@@ -3,10 +3,16 @@ package com.softwareplumbers.common.abstractquery;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collector;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import javax.json.Json;
 import javax.json.JsonObjectBuilder;
 import javax.json.JsonValue;
+import javax.json.JsonObject;
 
 /** A cube maps each dimension in an abstract space to a range.
  *
@@ -22,9 +28,18 @@ public class Cube {
 	public Cube(Cube to_copy) {
 		this.constraints = new HashMap<String, Range>(constraints);
 	}
+	
+	public Cube(String dimension, Range range) {
+		this.constraints = new HashMap<String, Range>(constraints);
+		this.constraints.put(dimension, range);
+	}
 
 	public Range getConstraint(String dimension) {
 		return constraints.get(dimension);
+	}
+	
+	public Set<String> getDimensions() {
+		return constraints.keySet();
 	}
 
 	public boolean equals(Cube other) {
@@ -80,10 +95,10 @@ public class Cube {
 		}
 	}
 
-	public Cube removeConstraints(String... toRemove) {
+	public Cube removeConstraints(Cube to_remove) {
 		Cube result = new Cube(this);
-		for (String dimension : toRemove) 
-			result.removeConstraint(dimension, constraints.get(dimension));
+		for (Map.Entry<String,Range> constraint : to_remove.constraints.entrySet()) 
+			result.removeConstraint(constraint.getKey(), constraint.getValue());
 		return result;
 	}
 
@@ -116,6 +131,17 @@ public class Cube {
 				return null;
 		}
 		return new Cube(new_constraints);
+	}
+	
+	public static Cube from(JsonObject object)  {
+		return new Cube(
+			object.entrySet().stream().collect(
+				Collectors.toMap(
+					e->e.getKey(), 
+					e->Range.fromJson(e.getValue())
+				)
+			)
+		);
 	}
 }
 

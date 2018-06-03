@@ -301,7 +301,7 @@ public abstract class Range {
 	* @param bounds bounding values for range
 	* @returns a range, or undefined if paramters are not compatible.
 	*/
-	static Range fromClosedRange(JsonObject bounds) 	{ 
+	static Range fromClosedRange(JsonValue bounds) 	{ 
 
 		if (bounds instanceof JsonArray) {
 			JsonArray array = (JsonArray)bounds;
@@ -329,13 +329,13 @@ public abstract class Range {
 	* The parameter 'obj' may be a bounds object, a simple value, a parameter a Query, or a Range. The result
 	* varies according to the type of obj, and whether an explicit order function is provided.
 	*
-	* @param obj - value
+	* @param jsonValue - value
 	* @returns a range
 	*/
-	static Range fromJson(JsonObject obj) {
-		if (obj == null) return null;
-		if (Range.isOpenRangeOrValue(obj)) return Range.fromOpenRangeOrValue(obj, value->equals(value));
-		if (Range.isClosedRange(obj)) return Range.fromClosedRange(obj);
+	static Range fromJson(JsonValue jsonValue) {
+		if (jsonValue == null) return null;
+		if (Range.isOpenRangeOrValue(jsonValue)) return Range.fromOpenRangeOrValue(jsonValue, value->equals(value));
+		if (Range.isClosedRange(jsonValue)) return Range.fromClosedRange(jsonValue);
 		//if (Query.isQuery(obj)) return Range.subquery(query);
 		return null;
 	}

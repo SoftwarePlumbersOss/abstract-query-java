@@ -3,6 +3,13 @@ package com.softwareplumbers.common.abstractquery;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import javax.json.JsonObject;
+import java.util.Iterator;
 
 /** A Query represent an arbitrary set of constraints on a set of data.
 *
@@ -28,9 +35,10 @@ import java.util.List;
 * expression like `a and (c or d)` instead of `(a and c) or (a and d)`.
 */
 class Query {
-	
+
 	private List<Cube> union;
 
+	
 	/** Construct a query from an array of cube objects.
 	*
 	* Should be considered a private constructor - use from instead to create a query.
@@ -40,7 +48,10 @@ class Query {
 	public Query(Cube... cubes) {
 		this.union = Arrays.asList(cubes);
 	}
-
+	
+	public Query(List<Cube> cubes) {
+		this.union = cubes;
+	}
 
 	/** Create a query from an constraint object 
 	*
@@ -52,58 +63,33 @@ class Query {
 	* @param {Query~ConstraintObject} obj - A constraint object.
 	* @returns a Query
 	*/
-	static from(obj) {
-		return new Query( [ new Cube(obj) ] );
+	static Query from(JsonObject obj) {
+		// TODO: handle $and, $or ?
+		return new Query(Cube.from(obj));
 	}
 
-	static isQuery(obj) {
-		return obj instanceof Query;
+	static boolean isQuery(JsonObject obj) {
+		// TODO: improve
+		return true;
 	}
 
-	/** Get the default query formatter
-	* @returns {QueryFormatter} the default query formatter
-	*/
-	static get DEFAULT_FORMAT() {
-
-		function printDimension(context,name) {
-			if (name === null) return '$self';
-			if (!context || !context.dimension) return name;
-			return printDimension(context.context, context.dimension) + "." + name;
-		}
-		
-		const printValue = value => typeof value === 'string' ? '"' + value + '"' : value;
-
-		return {
-    		andExpr(...ands) { return ands.join(' and ') }, 
-    		orExpr(...ors) { return "(" + ors.join(' or ') + ")"},
-    		operExpr(dimension, operator, value, context) {
-    			// null dimension implies that we are in a 'has' clause where the dimension is attached to the
-    			// outer 'has' operator 
-    			if (operator === 'match')
-    				return value;
-    			if (operator === 'has')
-    				return printDimension(context, dimension) + " has(" + value + ")"
-    			//if (dimension === null) return '$self' + operator + printValue(value) 
-
-    			return printDimension(context,dimension) + operator + printValue(value) 
-    		}
-    	}
-	}
 
 	/** Delete any redundant critera from the query */
-	optimize() {
-		for (let i = 0; i < this.union.length; i++)
-			for (let j = 0; j < this.union.length; j++) 
-				if (this.union[i].contains(this.union[j])) {
-					delete this.union[j];
-				}
+	void optimize() {
+		// TODO: case i and j are the same?
+		for (Iterator<Cube> i = union.iterator(); i.hasNext(); )
+			for (Iterator<Cube> j = union.iterator(); j.hasNext(); )
+				if (i.next().contains(j.next())) j.remove();
 	}
 
-	/**
- 	* @typedef {Object} Query~FactorResult
- 	* @property {Query} factored - the part of the query from which a factor has been removed
- 	* @property {Query} remainder - the part of the query from which a factor could not be removed
- 	*/
+	public static class FactorResult {
+		public final Query factored;
+		public final Query remainder;
+		public FactorResult(Query factored, Query remainder) {
+			this.factored = factored;
+			this.remainder = remainder;
+		}
+	}
 
 	/** Attempt to simplify a query by removing a common factor from the canonical form.
 	*
@@ -122,55 +108,65 @@ class Query {
 	* @param {ConstraintObject} constraint - object to factor out of query
 	* @return {Query~FactorResult} 
 	*/
-	Query factor(Cube common) {
-		let result = [];
-		let remainder = [];
-		for (let cube of this.union) {
+	FactorResult factor(Cube common) {
+		ArrayList<Cube> result = new ArrayList<Cube>();
+		ArrayList<Cube> remainder = new ArrayList<Cube>();
+		for (Cube cube : union) {
 			try {
-				let factored_cube = cube.removeConstraints(common);
-				result.push(factored_cube);
-			} catch (err) {
-				remainder.push(cube);
+				Cube factored_cube = cube.removeConstraints(common);
+				result.add(factored_cube);
+			} catch (IllegalArgumentException e) {
+				remainder.add(cube);
 			}
 		}
 
-		if (result.length === 0) {
-			return { remainder: this };
+		if (result.size() == 0) {
+			return new FactorResult(null, this);
 		} else {
-			let factored = new Query(result);
-			if (remainder.length === 0)
-				return { factored }
+			Query factored = new Query(result);
+			if (remainder.size() == 0)
+				return new FactorResult(factored, null);
 			else {
- 				return { factored, remainder: new Query(remainder) }
+ 				return new FactorResult(factored, new Query(remainder));
 			}
 		}
 	}
+	
+	private static class Bucket {
+		public final String dimension;
+		public final Range range;
+		public int count = 1;
+		public Bucket(String dimension, Range range) {
+			this.dimension = dimension;
+			this.range = range;
+		}
+	};
 
 	/** Find the factor that is common to the largest number of sub-expressions in canonical form.
 	*
-	* @returns {Object} A constraint object containing the common factor, or undefined.
+	* @returns A constraint object containing the common factor, or undefined.
 	*/
-	findFactor() {
-		let constraints = [];
-		for (let cube of this.union) {
-			for (let dimension in cube) {
-				let match = false;
-				for ( let bucket of constraints) {
-					if (bucket.dimension === dimension && bucket.range.equals(cube[dimension])) {
+	public Cube findFactor() {
+		ArrayList<Bucket> buckets = new ArrayList<Bucket>();
+		for (Cube cube : this.union) {
+			for (String dimension : cube.getDimensions()) {
+				boolean match = false;
+				for (Bucket bucket : buckets) {
+					if (bucket.dimension.equals(dimension) && bucket.range.equals(cube.getConstraint(dimension))) {
 						bucket.count++;
 						match = true;
 					}
 				} 
-				if (!match) constraints.push({ dimension, count: 1, range: cube[dimension] });
+				if (!match) buckets.add(new Bucket(dimension, cube.getConstraint(dimension)));
 			}
 		}
 
-		let bucket = constraints
-			.filter(a=>a.count > 1)
-			.sort((a,b) => (a.count > b.count) ? -1 : ((b.count > a.count) ? 1 : 0))
-			.shift();
+		Optional<Bucket> bucket = buckets.stream()
+			.filter(a -> a.count > 1)
+			.sorted((a,b) -> (a.count > b.count) ? -1 : ((b.count > a.count) ? 1 : 0))
+			.findFirst();
 
-		return bucket === undefined ? undefined : { [bucket.dimension] : bucket.range };
+		return bucket.isPresent() ? new Cube(bucket.get().dimension, bucket.get().range) : null;
 	}
 
 
@@ -180,42 +176,48 @@ class Query {
 	* @param {Context} [context] - context information
 	* @returns {Expression} expression - result expression. Typically a string but can be any type.
 	*/
-	toExpression(formatter=Query.DEFAULT_FORMAT, context) {
-		if (this.union.length === 1) {
-			return this.union[0].toExpression(formatter,context);
+	public <T,U> T toExpression(Formatter<T,U> formatter, U context) {
+		if (this.union.size() == 1) {
+			return this.union.get(0).toExpression(formatter,context);
 		}
-		if (this.union.length > 1) {
-			let factor = this.findFactor();
+		if (this.union.size() > 1) {
+			Cube factor = this.findFactor();
 
-			if (factor) {
-				let dimension = Object.keys(factor).shift();
-				let range = factor[dimension];
-				let { factored, remainder } = this.factor(factor);
+			if (factor != null) {
+				String dimension = factor.getDimensions().iterator().next();
+				Range range = factor.getConstraint(dimension);
+				FactorResult result = this.factor(factor);
 
-
-				if (factored && remainder) 
+				if (result.factored != null && result.remainder != null) 
 					return formatter.orExpr(
-						formatter.andExpr(
-							range.toExpression(dimension, formatter, context), 
-							factored.toExpression(formatter, context)
-						),
-						remainder.toExpression(formatter, context)
+						Stream.of(
+							formatter.andExpr(
+								Stream.of(
+									range.toExpression(dimension, formatter, context), 
+									result.factored.toExpression(formatter, context)
+								)
+							),
+							result.remainder.toExpression(formatter, context)
+						)
 					);
 
-				if (factored) 
+				if (result.factored != null) 
 					return formatter.andExpr(
-						range.toExpression(dimension, formatter, context), 
-						factored.toExpression(formatter, context)
+						Stream.of(
+							range.toExpression(dimension, formatter, context), 
+							result.factored.toExpression(formatter, context)
+						)
 					);
 			} else {
 				return formatter.orExpr(
-					...this.union.map(
-						cube => cube.toExpression(formatter, context)
-					)
-				);
+						this.union.stream().map(
+							cube -> cube.toExpression(formatter, context)
+						)
+					);
 			}
 
 		}
+		return null;
 	}
 
 	/** Create a new query that will return results in this query or some cube.
@@ -223,21 +225,21 @@ class Query {
 	* @param {Cube} other_cube - cube of additional results
 	* @returns {Query} a new compound query.
 	*/
-	_orCube(other_cube) {
-		let result = [];
-		let match = false;
-		for (let cube of this.union) {
+	public Query or(Cube other_cube) {
+		ArrayList<Cube> result = new ArrayList<Cube>();
+		boolean match = false;
+		for (Cube cube : union) {
 			if (cube.contains(other_cube)) {
 				match = true;
-				result.push(cube);
+				result.add(cube);
 			} else if (other_cube.contains(cube)) {
 				match = true;
-				result.push(other_cube);
+				result.add(other_cube);
 			} else {
-				result.push(cube);
+				result.add(cube);
 			}
 		}
-		if (!match) result.push(other_cube);
+		if (!match) result.add(other_cube);
 
 		return new Query(result);
 	}
@@ -247,8 +249,8 @@ class Query {
 	* @param {Query~ConstraintObject} other_constraint
 	* @returns {Query} a new compound query.
 	*/
-	orConstraint(other_constraint) {
-		return this._orCube(new Cube(other_constraint));
+	Query or(String other_constraint) {
+		return or(Cube.from(JsonUtil.parseObject(other_constraint)));
 	}
 
 	/** Create a new query that will return the union of results in this query and with some other query.
@@ -256,35 +258,25 @@ class Query {
 	* @param {Query} other_query - the other query
 	* @returns {Query} a new compound query that is the union of result sets from both queries
 	*/
-	orQuery(other_query) {
-		let result = this;
-		for (let cube of other_query.union) {
-			result = result._orCube(cube);
+	Query or(Query other_query) {
+		Query result = this;
+		for (Cube cube : other_query.union) {
+			result = result.or(cube);
 		}
 		return result;
 	}
 
-	/** Create a new query that will return the union of results in this query and with some other query or constraint.
-	*
-	* @param {Query|Query~ConstraintObject} obj - the other query or constraint
-	* @returns {Query} a new compound query that is the union of result sets
-	*/
-	or(obj) {
-		if (obj instanceof Query) return this.orQuery(obj);
-		if (obj instanceof Cube) return this._orCube(obj);
-		return this.orConstraint(obj);
-	}
 
 	/** Create a new query that will return results that are in this query and in some cube.
 	* @private 
 	* @param {Cube} other_cube - cube of additional results
 	* @returns {Query} a new compound query.
 	*/
-	_andCube(other_cube) {
-		let result = [];
-		for (let cube of this.union) {
-			let intersection = cube.intersect(other_cube);
-			if (intersection) result.push(intersection);
+	Query and(Cube other_cube) {
+		ArrayList<Cube> result = new ArrayList<Cube>();
+		for (Cube cube : this.union) {
+			Cube intersection = cube.intersect(other_cube);
+			if (intersection != null) result.add(intersection);
 		}
 		return new Query(result);
 	}
@@ -294,8 +286,8 @@ class Query {
 	* @param {Query~ConstraintObject} other_constraint
 	* @returns {Query} a new compound query.
 	*/
-	andConstraint(constraint) {
-		return this._andCube(new Cube(constraint));
+	Query and(String constraint) {
+		return and(Cube.from(JsonUtil.parseObject(constraint)));
 	}
 
 
@@ -304,23 +296,12 @@ class Query {
 	* @param {Query} other_query - the other query
 	* @returns {Query} a new compound query that is the intersection of result sets from both queries
 	*/
-	andQuery(other_query) {
-		let result = other_query;
-		for (let cube of this.union) {
-			result = result._andCube(cube);
+	Query and(Query other_query) {
+		Query result = other_query;
+		for (Cube cube : union) {
+			result = result.and(cube);
 		}
 		return result;
-	}
-
-	/** Create a new query that will return the union of results in this query and with some other query or constraint.
-	*
-	* @param {Query|Query~ConstraintObject} obj - the other query or constraint
-	* @returns {Query} a new compound query that is the union of result sets
-	*/
-	and(obj) {
-		if (obj instanceof Query) return this.andQuery(obj);
-		if (obj instanceof Cube) return this._andCube(obj);
-		return this.andConstraint(obj);
 	}
 
 	/** Establish if this results of this query would be a superset of the given query.
@@ -328,9 +309,9 @@ class Query {
 	* @param {Query} other_query - the other query
 	* @returns true if other query is a subset of this one, false if it isn't, null if containment is indeterminate
 	*/
-	containsQuery(other_query) {
-		for (let cube of other_query.union) {
-			let cube_contained = this._containsCube(cube);
+	public Boolean contains(Query other_query) {
+		for (Cube cube : other_query.union) {
+			Boolean cube_contained = contains(cube);
 			if (!cube_contained) return cube_contained;
 		}
 		return true;
@@ -342,10 +323,10 @@ class Query {
 	* @param {Cube} cube - the cube
 	* @returns true if cube is a subset of this one, false if it isn't, null if containment is indeterminate
 	*/
-	_containsCube(cube) {
-		for (let c of this.union) {
-			let contains_cube = c.contains(cube);
-			if (contains_cube || contains_cube === null) return contains_cube;
+	public Boolean contains(Cube cube) {
+		for (Cube c : this.union) {
+			Boolean contains_cube = c.contains(cube);
+			if (contains_cube == null || contains_cube) return contains_cube;
 		}
 		return false;
 	}
@@ -360,10 +341,10 @@ class Query {
 	* @param item to test
 	* @returns true, false or null
 	*/
-	containsItem(item) {
-		for (let c of this.union) {
-			let contains_item = c.containsItem(item);
-			if (contains_item || contains_item === null) return contains_item;
+	boolean containsItem(Value item) {
+		for (Cube c : this.union) {
+			Boolean contains_item = c.containsItem(item);
+			if (contains_item == null || contains_item) return contains_item;
 		}
 		return false;		
 	}
@@ -373,27 +354,8 @@ class Query {
 	* @param {Query~ConstraintObject} constraint - the constraint
 	* @returns true if constraint is a subset of this query, false if it isn't, null if containment is indeterminate
 	*/
-	containsConstraint(constraint) {
-		return this._containsCube(new Cube(constraint));
-	}
-
-	/** Establish if this results of this query would be a superset of the given constraint or query.
-	*
-	* Containment may be indeterminate one or more of the queries/constraints involved is parametrized and containment
-	* cannot be determined until the parameter values are known. However, the library works quite hard to identify 
-	* cases where containment can be determined even if the query is parametrized. For example:
-	* ```
-	* Query.from({ height: [$.param1, 12]}).contains(Query.from{ height[13, $.param2]})
-	* ```
-	* will return false since the two ranges can never overlap even though they are parametrized.
-	*
-	* @param {Query~ConstraintObject|Query} obj - the constraint or query
-	* @returns true if obj is a subset of this query, false if it isn't, null if containment is indeterminate
-	*/
-	contains(obj) {
-		if (obj instanceof Query) return this.containsQuery(obj);
-		if (obj instanceof Cube) return this._containsCube(obj);
-		return this.containsConstraint(obj);
+	Boolean contains(String constraint) {
+		return contains(Cube.from(JsonUtil.parseObject(constraint)));
 	}
 
 	/** Establish if this result of this query is the same as the given query.
@@ -401,15 +363,15 @@ class Query {
 	* @param {Query} other_query - the other query
 	* @returns true if other query is a subset of this one.
 	*/
-	equalsQuery(other_query) {
-		let unmatched = Array.from(other_query.union);
+	boolean equals(Query other_query) {
+		int matched = 0;
 		// Complicated by the fact that this.union and other_query.union may not be in same order
-		for (let constraint of this.union) {
-			let index = unmatched.findIndex(item => constraint.equals(item));
+		for (Cube constraint : union) {
+			int index = other_query.union.indexOf(constraint);
 			if (index < 0) return false;
-			delete unmatched[index];
+			matched++;
 		}
-		return unmatched.reduce(a=>a+1,0) === 0; // Array.length not change by delete
+		return matched == union.size();
 	}
 
 	/** Establish if this result of this query is the same as the given cube.
@@ -418,9 +380,9 @@ class Query {
 	* @param {Cube} cube - cube to compare
 	* @returns true if results of this query would be the same as the notional results for the cube.
 	*/
-	_equalsCube(cube) {
-		if (this.union.length != 1) return false;
-		return this.union[0].equals(cube);
+	boolean equalsCube(Cube cube) {
+		if (union.size() != 1) return false;
+		return union.get(0).equals(cube);
 	}
 
 	/** Establish if this results of this query would be the same as for a query created from the given constraint.
@@ -428,8 +390,8 @@ class Query {
 	* @param {Query~ConstraintObject} constraint - the constraint
 	* @returns true if constraint is the same as this query.
 	*/
-	equalsConstraint(other_constraint) {
-		return _equalsCube(new Cube(other_constraint));
+	boolean equals(String other_constraint) {
+		return equals(Cube.from(JsonUtil.parseObject(other_constraint)));
 	}
 
 	/** Establish if this results of this query would be a superset of the given constraint or query.
@@ -437,10 +399,11 @@ class Query {
 	* @param {Query~ConstraintObject|Query} obj - the constraint or query
 	* @returns true if obj is a subset of this query.
 	*/
-	equals(obj) {
-		if (obj instanceof Query) return this.equalsQuery(obj);
-		if (obj instanceof Cube) return this._equalsCube(obj);
-		return this.equalsConstraint(obj);
+	public boolean equals(Object obj) {
+		if (obj instanceof Query) return this.equals((Query)obj);
+		if (obj instanceof Cube) return this.equals((Cube)obj);
+		if (obj instanceof String) return this.equals((String)obj);
+		return false;
 	}
 
 	/** Bind a set of paramters to a query. 
@@ -458,26 +421,13 @@ class Query {
 	* @param {Object} parameter values
 	* @returns {Query} new query, with parameter values set.
 	*/
-	bind(parameters) {
-		let cubes = Stream
-			.from(this.union)
-			.map(cube => cube.bind(parameters))
-			.filter(cube => cube !== null)
-			.toArray();
+	Query bind(Map<String,Value> parameters) {
+		List<Cube> cubes = this.union.stream()
+			.map(cube -> cube.bind(parameters))
+			.filter(cube -> cube != null)
+			.collect(Collectors.toList());
 
-		return cubes.length > 0 ? new Query(cubes) : null;
+		return cubes.size() > 0 ? new Query(cubes) : null;
 	}
-
-	/** Convenience property for filtering
-	*
-	* Given a query, query.predicate is equal to item=>this.contains(item);
-	*
-	@ returns {Function} a function that returns true if its parameter is matched by this query.
-	*/
-	get predicate() {
-		return item => this.containsItem(item);
-	}
-
 }
 
-module.exports = Query;
