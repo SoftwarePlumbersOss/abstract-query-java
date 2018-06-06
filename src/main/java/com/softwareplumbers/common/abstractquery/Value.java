@@ -80,7 +80,7 @@ public class Value implements Comparable<Value> {
 	}
 	
 	public boolean equals(Value other) {
-		return ValueComparator.getInstance().equals(this, other);
+		return ValueComparator.getInstance().equals(this, other) == Boolean.TRUE;
 	}
 	
 	public boolean equals(Object other) {
@@ -109,6 +109,7 @@ public class Value implements Comparable<Value> {
 		switch (type) {
 		case STRING: 	return Json.createValue((String)value);
 		case NUMBER: 	return Json.createValue((BigDecimal)value);
+		case PARAM: 	return Json.createObjectBuilder().add("$", (String)value).build();
 		default:		throw new IllegalArgumentException("Unhandled type: " + type);
 		}		
 	}

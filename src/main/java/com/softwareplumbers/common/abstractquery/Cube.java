@@ -138,7 +138,7 @@ public class Cube {
 			object.entrySet().stream().collect(
 				Collectors.toMap(
 					e->e.getKey(), 
-					e->Range.fromJson(e.getValue())
+					e->Range.from(e.getValue())
 				)
 			)
 		);

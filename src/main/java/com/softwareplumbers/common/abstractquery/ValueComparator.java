@@ -28,27 +28,32 @@ public class ValueComparator implements Comparator<Value> {
 	
 	/** @returns true if a = b or a and b are both the same parameter, null if either is a parameter and they are not equal, false otherwise */ 
 	Boolean equals(Value a, Value b)		{ 
-		return paramsEqual(a,b) || (params(a,b) ? null : !order(a,b) && !order(b,a)); 
+		if (paramsEqual(a,b)) return true;
+		return (params(a,b) ? null : !order(a,b) && !order(b,a)); 
 	}
 	
 	/** @returns true if a < b or null if a or b is a parameter */
 	Boolean lessThan(Value a, Value b) 	{ 
-		return params(a,b) ? (paramsEqual(a,b) ? false : null) : order(a,b); 
+		if (params(a,b)) return paramsEqual(a,b) ? Boolean.FALSE : null;
+		return order(a,b); 
 	}
 	
 	/** @returns {boolean} true if a > b or null if a or b is a parameter */
 	Boolean greaterThan(Value a, Value b) { 
-		return params(a,b) ? (paramsEqual(a,b) ? false : null) : this.order(b,a); 
+		if (params(a,b)) return paramsEqual(a,b) ? Boolean.FALSE : null;
+		return order(b,a); 
 	}
 	
 	/** @returns {boolean} true if a <= b or a and b are both the same parameter, null if either is a parameter and they are not equal, false otherwise */
 	Boolean greaterThanOrEqual(Value a, Value b) { 
-		return paramsEqual(a,b) || (params(a,b) ? null : !this.order(a,b)); 
+		if (params(a,b)) return paramsEqual(a,b) ? Boolean.TRUE : null;
+		return !this.order(a,b); 
 	}
 	
 	/** @returns {boolean} true if a >= b or a and b are both the same parameter, null if either is a parameter and they are not equal, false otherwise */
 	Boolean lessThanOrEqual(Value a, Value b) 	{ 
-		return paramsEqual(a,b) || (params(a,b) ? null : !this.order(b,a)); 
+		if (params(a,b)) return paramsEqual(a,b) ? Boolean.TRUE : null;
+		return !this.order(b,a); 
 	}
 	
 	public static ValueComparator getInstance() {
