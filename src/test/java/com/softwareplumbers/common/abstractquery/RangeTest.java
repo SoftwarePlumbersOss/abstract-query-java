@@ -29,7 +29,7 @@ public class RangeTest {
     	assertFalse(range1.containsItem(Value.from(37)));
     	assertFalse(range1.containsItem(Value.from(38)));
     	assertTrue(range1.containsItem(Value.from(36)));
-    	Range range2 = Range.from("{ \"<\" : 37 }");
+    	Range range2 = Range.from("{ '<' : 37 }");
     	assertEquals(range1, range2);
     }
 
@@ -39,7 +39,7 @@ public class RangeTest {
     	assertFalse(range1.containsItem(Value.from(37)));
     	assertTrue(range1.containsItem(Value.from(38)));
     	assertFalse(range1.containsItem(Value.from(36)));
-    	Range range2 = Range.from("{ \">\" : 37 }");
+    	Range range2 = Range.from("{ '>' : 37 }");
     	assertEquals(range1, range2);
     }
 
@@ -69,15 +69,15 @@ public class RangeTest {
 
 	@Test
     public void canCreateRangesFromBoundsObject() {
-    	Range range1 = Range.from("{\"=\":5}");
+    	Range range1 = Range.from("{'=':5}");
     	assertEquals(range1,Range.equals(Value.from(5)));
-    	range1 = Range.from("{\"<\":5}");
+    	range1 = Range.from("{'<':5}");
     	assertEquals(range1,Range.lessThan(Value.from(5)));
-    	range1 = Range.from("{\">\":5}");
+    	range1 = Range.from("{'>':5}");
     	assertEquals(range1,Range.greaterThan(Value.from(5)));
-    	range1 = Range.from("{\"<=\":5}");
+    	range1 = Range.from("{'<=':5}");
     	assertEquals(range1,Range.lessThanOrEqual(Value.from(5)));
-    	range1 = Range.from("{\">=\":5}");
+    	range1 = Range.from("{'>=':5}");
     	assertEquals(range1,Range.greaterThanOrEqual(Value.from(5)));
         //range1 = Range.fromBounds({$has: {'=':5}}
         //assertEquals(range1,Range.has(Range.equals(Value.from(5))));
@@ -87,8 +87,8 @@ public class RangeTest {
     public void toJSONCreatesJSON() {
     	Range range1 = Range.from("5");
     	assertEquals(range1.toJSON(), JsonUtil.parseValue("5"));
-    	range1 = Range.from("{\"<\":5}");
-    	assertEquals(range1.toJSON(), JsonUtil.parseObject("{\"<\":5}"));
+    	range1 = Range.from("{'<':5}");
+    	assertEquals(range1.toJSON(), JsonUtil.parseObject("{'<':5}"));
     }
 
 	@Test
@@ -108,10 +108,10 @@ public class RangeTest {
 		Range range8 = Range.from("[15,37]");
 		assertNotEquals(range6,range8);
 		/*
-		Range range9 = Range.from("{ \"name\": \"morgan\"}");
-		Range range10 = Range.from("{ \"name\": \"freeman\"}");
+		Range range9 = Range.from("{ 'name': 'morgan'}");
+		Range range10 = Range.from("{ 'name': 'freeman'}");
 		
-		Range range11 = Range.from("{ \"name\": \"morgan\"}");
+		Range range11 = Range.from("{ 'name': 'morgan'}");
 		assertNotEquals(range9,range10);
 		assertEquals(range9,range11);
 		*/
@@ -457,11 +457,11 @@ public class RangeTest {
 
 	@Test
 	public void usedBoundsObjectsInRangeFrom() {
-    	Range range1 = Range.from("{ \">\":5}");
+    	Range range1 = Range.from("{ '>':5}");
     	assertEquals(range1,Range.greaterThan(Value.from(5)));
     	Range range2 = Range.from("[2,8]");
     	assertEquals(range2,Range.between(Value.from(2),Value.from(8)));
-    	Range range3 = Range.from("[{\">\":2}, {\"<=\":8}]");
+    	Range range3 = Range.from("[{'>':2}, {'<=':8}]");
     	assertEquals(range3,Range.between(Range.greaterThan(Value.from(2)),Range.lessThanOrEqual(Value.from(8))));
     }
 	
@@ -572,4 +572,14 @@ public class RangeTest {
         expect(range3).to.deep.equal(Range.from({$hasAll: [6,8]}));
     }
 */
+    
+    @Test
+    public void canCreateFromJson() {
+    	Range range = Range.from("[2,4]");
+    	assertEquals(Range.between(Value.from(2), Value.from(4)), range);
+    	range = Range.from("[2,null]");
+    	assertEquals(Range.greaterThanOrEqual(Value.from(2)), range);
+    	range = Range.from("{ '$': 'param1'}");
+    	assertEquals(Range.equals(Param.from("param1")), range);
+    }
 }

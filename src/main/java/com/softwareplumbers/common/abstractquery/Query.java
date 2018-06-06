@@ -67,6 +67,10 @@ class Query {
 		// TODO: handle $and, $or ?
 		return new Query(Cube.from(obj));
 	}
+	
+	static Query from(String query) {
+		return Query.from(JsonUtil.parseObject(query));
+	}
 
 	static boolean isQuery(JsonObject obj) {
 		// TODO: improve
@@ -428,6 +432,10 @@ class Query {
 			.collect(Collectors.toList());
 
 		return cubes.size() > 0 ? new Query(cubes) : null;
+	}
+	
+	public String toString() {
+		return toExpression(Formatter.DEFAULT_FORMAT, Formatter.DEFAULT_FORMAT_CONTEXT);
 	}
 }
 

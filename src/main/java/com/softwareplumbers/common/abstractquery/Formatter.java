@@ -17,6 +17,8 @@ public interface Formatter<T,U> {
 		}
 	}
 	
+	public static DefaultFormatContext DEFAULT_FORMAT_CONTEXT = new DefaultFormatContext(null, null);
+	
 	/** Get the default query formatter
 	* @returns {QueryFormatter} the default query formatter
 	*/

@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import javax.json.Json;
@@ -262,11 +263,14 @@ public abstract class Range {
 		return Value.isValue(obj) || isOpenRange(obj);
 	}
 
+	static boolean isOpenRangeValueOrNull(JsonValue obj)	{ 
+		return obj == JsonValue.NULL || Value.isValue(obj) || isOpenRange(obj);
+	}
 	static boolean isClosedRange(JsonValue obj) {
 		if (obj instanceof JsonArray) {
 			JsonArray array = (JsonArray)obj;
 			if (array.size() > 2 || array.size() == 0) return false;
-			return (array.size() == 1 || isOpenRangeOrValue(array.get(1)) && isOpenRangeOrValue(array.get(0)));
+			return (array.size() == 1 || isOpenRangeValueOrNull(array.get(1)) && isOpenRangeValueOrNull(array.get(0)));
 		} else {
 			return false;
 		}
@@ -289,9 +293,13 @@ public abstract class Range {
 			if (propname.isPresent()) {
 				JsonValue value = asObj.get(propname.get());
 				return Value.isValue(value) ? getRange(propname.get(), Value.from(value)) : null;
+			} else if (asObj.containsKey("$")) {
+				return Range.equals(Param.from(asObj));
 			} else {
 				return null;
 			}
+		} else if (obj == JsonValue.NULL) {
+			return UNBOUNDED;
 		} else {
 			return operator.apply(Value.from(obj));
 		}
@@ -1202,7 +1210,7 @@ public abstract class Range {
 			for (int i = 0; i < parameters.size() && result != null; i++)
 				result = result.intersect(parametrized_bounds.get(parameters.get(i)).bind(param_map));
 			return result;
-		}
+		}		
 	}
 }
 

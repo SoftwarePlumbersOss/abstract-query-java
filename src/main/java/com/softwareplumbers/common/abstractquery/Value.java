@@ -28,7 +28,7 @@ public class Value implements Comparable<Value> {
 	}
 	
 	public static boolean isValue(JsonValue obj) {
-		return (obj instanceof JsonNumber) || (obj instanceof JsonString);
+		return (obj instanceof JsonNumber) || (obj instanceof JsonString) || (obj instanceof JsonObject && obj.asJsonObject().containsKey("$"));
 	}
 
 	public static Value from(JsonValue obj) {
@@ -59,6 +59,10 @@ public class Value implements Comparable<Value> {
 		if (value instanceof Long) return from((Long)value);
 		if (value instanceof JsonValue) return Value.from((JsonValue) value);
 		return new Value(Type.MAP, new BeanMap(value));
+	}
+	
+	public static Value fromJson(String value) {
+		return from(JsonUtil.parseValue(value));		
 	}
 	
 	public Set<String> propertySet() {

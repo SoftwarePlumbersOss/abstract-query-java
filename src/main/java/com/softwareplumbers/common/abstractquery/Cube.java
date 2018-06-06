@@ -26,12 +26,25 @@ public class Cube {
 	}
 	
 	public Cube(Cube to_copy) {
-		this.constraints = new HashMap<String, Range>(constraints);
+		this.constraints = new HashMap<String, Range>(to_copy.constraints);
 	}
 	
 	public Cube(String dimension, Range range) {
-		this.constraints = new HashMap<String, Range>(constraints);
+		this.constraints = new HashMap<String, Range>();
 		this.constraints.put(dimension, range);
+	}
+	
+	public Cube(JsonObject json) {
+		this.constraints = new HashMap<String, Range>();
+		for (Map.Entry<String, JsonValue> entry : json.entrySet()) {
+			Range range = Range.from(entry.getValue());
+			if (range == null) throw new IllegalArgumentException("Don't know what to do with:" + entry.getKey());
+			constraints.put(entry.getKey(), range);
+		}
+	}
+	
+	public Cube(String json) {
+		this(JsonUtil.parseObject(json));
 	}
 
 	public Range getConstraint(String dimension) {
@@ -131,6 +144,16 @@ public class Cube {
 				return null;
 		}
 		return new Cube(new_constraints);
+	}
+	
+	public Cube bind(JsonObject values) {
+		return bind(values.entrySet()
+			.stream()
+			.collect(Collectors.toMap(e->e.getKey(), e->Value.from(e.getValue()))));
+	}
+	
+	public Cube bind(String values) {
+		return bind(JsonUtil.parseObject(values));
 	}
 	
 	public static Cube from(JsonObject object)  {

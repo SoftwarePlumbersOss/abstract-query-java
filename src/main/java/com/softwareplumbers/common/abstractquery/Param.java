@@ -21,6 +21,14 @@ class Param extends Value {
 	public static Param from(String name) {
 		return new Param(name);
 	}
+	
+	/** Create a new query parameter
+	*	
+	* @param name - the name of the query parameter 
+	*/
+	public static Param from(JsonObject obj) {
+		return new Param(obj.getString("$"));
+	}
 
 	/** Check in an object is a parameter
 	*
@@ -28,16 +36,9 @@ class Param extends Value {
 	* @returns true of obj is a Param
 	*/
 	public static boolean isParam(JsonObject obj) {
-		return obj instanceof Param;
+		return obj.containsKey("$");
 	}
 
-	/** Convert parameter to a string
-	*
-	* @returns the parameter name, prefixed with a '$' symbol.
-	*/
-	public String toString() {
-		return '$' + this.value.toString();
-	}
 }
 
 
