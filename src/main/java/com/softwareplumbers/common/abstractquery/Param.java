@@ -4,7 +4,7 @@ import javax.json.JsonObject;
 
 /** Class representing a query parameter than can be set later.
 */
-class Param extends Value {
+public class Param extends Value {
 	
 	/** Create a new query parameter
 	*

@@ -34,7 +34,7 @@ import java.util.Iterator;
 * an expression. Calling `a.and(c).or(a.and(d)).toExpression(...)` with appropriate callbacks should generate an 
 * expression like `a and (c or d)` instead of `(a and c) or (a and d)`.
 */
-class Query {
+public class Query {
 
 	private List<Cube> union;
 
@@ -63,23 +63,23 @@ class Query {
 	* @param {Query~ConstraintObject} obj - A constraint object.
 	* @returns a Query
 	*/
-	static Query from(JsonObject obj) {
+	public static Query from(JsonObject obj) {
 		// TODO: handle $and, $or ?
 		return new Query(Cube.from(obj));
 	}
 	
-	static Query from(String query) {
+	public static Query from(String query) {
 		return Query.from(JsonUtil.parseObject(query));
 	}
 
-	static boolean isQuery(JsonObject obj) {
+	public static boolean isQuery(JsonObject obj) {
 		// TODO: improve
 		return true;
 	}
 
 
 	/** Delete any redundant critera from the query */
-	void optimize() {
+	public void optimize() {
 		// TODO: case i and j are the same?
 		for (Iterator<Cube> i = union.iterator(); i.hasNext(); )
 			for (Iterator<Cube> j = union.iterator(); j.hasNext(); )
@@ -112,7 +112,7 @@ class Query {
 	* @param {ConstraintObject} constraint - object to factor out of query
 	* @return {Query~FactorResult} 
 	*/
-	FactorResult factor(Cube common) {
+	public FactorResult factor(Cube common) {
 		ArrayList<Cube> result = new ArrayList<Cube>();
 		ArrayList<Cube> remainder = new ArrayList<Cube>();
 		for (Cube cube : union) {
@@ -253,7 +253,7 @@ class Query {
 	* @param {Query~ConstraintObject} other_constraint
 	* @returns {Query} a new compound query.
 	*/
-	Query or(String other_constraint) {
+	public Query or(String other_constraint) {
 		return or(Cube.from(JsonUtil.parseObject(other_constraint)));
 	}
 
@@ -262,7 +262,7 @@ class Query {
 	* @param {Query} other_query - the other query
 	* @returns {Query} a new compound query that is the union of result sets from both queries
 	*/
-	Query or(Query other_query) {
+	public Query or(Query other_query) {
 		Query result = this;
 		for (Cube cube : other_query.union) {
 			result = result.or(cube);
@@ -276,7 +276,7 @@ class Query {
 	* @param {Cube} other_cube - cube of additional results
 	* @returns {Query} a new compound query.
 	*/
-	Query and(Cube other_cube) {
+	public Query and(Cube other_cube) {
 		ArrayList<Cube> result = new ArrayList<Cube>();
 		for (Cube cube : this.union) {
 			Cube intersection = cube.intersect(other_cube);
@@ -290,7 +290,7 @@ class Query {
 	* @param {Query~ConstraintObject} other_constraint
 	* @returns {Query} a new compound query.
 	*/
-	Query and(String constraint) {
+	public Query and(String constraint) {
 		return and(Cube.from(JsonUtil.parseObject(constraint)));
 	}
 
@@ -300,7 +300,7 @@ class Query {
 	* @param {Query} other_query - the other query
 	* @returns {Query} a new compound query that is the intersection of result sets from both queries
 	*/
-	Query and(Query other_query) {
+	public Query and(Query other_query) {
 		Query result = other_query;
 		for (Cube cube : union) {
 			result = result.and(cube);
@@ -345,7 +345,7 @@ class Query {
 	* @param item to test
 	* @returns true, false or null
 	*/
-	boolean containsItem(Value item) {
+	public boolean containsItem(Value item) {
 		for (Cube c : this.union) {
 			Boolean contains_item = c.containsItem(item);
 			if (contains_item == null || contains_item) return contains_item;
@@ -358,7 +358,7 @@ class Query {
 	* @param {Query~ConstraintObject} constraint - the constraint
 	* @returns true if constraint is a subset of this query, false if it isn't, null if containment is indeterminate
 	*/
-	Boolean contains(String constraint) {
+	public Boolean contains(String constraint) {
 		return contains(Cube.from(JsonUtil.parseObject(constraint)));
 	}
 
@@ -367,7 +367,7 @@ class Query {
 	* @param {Query} other_query - the other query
 	* @returns true if other query is a subset of this one.
 	*/
-	boolean equals(Query other_query) {
+	public boolean equals(Query other_query) {
 		int matched = 0;
 		// Complicated by the fact that this.union and other_query.union may not be in same order
 		for (Cube constraint : union) {
@@ -384,7 +384,7 @@ class Query {
 	* @param {Cube} cube - cube to compare
 	* @returns true if results of this query would be the same as the notional results for the cube.
 	*/
-	boolean equalsCube(Cube cube) {
+	public boolean equals(Cube cube) {
 		if (union.size() != 1) return false;
 		return union.get(0).equals(cube);
 	}
@@ -394,7 +394,7 @@ class Query {
 	* @param {Query~ConstraintObject} constraint - the constraint
 	* @returns true if constraint is the same as this query.
 	*/
-	boolean equals(String other_constraint) {
+	public boolean equals(String other_constraint) {
 		return equals(Cube.from(JsonUtil.parseObject(other_constraint)));
 	}
 
@@ -425,7 +425,7 @@ class Query {
 	* @param {Object} parameter values
 	* @returns {Query} new query, with parameter values set.
 	*/
-	Query bind(Map<String,Value> parameters) {
+	public Query bind(Map<String,Value> parameters) {
 		List<Cube> cubes = this.union.stream()
 			.map(cube -> cube.bind(parameters))
 			.filter(cube -> cube != null)

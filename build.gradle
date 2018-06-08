@@ -12,14 +12,28 @@ if (project.hasProperty("proxyMavenCentral")) {
 	MAVEN_CENTRAL_URL = project.getProperty("proxyMavenCentral");
 }
 
+group = "com.softwareplumbers.oss"
+version = "0.0.3"
+
 // Apply the java-library plugin to add support for Java Library
 apply plugin: 'java'
+apply plugin: 'maven'
 
 // In this section you declare where to find the dependencies of your project
 repositories {
     // Use jcenter for resolving your dependencies.
     // You can declare any Maven/Ivy/file repository here.
 	maven { url MAVEN_CENTRAL_URL }
+}
+
+uploadArchives {
+  repositories {
+    mavenDeployer {
+      repository(url: "https://nexus.softwareplumbers.com/repository/maven-oss") {
+      	authentication(userName: "jonessex", password: "thunderpants99")
+      }
+    }
+  }
 }
 
 dependencies {
