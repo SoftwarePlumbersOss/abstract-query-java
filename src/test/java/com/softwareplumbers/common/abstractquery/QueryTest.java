@@ -335,4 +335,9 @@ public class QueryTest {
        }
        */
 
+	@Test
+	public void canCreateQueryWithAnd() {
+		Query query = Query.from("{ '$and': [ {'x':[2,5]}, {'x':[4,7]} ]}");
+		assertEquals("x>=4 and x<5", query.toString());
+	}
 }

@@ -41,14 +41,16 @@ public class Query {
 	
 	/** Construct a query from an array of cube objects.
 	*
-	* Should be considered a private constructor - use from instead to create a query.
-	*
-	* @param {Cube[]} cubes - An array of cubes.
+	* @param cubes - An array of cubes.
 	*/
 	public Query(Cube... cubes) {
 		this.union = Arrays.asList(cubes);
 	}
 	
+	/** Construct a query from a list of cube objects.
+	*
+	* @param cubes - A list of cubes.
+	*/
 	public Query(List<Cube> cubes) {
 		this.union = cubes;
 	}
@@ -57,17 +59,39 @@ public class Query {
 	*
 	* The constraint object can have any number of properties. In the following example, the resulting
 	* query applies all the following constraints: w >= 3, x == 3, y >= 3, y < 7, z < 7
-	* @example
-1	* Query.from({ w: [3,], x : 3, y : [3,7], z: [,7]})
 	*
-	* @param {Query~ConstraintObject} obj - A constraint object.
+	* @param obj - A constraint object.
 	* @returns a Query
 	*/
 	public static Query from(JsonObject obj) {
-		// TODO: handle $and, $or ?
+		
+		if (obj.containsKey("$and")) {
+			Iterator<Query> values = obj.getJsonArray("$and").getValuesAs(val->from((JsonObject)val)).iterator();
+			Query result = values.next();
+			while (values.hasNext() && result != null) result = result.and(values.next());
+			return result;
+		}
+		
+		if (obj.containsKey("$or")) {
+			Iterator<Query> values = obj.getJsonArray("$or").getValuesAs(val->from((JsonObject)val)).iterator();
+			Query result = values.next();
+			while (values.hasNext()) result = result.or(values.next());
+			return result;
+		}
+
 		return new Query(Cube.from(obj));
 	}
 	
+	/** Create a query from an constraint object 
+	*
+	* The constraint object can have any number of properties. In the following example, the resulting
+	* query applies all the following constraints: w >= 3, x == 3, y >= 3, y < 7, z < 7
+	* @example
+1	* Query.from("{ w: [3,], x : 3, y : [3,7], z: [,7]}")
+	*
+	* @param obj - A string formatted as javascript
+	* @returns a Query
+	*/
 	public static Query from(String query) {
 		return Query.from(JsonUtil.parseObject(query));
 	}
@@ -176,9 +200,8 @@ public class Query {
 
 	/** Convert a query to a an expression.
 	*
-	* @param {QueryFormatter} [formatter=Query~DEFAULT_FORMATTER] - Generates expressions from element of a query
-	* @param {Context} [context] - context information
-	* @returns {Expression} expression - result expression. Typically a string but can be any type.
+	* @param formatter formatter to use to create expression
+	* @returns result expression. Typically a string but can be any type.
 	*/
 	public <T> T toExpression(Formatter<T> formatter) {
 		if (this.union.size() == 1) {
@@ -225,9 +248,9 @@ public class Query {
 	}
 
 	/** Create a new query that will return results in this query or some cube.
-	* @private 
-	* @param {Cube} other_cube - cube of additional results
-	* @returns {Query} a new compound query.
+	*
+	* @param other_cube cube of additional results
+	* @returns a new compound query.
 	*/
 	public Query or(Cube other_cube) {
 		ArrayList<Cube> result = new ArrayList<Cube>();
@@ -250,8 +273,8 @@ public class Query {
 
 	/** Create a new query that will return the union of results in this query with some other constraint.
 	*
-	* @param {Query~ConstraintObject} other_constraint
-	* @returns {Query} a new compound query.
+	* @param other_constraint
+	* @returns a new compound query.
 	*/
 	public Query or(String other_constraint) {
 		return or(Cube.from(JsonUtil.parseObject(other_constraint)));
@@ -259,8 +282,8 @@ public class Query {
 
 	/** Create a new query that will return the union of results in this query and with some other query.
 	*
-	* @param {Query} other_query - the other query
-	* @returns {Query} a new compound query that is the union of result sets from both queries
+	* @param other_query the other query
+	* @returns a new compound query that is the union of result sets from both queries
 	*/
 	public Query or(Query other_query) {
 		Query result = this;
@@ -272,9 +295,9 @@ public class Query {
 
 
 	/** Create a new query that will return results that are in this query and in some cube.
-	* @private 
-	* @param {Cube} other_cube - cube of additional results
-	* @returns {Query} a new compound query.
+	* 
+	* @param other_cube cube of additional results
+	* @returns a new compound query.
 	*/
 	public Query and(Cube other_cube) {
 		ArrayList<Cube> result = new ArrayList<Cube>();
@@ -297,8 +320,8 @@ public class Query {
 
 	/** Create a new query that will return the intersection of results in this query and some other query.
 	*
-	* @param {Query} other_query - the other query
-	* @returns {Query} a new compound query that is the intersection of result sets from both queries
+	* @param other_query the other query
+	* @returns a new compound query that is the intersection of result sets from both queries
 	*/
 	public Query and(Query other_query) {
 		Query result = other_query;
@@ -310,7 +333,7 @@ public class Query {
 
 	/** Establish if this results of this query would be a superset of the given query.
 	*
-	* @param {Query} other_query - the other query
+	* @param other_query the other query
 	* @returns true if other query is a subset of this one, false if it isn't, null if containment is indeterminate
 	*/
 	public Boolean contains(Query other_query) {
@@ -323,8 +346,7 @@ public class Query {
 
 	/** Establish if this results of this query would be a superset of the given cube.
 	*
-	* @private
-	* @param {Cube} cube - the cube
+	* @param cube the cube
 	* @returns true if cube is a subset of this one, false if it isn't, null if containment is indeterminate
 	*/
 	public Boolean contains(Cube cube) {
@@ -355,7 +377,7 @@ public class Query {
 
 	/** Establish if this results of this query would be a superset of the given constraint.
 	*
-	* @param {Query~ConstraintObject} constraint - the constraint
+	* @param constraint the constraint
 	* @returns true if constraint is a subset of this query, false if it isn't, null if containment is indeterminate
 	*/
 	public Boolean contains(String constraint) {
@@ -364,7 +386,7 @@ public class Query {
 
 	/** Establish if this result of this query is the same as the given query.
 	*
-	* @param {Query} other_query - the other query
+	* @param other_query the other query
 	* @returns true if other query is a subset of this one.
 	*/
 	public boolean equals(Query other_query) {
@@ -380,8 +402,7 @@ public class Query {
 
 	/** Establish if this result of this query is the same as the given cube.
 	*
-	* @private
-	* @param {Cube} cube - cube to compare
+	* @param cube cube to compare
 	* @returns true if results of this query would be the same as the notional results for the cube.
 	*/
 	public boolean equals(Cube cube) {
@@ -391,7 +412,7 @@ public class Query {
 
 	/** Establish if this results of this query would be the same as for a query created from the given constraint.
 	*
-	* @param {Query~ConstraintObject} constraint - the constraint
+	* @param constraint the constraint
 	* @returns true if constraint is the same as this query.
 	*/
 	public boolean equals(String other_constraint) {
@@ -400,7 +421,7 @@ public class Query {
 
 	/** Establish if this results of this query would be a superset of the given constraint or query.
 	*
-	* @param {Query~ConstraintObject|Query} obj - the constraint or query
+	* @param obj the constraint or query
 	* @returns true if obj is a subset of this query.
 	*/
 	public boolean equals(Object obj) {
@@ -416,14 +437,14 @@ public class Query {
 	* this query was created. So:
 	* ```
 	* Query
-	*	.from({ height : [$.floor, $.ceiling]})
-	*	.bind({ floor:12, ceiling: 16})
-	*	.toExpression();
+	*	.from("{ height : [ {$:'floor'}, {$:'ceiling'} ]}")
+	*	.bind(new TreeMap<String,Value>(){{ put("floor",Value.from(12)); put("ceiling",Floor.from(16);}});
+	*	.toString();
 	* ```
 	* will return something like `height >= 12 and height < 16`.
 	*
-	* @param {Object} parameter values
-	* @returns {Query} new query, with parameter values set.
+	* @param parameters map of parameter values
+	* @returns new query, with parameter values set.
 	*/
 	public Query bind(Map<String,Value> parameters) {
 		List<Cube> cubes = this.union.stream()
