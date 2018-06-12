@@ -3,9 +3,23 @@ package com.softwareplumbers.common.abstractquery;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+/** Format a Query
+ * 
+ * Used to walk the logical structure of a query, building a representation of
+ * type T using context data of type U.
+ * 
+ * @author Jonathan Essex
+ *
+ * @param <T> Type of formatted representation (typically, but not always, a String)
+ * @param <U> Type of context information required
+ */
 public interface Formatter<T,U> {
+	
+	/** Create a representation of a constraint on a dimension */
 	T operExpr(String dimension, String operator, Value value, U context);
+	/** Create a representation of an intersection of constraints */
 	T andExpr(Stream<T> expressions);
+	/** Create a representation of a union of constraints */
 	T orExpr(Stream<T> expressions);
 	
 	public static class DefaultFormatContext {
