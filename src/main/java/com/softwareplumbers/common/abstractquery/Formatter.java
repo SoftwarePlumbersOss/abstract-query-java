@@ -13,35 +13,32 @@ import java.util.stream.Stream;
  * @param <T> Type of formatted representation (typically, but not always, a String)
  * @param <U> Type of context information required
  */
-public interface Formatter<T,U> {
+public interface Formatter<T> {
 	
 	/** Create a representation of a constraint on a dimension */
-	T operExpr(String dimension, String operator, Value value, U context);
+	T operExpr(String dimension, String operator, Value value);
 	/** Create a representation of an intersection of constraints */
 	T andExpr(Stream<T> expressions);
 	/** Create a representation of a union of constraints */
 	T orExpr(Stream<T> expressions);
 	
-	public static class DefaultFormatContext {
-		public final DefaultFormatContext context;
-		public final String dimension;
-		public DefaultFormatContext(DefaultFormatContext context, String dimension) {
-			this.context = context;
-			this.dimension = dimension;
-		}
-	}
-	
-	public static DefaultFormatContext DEFAULT_FORMAT_CONTEXT = new DefaultFormatContext(null, null);
 	
 	/** Get the default query formatter
-	* @returns {QueryFormatter} the default query formatter
 	*/
-	public static Formatter<String,DefaultFormatContext> DEFAULT_FORMAT = new Formatter<String,DefaultFormatContext>() {
+	public static class DefaultFormat implements Formatter<String> {
+		
+		private DefaultFormat parent;
+		private String dimension;
+		
+		public DefaultFormat(DefaultFormat parent, String dimension) {
+			this.parent = parent;
+			this.dimension = dimension;
+		}
 
-		String printDimension(DefaultFormatContext context, String name) {
+		String printDimension(String name) {
 			if (name == null) return "$self";
-			if (context == null || context.dimension == null) return name;
-			return printDimension(context.context, context.dimension) + "." + name;
+			if (dimension == null) return name;
+			return parent.printDimension(dimension) + "." + name;
 		}
 		
 		String printValue(Value value) {
@@ -56,16 +53,18 @@ public interface Formatter<T,U> {
     		return "(" + ors.collect(Collectors.joining(" or ")) + ")"; 
     	}
     	
-    	public String operExpr(String dimension, String operator, Value value, DefaultFormatContext context) {
+    	public String operExpr(String dimension, String operator, Value value) {
     			// null dimension implies that we are in a 'has' clause where the dimension is attached to the
     			// outer 'has' operator 
     			if (operator.equals("match"))
     				return value.toString();
     			if (operator.equals("has"))
-    				return printDimension(context, dimension) + " has(" + value + ")";
+    				return printDimension(dimension) + " has(" + value + ")";
     			//if (dimension === null) return '$self' + operator + printValue(value) 
 
-    			return printDimension(context,dimension) + operator + printValue(value) ;
+    			return printDimension(dimension) + operator + printValue(value) ;
     	}
 	};
+	
+	public Formatter<String> DEFAULT = new DefaultFormat(null, null);
 }

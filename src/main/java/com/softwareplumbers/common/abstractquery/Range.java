@@ -34,7 +34,7 @@ public abstract class Range {
 	public abstract Boolean contains(Range range);
 	public abstract Boolean containsItem(Value item);
 	public abstract Range intersect(Range range);
-	public abstract <T,U> T toExpression(String dimension, Formatter<T,U> formatter, U context);
+	public abstract <T> T toExpression(String dimension, Formatter<T> formatter);
 	public String toString() { return toJSON().toString(); }
 	public abstract JsonValue toJSON();
 	public abstract Range bind(Map<String,Value> parameters);
@@ -393,8 +393,8 @@ public abstract class Range {
 			return range;
 		}
 
-		public <T,U> T toExpression(String dimension, Formatter<T,U> formatter, U context)	{ 
-			return formatter.operExpr(dimension, "=", Value.from("*"), context); 
+		public <T> T toExpression(String dimension, Formatter<T> formatter)	{ 
+			return formatter.operExpr(dimension, "=", Value.from("*")); 
 		}
 
 		public Boolean mightEquals(Range range)	{ return range instanceof Unbounded; }
@@ -424,8 +424,8 @@ public abstract class Range {
 			this.operator = operator;
 		}
 
-		public <T,U> T toExpression(String dimension, Formatter<T,U> formatter, U context)	{ 
-			return formatter.operExpr(dimension, this.operator, this.value, context); 
+		public <T> T toExpression(String dimension, Formatter<T> formatter)	{ 
+			return formatter.operExpr(dimension, this.operator, this.value); 
 		}
 
 		public Boolean mightEquals(Range range)	{ 
@@ -499,10 +499,10 @@ public abstract class Range {
 			return null;
 		}
 
-		public <T,U> T toExpression(String dimension, Formatter<T,U> formatter, U context)	{ 
+		public <T> T toExpression(String dimension, Formatter<T> formatter)	{ 
 			return formatter.andExpr(
 					Stream.of(lower_bound, upper_bound)
-					.map(range -> range.toExpression(dimension, formatter, context))
+					.map(range -> range.toExpression(dimension, formatter))
 					);
 		}
 
@@ -573,8 +573,8 @@ public abstract class Range {
 			}
 		}
 
-		public <T,U> T toExpression(String dimension, Formatter<T,U> formatter, U context)	{ 
-			return formatter.operExpr(dimension, "=", this.value, context); 
+		public <T> T toExpression(String dimension, Formatter<T> formatter)	{ 
+			return formatter.operExpr(dimension, "=", this.value); 
 		}
 
 		public Boolean mightEquals(Range range) {
@@ -1162,13 +1162,13 @@ public abstract class Range {
 			return null;
 		}
 
-		public <T,U> T toExpression(String dimension, Formatter<T,U> formatter, U context)	{ 
+		public <T> T toExpression(String dimension, Formatter<T> formatter)	{ 
 			Stream<Range> ranges = Stream.concat(
 					Stream.of(known_bounds), 
 					parametrized_bounds.values().stream()
 					);
 
-			return formatter.andExpr(ranges.map(range->range.toExpression(dimension, formatter, context)));
+			return formatter.andExpr(ranges.map(range->range.toExpression(dimension, formatter)));
 		}
 
 		public Boolean mightEquals(Intersection range) { 

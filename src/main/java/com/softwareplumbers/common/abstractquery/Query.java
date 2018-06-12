@@ -180,9 +180,9 @@ public class Query {
 	* @param {Context} [context] - context information
 	* @returns {Expression} expression - result expression. Typically a string but can be any type.
 	*/
-	public <T,U> T toExpression(Formatter<T,U> formatter, U context) {
+	public <T> T toExpression(Formatter<T> formatter) {
 		if (this.union.size() == 1) {
-			return this.union.get(0).toExpression(formatter,context);
+			return this.union.get(0).toExpression(formatter);
 		}
 		if (this.union.size() > 1) {
 			Cube factor = this.findFactor();
@@ -197,25 +197,25 @@ public class Query {
 						Stream.of(
 							formatter.andExpr(
 								Stream.of(
-									range.toExpression(dimension, formatter, context), 
-									result.factored.toExpression(formatter, context)
+									range.toExpression(dimension, formatter), 
+									result.factored.toExpression(formatter)
 								)
 							),
-							result.remainder.toExpression(formatter, context)
+							result.remainder.toExpression(formatter)
 						)
 					);
 
 				if (result.factored != null) 
 					return formatter.andExpr(
 						Stream.of(
-							range.toExpression(dimension, formatter, context), 
-							result.factored.toExpression(formatter, context)
+							range.toExpression(dimension, formatter), 
+							result.factored.toExpression(formatter)
 						)
 					);
 			} else {
 				return formatter.orExpr(
 						this.union.stream().map(
-							cube -> cube.toExpression(formatter, context)
+							cube -> cube.toExpression(formatter)
 						)
 					);
 			}
@@ -435,7 +435,7 @@ public class Query {
 	}
 	
 	public String toString() {
-		return toExpression(Formatter.DEFAULT_FORMAT, Formatter.DEFAULT_FORMAT_CONTEXT);
+		return toExpression(Formatter.DEFAULT);
 	}
 }
 

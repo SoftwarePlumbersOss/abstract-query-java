@@ -238,13 +238,12 @@ public class Cube {
 	 * information (for example, information about the parent scope of an expression).
 	 * 
 	 * @param formatter Object used to format an expression from this Cube
-	 * @param context Context such as parent scope
 	 * @return A formatted expression
 	 */
-	public <T,U> T toExpression(Formatter<T,U> formatter, U context) {
+	public <T> T toExpression(Formatter<T> formatter) {
 		return formatter.andExpr(
 			constraints.entrySet().stream().map(
-				entry -> entry.getValue().toExpression(entry.getKey(), formatter, context)
+				entry -> entry.getValue().toExpression(entry.getKey(), formatter)
 			)
 		);
 	}
