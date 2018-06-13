@@ -11,7 +11,6 @@ String propValue(String propName, String defValue) {
 }
 
 version = propValue("ci_version","master");
-
 group = "com.softwareplumbers.oss"
 
 // Apply the java-library plugin to add support for Java Library
@@ -45,5 +44,8 @@ dependencies {
 	testImplementation group: 'org.glassfish', name: 'javax.json', version: '1.1.2'
 }
 
+jar {
+  baseName 'abstract-query-java'
+}
 
 
