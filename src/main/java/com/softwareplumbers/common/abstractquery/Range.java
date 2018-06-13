@@ -31,11 +31,47 @@ import javax.json.JsonValue;
  */
 public abstract class Range {
 
+	/** Check if this range contain another range.
+	 * 
+	 * A range contains another range if every value in the contained range is also contained
+	 * by the containing range. Ranges may be parameterized, in which case this cannot always be
+	 * determined. 
+	 * 
+	 * @param range Range to compare to this range.
+	 * @return True if this range contains the given range, False if not, null if this cannot be determined
+	 */
 	public abstract Boolean contains(Range range);
+	
+	
+	/** Check if this range contains a value.
+	 * 
+	 * A range contains a value if the value meets the implied constraints.Ranges may be 
+	 * parameterized, in which case this cannot always be determined. 
+	 * 
+	 * @param range Range to compare to this range.
+	 * @return True if this range contains the given value, False if not, null if this cannot be determined
+	 */
 	public abstract Boolean containsItem(Value item);
+	
+	/** Create a new range that contains only those values contained by both ranges.
+	 * 
+	 * The intersection of two ranges contains all the values contained by both ranges.
+	 * 
+	 * @param range Range to intersect with this range.
+	 * @return intersection of the two ranges
+	 */	
 	public abstract Range intersect(Range range);
+	
+	/** Format a range into an expression using a formatter
+	 * 
+	 * @param dimension Name of dimension to use in formatter
+	 * @param formatter Formatter object to create expression
+	 * @return An expression (usually a string).
+	 */
 	public abstract <T> T toExpression(String dimension, Formatter<T> formatter);
+	
 	public String toString() { return toJSON().toString(); }
+	
 	public abstract JsonValue toJSON();
 	public abstract Range bind(Map<String,Value> parameters);
 	public abstract Boolean mightEquals(Range other);
@@ -51,7 +87,7 @@ public abstract class Range {
 
 	/** Object mapping of range operators to constructor functions
 	 *
-	 * | Operator String | Constructor Function 		|
+	 * | Operator String | Constructor Function 	|
 	 * |-----------------|---------------------------|
 	 * | ">"			 | Range.greaterThan 		|
 	 * | "<"			 | Range.LessThan 			|
@@ -128,6 +164,12 @@ public abstract class Range {
 		return lowerr.intersect(upperr);
 	}
 	
+	/**
+	 * 
+	 * @param lower
+	 * @param upper
+	 * @return
+	 */
 	public static Range between(Range lower, Range upper) {
 		if (lower instanceof LessThanOrEqual) return null;
 		if (lower instanceof LessThan) return null;
@@ -208,10 +250,7 @@ public abstract class Range {
 	 * ```
 	 * 	{tags : { $has: 'javascript'}}
 	 * ```
-	 * to select objects with the word 'javascript' in the tags array. This constraint can be constructed with: 
-	 * ```
-	 * 	{ tags: Range.has( Range.equals('javascript') ) }
-	 * ```
+	 * to select objects with the word 'javascript' in the tags array. 
 	 * @param bounds ranges that select items in the list
 	 * @returns {Range} a Range object
 	 */
@@ -227,11 +266,6 @@ public abstract class Range {
 	 * high-level object is matched or not. A trivial case would be a constraint that reads something like:
 	 * ```
 	 * 	{tags : { $hasAll: ['javascript','framework'] } }
-	 * ```
-	 * to select objects with the words 'javascript' and 'framework' in the tags array. This constraint can be 
-	 * constructed with: 
-	 * ```
-	 * 	{ tags: Range.hasAll( [Range.equals('javascript'),Range.equals('framework')] ) }
 	 * ```
 	 * @param bounds {Range[]} ranges that select items in the array
 	 * @returns {Range} a Range object

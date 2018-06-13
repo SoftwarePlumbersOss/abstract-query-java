@@ -3,6 +3,12 @@ package com.softwareplumbers.common.abstractquery;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import javax.json.Json;
+import javax.json.JsonArrayBuilder;
+import javax.json.JsonObject;
+import javax.json.JsonObjectBuilder;
+import javax.json.JsonValue;
+
 /** Format a Query
  * 
  * Used to walk the logical structure of a query, building a representation of
@@ -65,6 +71,34 @@ public interface Formatter<T> {
     			return printDimension(dimension) + operator + printValue(value) ;
     	}
 	};
-	
+
+	/** Get the default query formatter
+	*/
+	public static class JsonFormat implements Formatter<JsonValue> {
+				
+    	public JsonValue andExpr(Stream<JsonValue> ands) { 
+    		JsonArrayBuilder array = Json.createArrayBuilder();
+    		ands.forEach(value->array.add(value));
+    		JsonObjectBuilder object = Json.createObjectBuilder();
+    		object.add("$and", array);
+    		return object.build();
+    	}
+    	
+    	public JsonValue orExpr(Stream<JsonValue> ors) { 
+    		JsonArrayBuilder array = Json.createArrayBuilder();
+    		ors.forEach(value->array.add(value));
+    		JsonObjectBuilder object = Json.createObjectBuilder();
+    		object.add("$or", array);
+    		return object.build();
+    	}
+    	
+    	public JsonValue operExpr(String dimension, String operator, Value value) {
+    		JsonObjectBuilder object = Json.createObjectBuilder();
+    		object.add(dimension, Json.createObjectBuilder().add(operator, value.toJSON()));
+    		return object.build();
+    	}
+	};
+
 	public Formatter<String> DEFAULT = new DefaultFormat(null, null);
+	public Formatter<JsonValue> JSON = new JsonFormat();
 }

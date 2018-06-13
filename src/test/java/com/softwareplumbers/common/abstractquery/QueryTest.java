@@ -5,6 +5,8 @@ import org.junit.Test;
 
 import static org.junit.Assert.*;
 
+import javax.json.JsonObject;
+
 
 public class QueryTest {
 
@@ -340,4 +342,37 @@ public class QueryTest {
 		Query query = Query.from("{ '$and': [ {'x':[2,5]}, {'x':[4,7]} ]}");
 		assertEquals("x>=4 and x<5", query.toString());
 	}
+	
+	@Test
+	public void canCreateJsonOutput() {
+    	Query query = Query
+        		.from("{'x': [null,2], 'y': 4}")
+        		.and(Query.from("{ 'z': 5}"))
+        		.or(Query.from("{'x':[6,8], 'y':3, 'z':99}"));
+    	JsonObject json = query.toJSON();
+    	assertEquals("{\"$or\":[{\"x\":{\"<\":2},\"y\":4,\"z\":5},{\"x\":[6,8],\"y\":3,\"z\":99}]}", json.toString());
+	}
+	
+	@Test
+	public void canRoundtripJsonOutput() {
+    	Query query = Query
+        		.from("{'x': [null,2], 'y': 4}")
+        		.and(Query.from("{ 'z': 5}"))
+        		.or(Query.from("{'x':[6,8], 'y':3, 'z':99}"));
+    	JsonObject json = query.toJSON();
+    	Query query2 = Query.from(json);
+    	assertEquals(query, query2);
+ 	}
+
+	@Test
+	public void canRoundtripUrlEncodedOutput() {
+    	Query query = Query
+        		.from("{'x': [null,2], 'y': 4}")
+        		.and(Query.from("{ 'z': 5}"))
+        		.or(Query.from("{'x':[6,8], 'y':3, 'z':99}"));
+    	String encoded = query.urlEncode();
+    	Query query2 = Query.urlDecode(encoded);
+    	assertEquals(query, query2);
+ 	}
+
 }

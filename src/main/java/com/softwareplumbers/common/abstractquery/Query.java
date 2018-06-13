@@ -2,12 +2,15 @@ package com.softwareplumbers.common.abstractquery;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import javax.json.Json;
+import javax.json.JsonArrayBuilder;
 import javax.json.JsonObject;
 import java.util.Iterator;
 
@@ -458,5 +461,31 @@ public class Query {
 	public String toString() {
 		return toExpression(Formatter.DEFAULT);
 	}
+	
+	public JsonObject toJSON() {
+		JsonArrayBuilder builder = Json.createArrayBuilder();
+		for (Cube cube : union) builder.add(cube.toJSON());
+		return Json.createObjectBuilder().add("$or", builder).build();
+	}
+	
+	/** Convert query to something that is URL-safe.
+	 * 
+	 * @return A url-safe string
+	 */
+	public String urlEncode() {
+		// TODO: maybe do this better, like use JSURL. Or alternatively add compression?
+		return Base64.getUrlEncoder().encodeToString(toJSON().toString().getBytes());
+	}
+
+	/** Read a query from url-safe representation
+	 * 
+	 * @param query An url-safe representation, as originally returned by urlEncode()
+	 * @return A query
+	 */
+	public static Query urlDecode(String query) {
+		// TODO: maybe do this better, like use JSURL. Or alternatively add compression?
+		return Query.from(new String(Base64.getUrlDecoder().decode(query)));
+	}
+
 }
 
