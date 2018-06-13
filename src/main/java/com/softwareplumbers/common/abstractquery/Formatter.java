@@ -1,5 +1,6 @@
 package com.softwareplumbers.common.abstractquery;
 
+import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -27,6 +28,8 @@ public interface Formatter<T> {
 	T andExpr(Stream<T> expressions);
 	/** Create a representation of a union of constraints */
 	T orExpr(Stream<T> expressions);
+	
+	T subExpr(String dimension, String operator, Stream<Range> items);
 	
 	
 	/** Get the default query formatter
@@ -70,6 +73,11 @@ public interface Formatter<T> {
 
     			return printDimension(dimension) + operator + printValue(value) ;
     	}
+    	
+    	public String subExpr(String dimension, String operator, Stream<Range> ranges) {
+    		// TODO: implement
+    		return null;
+    	}
 	};
 
 	/** Get the default query formatter
@@ -96,6 +104,11 @@ public interface Formatter<T> {
     		JsonObjectBuilder object = Json.createObjectBuilder();
     		object.add(dimension, Json.createObjectBuilder().add(operator, value.toJSON()));
     		return object.build();
+    	}
+    	
+    	public JsonValue subExpr(String dimension, String operator, Stream<Range> ranges) {
+    		// TODO: implement
+    		return null;
     	}
 	};
 
