@@ -3,6 +3,7 @@ package com.softwareplumbers.common.abstractquery;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -38,6 +39,8 @@ import java.util.Iterator;
 * expression like `a and (c or d)` instead of `(a and c) or (a and d)`.
 */
 public class Query {
+	
+	public static final Query UNBOUNDED = new Query();
 
 	private List<Cube> union;
 
@@ -56,6 +59,10 @@ public class Query {
 	*/
 	public Query(List<Cube> cubes) {
 		this.union = cubes;
+	}
+	
+	public Query() {
+		this.union = Collections.singletonList(Cube.UNBOUNDED);
 	}
 
 	/** Create a query from an constraint object 

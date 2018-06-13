@@ -18,6 +18,8 @@ import javax.json.JsonObject;
  *
  */
 public class Cube {
+	
+	public static final Cube UNBOUNDED = new Cube();
 
 	private Map<String,Range> constraints;
 
@@ -73,6 +75,10 @@ public class Cube {
 	 */
 	public Cube(String json) {
 		this(JsonUtil.parseObject(json));
+	}
+	
+	public Cube() {
+		this.constraints = new HashMap<String,Range>();
 	}
 
 	/** Get the constraint for a given dimension
