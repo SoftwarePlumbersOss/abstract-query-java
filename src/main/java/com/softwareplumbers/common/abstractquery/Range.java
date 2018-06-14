@@ -286,24 +286,24 @@ public abstract class Range implements CanFormat {
 	 * @return true if obj has operator property.
 	 */
 	static boolean isRange(JsonValue obj)	{ 
-		return isOpenRange(obj) || isClosedRange(obj) || Value.isValue(obj);
+		return isOpenRange(obj) || isClosedRange(obj) || Value.isAtomicValue(obj);
 	}
 
 	static boolean isOpenRange(JsonValue obj)	{ 
 		if (obj instanceof JsonObject) {
 			JsonObject asObj = (JsonObject)obj;
 			return asObj.keySet().stream()
-					.anyMatch(key -> RANGE_OPERATORS.containsKey(key) && Value.isValue(asObj.get(key)));
+					.anyMatch(key -> RANGE_OPERATORS.containsKey(key) && Value.isAtomicValue(asObj.get(key)));
 		}
 		return false;
 	}
 
 	static boolean isOpenRangeOrValue(JsonValue obj)	{ 
-		return Value.isValue(obj) || isOpenRange(obj);
+		return Value.isAtomicValue(obj) || isOpenRange(obj);
 	}
 
 	static boolean isOpenRangeValueOrNull(JsonValue obj)	{ 
-		return obj == JsonValue.NULL || Value.isValue(obj) || isOpenRange(obj);
+		return obj == JsonValue.NULL || Value.isAtomicValue(obj) || isOpenRange(obj);
 	}
 	static boolean isClosedRange(JsonValue obj) {
 		if (obj instanceof JsonArray) {
@@ -331,7 +331,7 @@ public abstract class Range implements CanFormat {
 
 			if (propname.isPresent()) {
 				JsonValue value = asObj.get(propname.get());
-				return Value.isValue(value) ? getRange(propname.get(), Value.from(value)) : null;
+				return Value.isAtomicValue(value) ? getRange(propname.get(), Value.from(value)) : null;
 			} else if (asObj.containsKey("$")) {
 				return Range.equals(Param.from(asObj));
 			} else {
@@ -357,7 +357,7 @@ public abstract class Range implements CanFormat {
 
 		if (propname.isPresent()) {
 			JsonValue value = obj.get(propname);
-			return Value.isValue(value) ? getRange(propname.get(), Value.from(value)) : null;
+			return Value.isAtomicValue(value) ? getRange(propname.get(), Value.from(value)) : null;
 		} else {
 			return null;
 		}

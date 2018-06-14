@@ -44,11 +44,10 @@ public class Value implements Comparable<Value> {
 	}
 	
 	/** Check if the supplied json value can be converted into a Value */
-	public static boolean isValue(JsonValue obj) {
+	public static boolean isAtomicValue(JsonValue obj) {
 		return 		(obj instanceof JsonNumber) 
-				|| 	(obj instanceof JsonString) 
-				|| 	(obj instanceof JsonArray) 
-				||  (obj instanceof JsonObject);
+				|| 	(obj instanceof JsonString)
+				||  (obj instanceof JsonObject && ((JsonObject)obj).containsKey("$"));
 	}
 
 	/** Convert from a JSON value 
