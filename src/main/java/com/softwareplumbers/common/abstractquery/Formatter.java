@@ -129,6 +129,8 @@ public interface Formatter<T> {
     	}
 	};
 
+	/** Default formatter creates a compact string expression */
 	public Formatter<String> DEFAULT = new DefaultFormat(null, null);
+	/** Default JSON creates a JSON representation */
 	public Formatter<JsonValue> JSON = new JsonFormat(null);
 }
