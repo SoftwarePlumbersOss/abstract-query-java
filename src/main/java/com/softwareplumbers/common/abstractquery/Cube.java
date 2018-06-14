@@ -249,7 +249,7 @@ public class Cube {
 	public <T> T toExpression(Formatter<T> formatter) {
 		return formatter.andExpr(
 			constraints.entrySet().stream().map(
-				entry -> entry.getValue().toExpression(entry.getKey(), formatter)
+				entry -> entry.getValue().toExpression(formatter.in(entry.getKey()))
 			)
 		);
 	}

@@ -21,6 +21,8 @@ import javax.json.JsonObject;
 import javax.json.JsonObjectBuilder;
 import javax.json.JsonValue;
 
+import com.softwareplumbers.common.abstractquery.Formatter.CanFormat;
+
 /** Range is an abstract class representing a range of values.
  *
  * Objects extending range should implement 'contains', 'intersect', 'equals', and 'bind' operations.
@@ -33,7 +35,7 @@ import javax.json.JsonValue;
  * usually of some subclass of range).
  *
  */
-public abstract class Range {
+public abstract class Range implements CanFormat {
 
 	/** Check if this range contain another range.
 	 * 
@@ -68,11 +70,10 @@ public abstract class Range {
 	
 	/** Format a range into an expression using a formatter
 	 * 
-	 * @param dimension Name of dimension to use in formatter
 	 * @param formatter Formatter object to create expression
 	 * @return An expression (usually a string).
 	 */
-	public abstract <T> T toExpression(String dimension, Formatter<T> formatter);
+	public abstract <T> T toExpression(Formatter<T> formatter);
 	
 	public String toString() { return toJSON().toString(); }
 	
@@ -431,8 +432,8 @@ public abstract class Range {
 			return range;
 		}
 
-		public <T> T toExpression(String dimension, Formatter<T> formatter)	{ 
-			return formatter.operExpr(dimension, "=", Value.from("*")); 
+		public <T> T toExpression(Formatter<T> formatter)	{ 
+			return formatter.operExpr("=", Value.from("*")); 
 		}
 
 		public Boolean mightEquals(Range range)	{ return range instanceof Unbounded; }
@@ -462,8 +463,8 @@ public abstract class Range {
 			this.operator = operator;
 		}
 
-		public <T> T toExpression(String dimension, Formatter<T> formatter)	{ 
-			return formatter.operExpr(dimension, this.operator, this.value); 
+		public <T> T toExpression(Formatter<T> formatter)	{ 
+			return formatter.operExpr(this.operator, this.value); 
 		}
 
 		public Boolean mightEquals(Range range)	{ 
@@ -537,10 +538,10 @@ public abstract class Range {
 			return null;
 		}
 
-		public <T> T toExpression(String dimension, Formatter<T> formatter)	{ 
+		public <T> T toExpression(Formatter<T> formatter)	{ 
 			return formatter.andExpr(
 					Stream.of(lower_bound, upper_bound)
-					.map(range -> range.toExpression(dimension, formatter))
+					.map(range -> range.toExpression(formatter))
 					);
 		}
 
@@ -611,8 +612,8 @@ public abstract class Range {
 			}
 		}
 
-		public <T> T toExpression(String dimension, Formatter<T> formatter)	{ 
-			return formatter.operExpr(dimension, "=", this.value); 
+		public <T> T toExpression(Formatter<T> formatter)	{ 
+			return formatter.operExpr("=", this.value); 
 		}
 
 		public Boolean mightEquals(Range range) {
@@ -1138,8 +1139,8 @@ public abstract class Range {
 			throw new RuntimeException("Can't mix array operations and scalar operations on a single field");
 		}
 
-		public <T> T toExpression(String dimension, Formatter<T> formatter) { 
-			return formatter.subExpr(dimension, OPERATOR, bounds.stream());
+		public <T> T toExpression(Formatter<T> formatter) { 
+			return formatter.subExpr(OPERATOR, bounds.stream().map(range->range.toExpression(formatter)));
 		}
 
 		public boolean equals(Range range) { 
@@ -1332,13 +1333,13 @@ public abstract class Range {
 			return null;
 		}
 
-		public <T> T toExpression(String dimension, Formatter<T> formatter)	{ 
+		public <T> T toExpression(Formatter<T> formatter)	{ 
 			Stream<Range> ranges = Stream.concat(
 					Stream.of(known_bounds), 
 					parametrized_bounds.values().stream()
 					);
 
-			return formatter.andExpr(ranges.map(range->range.toExpression(dimension, formatter)));
+			return formatter.andExpr(ranges.map(range->range.toExpression(formatter)));
 		}
 
 		public Boolean mightEquals(Intersection range) { 

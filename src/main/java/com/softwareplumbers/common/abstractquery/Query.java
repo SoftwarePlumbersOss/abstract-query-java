@@ -230,7 +230,7 @@ public class Query {
 						Stream.of(
 							formatter.andExpr(
 								Stream.of(
-									range.toExpression(dimension, formatter), 
+									range.toExpression(formatter.in(dimension)), 
 									result.factored.toExpression(formatter)
 								)
 							),
@@ -241,7 +241,7 @@ public class Query {
 				if (result.factored != null) 
 					return formatter.andExpr(
 						Stream.of(
-							range.toExpression(dimension, formatter), 
+							range.toExpression(formatter.in(dimension)), 
 							result.factored.toExpression(formatter)
 						)
 					);
