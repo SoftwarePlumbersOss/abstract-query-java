@@ -1,5 +1,9 @@
 package com.softwareplumbers.common.abstractquery;
 
+import java.util.Map;
+
+import javax.json.JsonValue;
+
 public interface AbstractSet<T extends Value, U extends AbstractSet<T,U>> {
 	
 	/** Create a new range that contains only those values contained by both ranges.
@@ -36,4 +40,8 @@ public interface AbstractSet<T extends Value, U extends AbstractSet<T,U>> {
 	Boolean maybeEquals(U other);
 	
 	<U> U toExpression(Formatter<U> formatter);
+	
+	JsonValue toJSON();
+	
+	U bind(Map<Param,Value> values);
 }

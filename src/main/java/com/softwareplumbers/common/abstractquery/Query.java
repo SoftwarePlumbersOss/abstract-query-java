@@ -172,9 +172,9 @@ public class Query {
 	
 	private static class Bucket {
 		public final String dimension;
-		public final Range range;
+		public final AbstractSet<? extends Value, ?> range;
 		public int count = 1;
-		public Bucket(String dimension, Range range) {
+		public Bucket(String dimension, AbstractSet<? extends Value, ?> range) {
 			this.dimension = dimension;
 			this.range = range;
 		}
@@ -222,7 +222,7 @@ public class Query {
 
 			if (factor != null) {
 				String dimension = factor.getDimensions().iterator().next();
-				Range range = factor.getConstraint(dimension);
+				AbstractSet<? extends Value, ?> range = factor.getConstraint(dimension);
 				FactorResult result = this.factor(factor);
 
 				if (result.factored != null && result.remainder != null) 
@@ -377,7 +377,7 @@ public class Query {
 	* @param item to test
 	* @returns true, false or null
 	*/
-	public boolean containsItem(Value.MapValue<?> item) {
+	public boolean containsItem(Value.MapValue item) {
 		for (Cube c : this.union) {
 			Boolean contains_item = c.containsItem(item);
 			if (contains_item == null || contains_item) return contains_item;

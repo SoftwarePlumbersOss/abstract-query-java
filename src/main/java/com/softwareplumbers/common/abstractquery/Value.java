@@ -148,15 +148,15 @@ public abstract class Value {
 		}
 	}
 	
-	public static class MapValue<T> extends Value {
+	public static class MapValue extends Value {
 		
-		private final Map<String,T> map; 
-		private final Function<T,Value> makeValue; 
+		private final Map<String,?> map; 
+		private final Function<Object,Value> makeValue; 
 		
-		private MapValue(Map<String,T> map, Function<T,Value> makeValue) {
+		private <T> MapValue(Map<String,T> map, Function<T,Value> makeValue) {
 			super(Type.MAP);
 			this.map = map;
-			this.makeValue = makeValue;
+			this.makeValue = (Function<Object,Value>)makeValue;
 		}
 		
 		/** Get the set of valid property names in this value.
@@ -175,10 +175,10 @@ public abstract class Value {
 		 */
 		public Value getProperty(String key) {
 			if (!propertySet().contains(key)) throw new IllegalArgumentException("No such property " + key);
-			return makeValue.apply(map.get(key));
+			return (Value)makeValue.apply(map.get(key));
 		}
 		
-		private static <T,U> Boolean compareEntries(Function<T,Value> makeValue1, Function<U,Value> makeValue2, Map.Entry<String, T> entry1, Map.Entry<String, U> entry2) {
+		private static <T,U> Boolean compareEntries(Function<Object,Value> makeValue1, Function<Object,Value> makeValue2, Map.Entry<String, ?> entry1, Map.Entry<String, ?> entry2) {
 			if (entry1.getKey().equals(entry2.getKey())) {
 				return makeValue1.apply(entry1.getValue()).maybeEquals(makeValue2.apply(entry2.getValue()));
 			} else {
@@ -186,7 +186,7 @@ public abstract class Value {
 			}
 		}
 		
-		public <U> Boolean maybeEquals(MapValue<U> other) {
+		public Boolean maybeEquals(MapValue other) {
 			return Tristate.compareCollections(
 					map.entrySet(), 
 					other.map.entrySet(), 
@@ -196,7 +196,7 @@ public abstract class Value {
 		
 		public Boolean maybeEquals(Value other) {
 			if (other.type == Type.MAP)
-				return maybeEquals((MapValue<?>)other);
+				return maybeEquals((MapValue)other);
 			else
 				return false;
 		}
@@ -214,27 +214,27 @@ public abstract class Value {
 			return builder.build();
 		}
 		
-		public static MapValue<JsonValue> from(JsonObject o) {
-			return new MapValue<JsonValue>(o, Value::from);
+		public static MapValue from(JsonObject o) {
+			return new MapValue(o, Value::from);
 		}
 		
-		public static MapValue<JsonValue> fromJson(String json) {
+		public static MapValue fromJson(String json) {
 			return from(JsonUtil.parseObject(json));
 		}
 	}
 	
-	public static class ArrayValue<T> extends Value {
-		private final List<T> data; 
-		private final Function<T,Value> makeValue; 
+	public static class ArrayValue extends Value {
+		private final List<?> data; 
+		private final Function<Object,Value> makeValue; 
 		
-		private ArrayValue(List<T> data, Function<T,Value> makeValue) {
+		private <T> ArrayValue(List<T> data, Function<T,Value> makeValue) {
 			super(Type.ARRAY);
 			this.data = data;
-			this.makeValue = makeValue;
+			this.makeValue = (Function<Object,Value>)makeValue;
 		}
 
-		public static ArrayValue<JsonValue> from(JsonArray value) {
-			return new ArrayValue<JsonValue>(value, Value::from);
+		public static ArrayValue from(JsonArray value) {
+			return new ArrayValue(value, Value::from);
 		}
 		
 		/** Get the size of the array
@@ -252,18 +252,18 @@ public abstract class Value {
 			return makeValue.apply(data.get(index));
 		}
 		
-		private static <T,U> Boolean compareValues(Function<T,Value> makeValue1, Function<U,Value> makeValue2, T value1, U value2) {
+		private static Boolean compareValues(Function<Object,Value> makeValue1, Function<Object,Value> makeValue2, Object value1, Object value2) {
 			return makeValue1.apply(value1).maybeEquals(makeValue2.apply(value2));
 		}
 		
-		public <U> Boolean maybeEquals(ArrayValue<U> other) {
+		public Boolean maybeEquals(ArrayValue other) {
 			return Tristate.compareCollections(data, other.data, (e1,e2)->compareValues(makeValue, other.makeValue, e1, e2));
 		}
 
 		@Override
 		public Boolean maybeEquals(Value other) {
 			if (other.type == Type.ARRAY) {
-				return maybeEquals((ArrayValue<?>)other);
+				return maybeEquals((ArrayValue)other);
 			} else {
 				return false;
 			}
@@ -323,7 +323,7 @@ public abstract class Value {
 			if (Param.isParam(asObj)) {
 				return from(Param.from(asObj));
 			} else {
-				return from(new MapValue<JsonValue>(asObj, Value::from));
+				return from(new MapValue(asObj, Value::from));
 			}
 		} else if (obj instanceof JsonArray) {
 			from((JsonArray)obj);
@@ -348,8 +348,8 @@ public abstract class Value {
 	 *  POJO supported by from(value). Care should be taken if the list contains mutable java
 	 *  objects. 
 	 */
-	public static ArrayValue<Object> from(List<Object> values) {
-		return new ArrayValue<Object>(new ArrayList<Object>(values), Value::from);
+	public static ArrayValue from(List<Object> values) {
+		return new ArrayValue(new ArrayList<Object>(values), Value::from);
 	}
 
 
@@ -358,7 +358,7 @@ public abstract class Value {
 	 * The values array is not copied.
 	 */
 	public static Value from(Object... values) {
-		return new ArrayValue<Object>(Arrays.asList(values), Value::from);
+		return new ArrayValue(Arrays.asList(values), Value::from);
 	}
 
 	/** Convert from a POJO 
@@ -374,7 +374,7 @@ public abstract class Value {
 		if (value instanceof String) return from((String)value);
 		if (value instanceof Param) return from((Param)value);
 		if (value instanceof JsonValue) return Value.from((JsonValue) value);
-		return new MapValue<Object>((Map)new BeanMap(value), Value::from);
+		return new MapValue((Map)new BeanMap(value), Value::from);
 	}
 	
 	/** Convenience method equivalent to from(JsonUtil.parseValue(value) */

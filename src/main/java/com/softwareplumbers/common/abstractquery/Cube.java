@@ -17,17 +17,17 @@ import javax.json.JsonObject;
 /** A cube maps each dimension in an abstract space to a range.
  *
  */
-public class Cube {
+public class Cube implements AbstractSet<Value.MapValue, Cube>{
 	
 	public static final Cube UNBOUNDED = new Cube();
 
-	private Map<String,Range> constraints;
+	private Map<String, AbstractSet<? extends Value, ?>> constraints;
 
 	/** Create a new cube
 	 * 
 	 * @param constraints A map from dimension name to a range of values.
 	 */
-	public Cube(Map<String,Range> constraints) {
+	public Cube(Map<String, AbstractSet<? extends Value,?>> constraints) {
 		this.constraints = constraints;
 	}
 	
@@ -36,7 +36,7 @@ public class Cube {
 	 * @param to_copy A cube to copy
 	 */
 	public Cube(Cube to_copy) {
-		this.constraints = new HashMap<String, Range>(to_copy.constraints);
+		this.constraints = new HashMap<String, AbstractSet<? extends Value,?>>(to_copy.constraints);
 	}
 	
 	/** Create a 'one dimensional' cube
@@ -44,8 +44,8 @@ public class Cube {
 	 * @param dimension name of a dimension
 	 * @param range permitted range for that dimension
 	 */
-	public Cube(String dimension, Range range) {
-		this.constraints = new HashMap<String, Range>();
+	public Cube(String dimension, AbstractSet<? extends Value,?> range) {
+		this.constraints = new HashMap<String, AbstractSet<? extends Value,?>>();
 		this.constraints.put(dimension, range);
 	}
 	
@@ -56,7 +56,7 @@ public class Cube {
 	 * @param json object with properties that are valid ranges
 	 */
 	public Cube(JsonObject json) {
-		this.constraints = new HashMap<String, Range>();
+		this.constraints = new HashMap<String, AbstractSet<? extends Value,?>>();
 		for (Map.Entry<String, JsonValue> entry : json.entrySet()) {
 			Range range = Range.from(entry.getValue());
 			if (range == null) throw new IllegalArgumentException("Don't know what to do with:" + entry.getKey());
@@ -78,7 +78,7 @@ public class Cube {
 	}
 	
 	public Cube() {
-		this.constraints = new HashMap<String,Range>();
+		this.constraints = new HashMap<String,AbstractSet<? extends Value,?>>();
 	}
 
 	/** Get the constraint for a given dimension
@@ -89,7 +89,7 @@ public class Cube {
 	 * @param dimension the name of the dimension
 	 * @return the range of values permitted for the given dimension
 	 */
-	public Range getConstraint(String dimension) {
+	public AbstractSet<? extends Value,?> getConstraint(String dimension) {
 		return constraints.get(dimension);
 	}
 	
@@ -126,6 +126,13 @@ public class Cube {
 		return other instanceof Cube && equals((Cube)other);
 	}
 	
+	private <T extends Value,U extends AbstractSet<T,U>> Boolean containsConstraint(String dimension, Cube other) {
+		// We should do some type checking here.
+		U thisConstraint = (U)constraints.get(dimension);
+		U otherConstraint = (U)other.constraints.get(dimension);
+		return thisConstraint.contains(otherConstraint);
+	}
+	
 	/** Check whether this cube contains some other cube
 	 * 
 	 * A cube contains another cube if there is no possible value which
@@ -139,14 +146,21 @@ public class Cube {
 	 * @return true if this cube contains the other cube, false if not, null if we cannot tell.
 	 */
 	public Boolean contains(Cube other) {
-		Optional<Boolean> nomatch = constraints.entrySet().stream()
-				.map(entry -> entry.getValue().contains(other.getConstraint(entry.getKey())))
+		Optional<Boolean> nomatch = constraints.keySet().stream()
+				.map(key -> containsConstraint(key, other))
 				.filter(result -> result != Boolean.TRUE)
 				.findAny();
 				
 		return nomatch.isPresent() ? nomatch.get() : Boolean.TRUE;
 	}
 
+	private <T extends Value,U extends AbstractSet<T,U>> Boolean containsItem(String dimension, Value.MapValue item) {
+		// TODO: We should do some type checking here. Notionally that element.type equals constraint.type
+		U constraint = (U)constraints.get(dimension);
+		T element = (T)item.getProperty(dimension);
+		return constraint.containsItem(element);
+	}
+	
 	/** Check whether this cube contains some value
 	 * 
 	 * A cube contains a value if the value meets constraints on every dimension of
@@ -158,12 +172,19 @@ public class Cube {
 	 * @param item Item to compare
 	 * @return true if this cube contains the item, false if not, null if we cannot tell.
 	 */
-	public Boolean containsItem(Value.MapValue<?> item) {
-		return Tristate.every(constraints.entrySet(),
-				entry -> entry.getValue().containsItem((Value.Atomic)item.getProperty(entry.getKey())));		
+	public Boolean containsItem(Value.MapValue item) {
+		return Tristate.every(constraints.keySet(),
+				entry -> containsItem(entry, item));		
 	}
 	
-
+	private <T extends Value,U extends AbstractSet<T,U>> U intersect(String dimension, Cube other) {
+		// TODO: We should do some type checking here. Notionally that constraint1.type equals constraint2.type
+		U constraint1 = (U)constraints.get(dimension);
+		U constraint2 = (U)other.constraints.get(dimension);
+		if (constraint1 == null) return constraint2;
+		if (constraint2 == null) return constraint1;
+		return constraint1.intersect(constraint2);
+	}
 
 	/** Intersect this cube with some other
 	 * 
@@ -174,29 +195,25 @@ public class Cube {
 	 */
 	public Cube intersect(Cube other) {
 
-		HashMap<String,Range> result = new HashMap<String,Range>(constraints);
-		result.putAll(other.constraints);
-
-		for (String dimension : result.keySet()) {
-			Range this_range = constraints.get(dimension);
-			Range other_range = other.constraints.get(dimension);
-			if (this_range != null && other_range != null) {
-				Range range_intersection = this_range.intersect(other_range);
-				if (range_intersection == null) return null;
-				result.put(dimension, range_intersection);
-			}
+		Map<String, AbstractSet<? extends Value, ?>> result = new HashMap<String, AbstractSet<? extends Value, ?>>();
+		result.putAll(constraints);
+		
+		for (String dimension : other.constraints.keySet()) {
+			AbstractSet<? extends Value, ?> intersection = intersect(dimension, other);
+			if (intersection == null) return null;
+			result.put(dimension, intersection);
 		}
 
 		return new Cube(result);
 	}
 	
 	// TODO: I don't think this is quite right.
-	private void removeConstraint(String dimension, Range range) {
-		Range constraint = constraints.get(dimension);
-		if (constraint != null && constraint.equals(range)) {
+	private void removeConstraint(String dimension, AbstractSet<? extends Value,?> constraint) {
+		AbstractSet<? extends Value,?> this_constraint = constraints.get(dimension);
+		if (this_constraint != null && this_constraint.equals(constraint)) {
 			constraints.remove(dimension);
 		} else {
-			throw new IllegalArgumentException( "{ " + dimension + ":" + range + "} is not a factor of " + this );
+			throw new IllegalArgumentException( "{ " + dimension + ":" + constraint + "} is not a in " + this );
 		}
 	}
 
@@ -207,7 +224,7 @@ public class Cube {
 	 */
 	public Cube removeConstraints(Cube to_remove) {
 		Cube result = new Cube(this);
-		for (Map.Entry<String,Range> constraint : to_remove.constraints.entrySet()) 
+		for (Map.Entry<String,AbstractSet<? extends Value,?>> constraint : to_remove.constraints.entrySet()) 
 			result.removeConstraint(constraint.getKey(), constraint.getValue());
 		return result;
 	}
@@ -230,7 +247,7 @@ public class Cube {
 	 */
 	public JsonValue toJSON() {
 		JsonObjectBuilder builder = Json.createObjectBuilder();
-		for (Map.Entry<String, Range> entry : constraints.entrySet())
+		for (Map.Entry<String, AbstractSet<? extends Value,?>> entry : constraints.entrySet())
 			builder.add(entry.getKey(), entry.getValue().toJSON());
 		return builder.build();
 	}
@@ -260,9 +277,9 @@ public class Cube {
 	 * @return A cube with any matching parameters substituted with the given values.
 	 */
 	public Cube bind(Map<Param, Value> parameters) {
-		HashMap<String,Range> new_constraints = new HashMap<String,Range>();
-		for (Map.Entry<String,Range> entry : constraints.entrySet()) {
-			Range new_constraint = entry.getValue().bind(parameters);
+		HashMap<String,AbstractSet<? extends Value,?>> new_constraints = new HashMap<String,AbstractSet<? extends Value,?>>();
+		for (Map.Entry<String,AbstractSet<? extends Value,?>> entry : constraints.entrySet()) {
+			AbstractSet<? extends Value,?> new_constraint = entry.getValue().bind(parameters);
 			if (new_constraint != null)
 				new_constraints.put(entry.getKey(), new_constraint);
 			else
@@ -306,6 +323,24 @@ public class Cube {
 				)
 			)
 		);
+	}
+
+	@Override
+	public Cube union(Cube other) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	private <T extends Value,U extends AbstractSet<T,U>> Boolean maybeEquals(String dimension, Cube other) {
+		U constraint1 = (U)constraints.get(dimension);
+		U constraint2 = (U)other.constraints.get(dimension);
+		if (constraint1 == null || constraint2 == null) return Boolean.FALSE;
+		return constraint1.maybeEquals(constraint2);
+	}
+	
+	@Override
+	public Boolean maybeEquals(Cube other) {
+		return Tristate.every(constraints.keySet(), dimension->maybeEquals(dimension, other));
 	}
 }
 
