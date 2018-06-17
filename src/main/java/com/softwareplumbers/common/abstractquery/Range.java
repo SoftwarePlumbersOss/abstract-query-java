@@ -2,8 +2,6 @@ package com.softwareplumbers.common.abstractquery;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -32,61 +30,19 @@ import com.softwareplumbers.common.abstractquery.Value.Atomic;
  * usually of some subclass of range).
  *
  */
-public abstract class Range implements AbstractSet<Value.Atomic, Range> {
-
-	/** Check if this range contain another range.
-	 * 
-	 * A range contains another range if every value in the contained range is also contained
-	 * by the containing range. Ranges may be parameterized, in which case this cannot always be
-	 * determined. 
-	 * 
-	 * @param range Range to compare to this range.
-	 * @return True if this range contains the given range, False if not, null if this cannot be determined
-	 */
-	public abstract Boolean contains(Range range);
+public interface Range extends AbstractSet<Value.Atomic, Range> {
 	
+	public Range merge(Range other);
 	
-	/** Check if this range contains a value.
-	 * 
-	 * A range contains a value if the value meets the implied constraints.Ranges may be 
-	 * parameterized, in which case this cannot always be determined. 
-	 * 
-	 * @param range Range to compare to this range.
-	 * @return True if this range contains the given value, False if not, null if this cannot be determined
-	 */
-	public abstract Boolean containsItem(Value.Atomic item);
-	
-	/** Create a new range that contains only those values contained by both ranges.
-	 * 
-	 * The intersection of two ranges contains all the values contained by both ranges.
-	 * 
-	 * @param range Range to intersect with this range.
-	 * @return intersection of the two ranges
-	 */	
-	public abstract Range intersect(Range range);
-	
-	/** Format a range into an expression using a formatter
-	 * 
-	 * @param formatter Formatter object to create expression
-	 * @return An expression (usually a string).
-	 */
-	public abstract <U> U toExpression(Formatter<U> formatter);
-	
-	public String toString() { return toJSON().toString(); }
-	
-	public abstract JsonValue toJSON();
-	public abstract Range bind(Map<Param,Value> parameters);
-	
-	public boolean equals(Range other) {
+	public default boolean equals(Range other) {
 		Boolean mightEqual = maybeEquals(other);
 		return mightEqual == Boolean.TRUE;
 	}
 	
-	@SuppressWarnings("unchecked")
-	public boolean equals(Object other) {
-		return other instanceof Range && equals((Range)other);
+	public default Range union(Range other) {
+		return from(this, other);
 	}
-
+	
 	/** Object mapping of range operators to constructor functions
 	 *
 	 * | Operator String | Constructor Function 	|
@@ -127,7 +83,7 @@ public abstract class Range implements AbstractSet<Value.Atomic, Range> {
 	 * @param value - value to search for
 	 * @returns a Range object
 	 */
-	public static  Range equals(Value.Atomic value) 				
+	public static Range equals(Value.Atomic value) 				
 	{ return new Equals(value); }
 
 	/** Create a range containing values less than a given value 
@@ -334,7 +290,7 @@ public abstract class Range implements AbstractSet<Value.Atomic, Range> {
 	 *
 	 * @private
 	 */
-	private static class Unbounded extends Range {
+	public static class Unbounded implements Range {
 
 		public Boolean contains(Range range) {
 			return true;
@@ -349,6 +305,10 @@ public abstract class Range implements AbstractSet<Value.Atomic, Range> {
 			return range;
 		}
 
+		public Boolean intersects(Range range) {
+			return Boolean.TRUE;
+		}
+		
 		public <U> U toExpression(Formatter<U> formatter)	{ 
 			return formatter.operExpr("=", Value.from("*")); 
 		}
@@ -358,6 +318,10 @@ public abstract class Range implements AbstractSet<Value.Atomic, Range> {
 		}
 
 		public Boolean maybeEquals(Range range)	{ return range instanceof Unbounded; }
+		
+		public boolean equals(Object other) {
+			return other instanceof Range && maybeEquals((Range)other) == Boolean.TRUE;
+		}
 
 		public JsonValue toJSON() {
 			// TODO: fixme
@@ -367,13 +331,21 @@ public abstract class Range implements AbstractSet<Value.Atomic, Range> {
 		public Range bind(Map<Param,Value> parameters) {
 			return this;
 		}
+		
+		public Range merge(Range other) {
+			return this;
+		}
+		
+		public String toString() {
+			return toExpression(Formatter.DEFAULT);
+		}
 	}
 
 	/** Base class for ranges with a single bound (e.g. less than, greater than etc.)
 	 *
 	 * @private
 	 */
-	private static abstract class OpenRange extends Range {
+	public static abstract class OpenRange implements Range {
 
 		protected String operator;
 		protected Value.Atomic value;
@@ -399,12 +371,20 @@ public abstract class Range implements AbstractSet<Value.Atomic, Range> {
 				return false;
 		}
 
+		public boolean equals(Object other) {
+			return other instanceof Range && maybeEquals((Range)other) == Boolean.TRUE;
+		}
+
 		public JsonValue toJSON() {
 			JsonObjectBuilder builder = Json.createObjectBuilder();
 			builder.add(this.operator, this.value.toJSON());
 			return builder.build();
 		}
-
+		
+		public String toString() {
+			return toExpression(Formatter.DEFAULT);
+		}
+		
 		@SuppressWarnings("unchecked")
 		public Range bind(Map<Param,Value> parameters) {
 			if (value.type == Value.Type.PARAM) {
@@ -422,7 +402,7 @@ public abstract class Range implements AbstractSet<Value.Atomic, Range> {
 	 *
 	 * @private
 	 */
-	private static class Between extends Range {
+	public static class Between implements Range {
 
 		public final Range lower_bound;
 		public final Range upper_bound;
@@ -461,6 +441,29 @@ public abstract class Range implements AbstractSet<Value.Atomic, Range> {
 
 			return null;
 		}
+		
+		public Boolean intersects(Range range) {
+			if (range instanceof Unbounded) return Boolean.TRUE;
+			if (range instanceof Between) {
+				Between between = (Between)range;
+				return Tristate.and(
+					lower_bound.intersects(between.upper_bound), 
+					upper_bound.intersects(between.lower_bound)
+				);
+			}
+			if (range instanceof Intersection) { 
+				return Tristate.and(
+					range.intersects(lower_bound), 
+					range.intersects(upper_bound)
+				);
+			}
+			if (range instanceof LessThan || range instanceof LessThanOrEqual) 
+				return upper_bound.intersects(range);
+			if (range instanceof GreaterThan || range instanceof GreaterThanOrEqual)
+				return lower_bound.intersects(range);
+
+			return null;			
+		}
 
 		public <U> U toExpression(Formatter<U> formatter)	{ 
 			return formatter.andExpr(
@@ -481,6 +484,10 @@ public abstract class Range implements AbstractSet<Value.Atomic, Range> {
 				return false;
 		}
 
+		public boolean equals(Object other) {
+			return other instanceof Range && maybeEquals((Range)other) == Boolean.TRUE;
+		}
+
 		public JsonValue toJSON() {
 			JsonArrayBuilder builder = Json.createArrayBuilder();
 
@@ -496,6 +503,10 @@ public abstract class Range implements AbstractSet<Value.Atomic, Range> {
 
 			return builder.build();
 		}
+		
+		public String toString() {
+			return toExpression(Formatter.DEFAULT);
+		}
 
 		public Range bind(Map<Param,Value> parameters) {
 			Range new_lower_bound = lower_bound.bind(parameters);
@@ -505,28 +516,27 @@ public abstract class Range implements AbstractSet<Value.Atomic, Range> {
 		}
 
 		@Override
-		public Range union(Range range) {
+		public Range merge(Range range) {
 			if (range instanceof Unbounded) return UNBOUNDED;
-			if (intersect(range) == null)
-				return new Union(this, range);
-			else {
-				if (range instanceof Between)
-					return between(lower_bound.union(((Between)range).lower_bound), upper_bound.union(((Between)range).upper_bound));
-				if (range instanceof Intersection) 
-					return new Union(this, range);
-				if (range instanceof LessThan || range instanceof LessThanOrEqual) 
-					return between(lower_bound, upper_bound.union(range));
-				if (range instanceof GreaterThan || range instanceof GreaterThanOrEqual)
-					return between(lower_bound.union(range), upper_bound);
-				throw new IllegalArgumentException("Unsupported range type");
-			}
+			if (range instanceof Union) return null;
+			if (range instanceof Intersection) return null;
+			if (intersect(range) == null) return null;
+			if (range instanceof Between)
+				return between(lower_bound.union(((Between)range).lower_bound), upper_bound.union(((Between)range).upper_bound));
+			if (range instanceof LessThan || range instanceof LessThanOrEqual) 
+				return between(lower_bound, upper_bound.union(range));
+			if (range instanceof GreaterThan || range instanceof GreaterThanOrEqual)
+				return between(lower_bound.union(range), upper_bound);
+			if (range instanceof Equals)
+				return this;
+			throw new IllegalArgumentException("Unsupported range type");
 		}
 	}
 
 	/** Range exactly equal to some value
 	 * 
 	 */
-	private static class Equals extends Range {
+	public static class Equals implements Range {
 
 		private Value.Atomic value;
 
@@ -554,10 +564,20 @@ public abstract class Range implements AbstractSet<Value.Atomic, Range> {
 			}
 		}
 		
-		public Range union(Range other) {
-			if (intersect(other) == null)
-				return new Union(this, other);
-			return other;
+		public Boolean intersects(Range range) {
+			if (range instanceof Equals) { 
+				return value.maybeEquals(((Equals)range).value);
+			} else {
+				return range.intersects(this);
+			}
+		}
+		
+		public Range merge(Range range) {
+			if (range instanceof Unbounded) return UNBOUNDED;
+			if (range instanceof Union) return null;
+			if (range instanceof Intersection) return null;
+			if (intersect(range) == null) return null;
+			return range;
 		}
 
 		public <U> U toExpression(Formatter<U> formatter)	{ 
@@ -571,6 +591,11 @@ public abstract class Range implements AbstractSet<Value.Atomic, Range> {
 			} else
 				return Boolean.FALSE;
 		}
+		
+		public boolean equals(Object other) {
+			return other instanceof Range && maybeEquals((Range)other) == Boolean.TRUE;
+		}
+
 
 		public JsonValue toJSON() {
 			return value.toJSON();
@@ -592,7 +617,7 @@ public abstract class Range implements AbstractSet<Value.Atomic, Range> {
 	 *
 	 * @private
 	 */
-	private static class LessThan extends OpenRange {
+	public static class LessThan extends OpenRange {
 
 		public static final String OPERATOR = "<";
 
@@ -617,6 +642,21 @@ public abstract class Range implements AbstractSet<Value.Atomic, Range> {
 
 		public Boolean containsItem(Value.Atomic item) {
 			return item.lessThan(this.value);
+		}
+		
+		public Boolean intersects(Range range) {
+
+			if (range instanceof Unbounded) return Boolean.TRUE;
+			if (range instanceof Between || range instanceof Intersection)
+				return range.intersects(this);
+			if (range instanceof LessThan || range instanceof LessThanOrEqual) 
+				return Boolean.TRUE;
+			if (range instanceof GreaterThan || range instanceof GreaterThanOrEqual) 
+				return ((OpenRange)range).value.lessThan(value);
+			if (range instanceof Equals) 
+				return ((Equals)range).value.lessThan(value);
+
+			throw new IllegalArgumentException("Uknown range type: " + range);
 		}
 
 		public Range intersect(Range range) {
@@ -678,27 +718,27 @@ public abstract class Range implements AbstractSet<Value.Atomic, Range> {
 			throw new IllegalArgumentException("Uknown range type: " + range);
 		}
 		
-		public Range union(Range other) {
-			if (intersect(other) == null) {
-				return new Union(this, other);
-			} else {
-				if (other instanceof Between)
-					return between(((Between)other).lower_bound, union(((Between)other).upper_bound));
-				if (other instanceof Intersection) 
-					return new Union(this, other);
-				if (other instanceof LessThan || other instanceof LessThanOrEqual) {
-					Boolean comparison = value.lessThanOrEqual(((OpenRange)other).value);
-					if (comparison == Boolean.TRUE) return other;
-					if (comparison == null) return new Union(this, other);
-					return this;
-				}
-				if (other instanceof GreaterThan || other instanceof GreaterThanOrEqual)
-					return UNBOUNDED;
-				throw new IllegalArgumentException("Unsupported range type");
-
+		public Range merge(Range range) {
+			if (range instanceof Unbounded) return UNBOUNDED;
+			if (range instanceof Union) return null;
+			if (range instanceof Intersection) return null;
+			if (intersect(range) == null) return null;
+			if (range instanceof Equals)
+				return this;
+			if (range instanceof GreaterThan || range instanceof GreaterThanOrEqual) 
+				return UNBOUNDED;
+			if (range instanceof Between)
+				return merge(((Between)range).upper_bound);
+			if (range instanceof LessThan || range instanceof LessThanOrEqual) {
+				Boolean result = value.greaterThan(((OpenRange)range).value);
+				if (result == Boolean.TRUE) return this;
+				if (result == Boolean.FALSE) return range;
+				return null;	
 			}
+				
+			throw new IllegalArgumentException("Uknown range type: " + range);
 		}
-
+			
 	}
 
 
@@ -706,7 +746,7 @@ public abstract class Range implements AbstractSet<Value.Atomic, Range> {
 	 *
 	 * @private
 	 */
-	private static class LessThanOrEqual extends OpenRange {
+	public static class LessThanOrEqual extends OpenRange {
 
 		public static final String OPERATOR = "<=";
 
@@ -732,6 +772,21 @@ public abstract class Range implements AbstractSet<Value.Atomic, Range> {
 			return value.type == Value.Type.PARAM ? null : item.lessThanOrEqual(this.value);
 		}
 
+		public Boolean intersects(Range range) {
+
+			if (range instanceof Unbounded) return Boolean.TRUE;
+			if (range instanceof Between || range instanceof Intersection)
+				return range.intersects(this);
+			if (range instanceof LessThan || range instanceof LessThanOrEqual) 
+				return Boolean.TRUE;
+			if (range instanceof GreaterThan || range instanceof GreaterThanOrEqual) 
+				return ((OpenRange)range).value.lessThanOrEqual(value);
+			if (range instanceof Equals) 
+				return ((Equals)range).value.lessThanOrEqual(value);
+
+			throw new IllegalArgumentException("Uknown range type: " + range);
+		}
+		
 		public Range intersect(Range range) {
 			
 			if (range instanceof Unbounded) return this;
@@ -805,11 +860,27 @@ public abstract class Range implements AbstractSet<Value.Atomic, Range> {
 
 			throw new IllegalArgumentException("Unknown range type: " + range);
 		}
-
-		@Override
-		public Range union(Range other) {
-			// TODO Auto-generated method stub
-			return null;
+		
+		
+		public Range merge(Range range) {
+			if (range instanceof Unbounded) return UNBOUNDED;
+			if (range instanceof Union) return null;
+			if (range instanceof Intersection) return null;
+			if (intersect(range) == null) return null;
+			if (range instanceof Equals)
+				return this;
+			if (range instanceof GreaterThan || range instanceof GreaterThanOrEqual) 
+				return UNBOUNDED;
+			if (range instanceof Between)
+				return merge(((Between)range).upper_bound);
+			if (range instanceof LessThan || range instanceof LessThanOrEqual) {
+				Boolean result = value.greaterThanOrEqual(((OpenRange)range).value);
+				if (result == Boolean.TRUE) return this;
+				if (result == Boolean.FALSE) return range;
+				return null;	
+			}
+				
+			throw new IllegalArgumentException("Uknown range type: " + range);
 		}
 	}
 
@@ -817,14 +888,13 @@ public abstract class Range implements AbstractSet<Value.Atomic, Range> {
 	 *
 	 * @private
 	 */
-	private static class GreaterThan extends OpenRange {
+	public static class GreaterThan extends OpenRange {
 
 		public static final String OPERATOR = ">";
 
 		public GreaterThan(Value.Atomic value) {
 			super(GreaterThan.OPERATOR, value);
 		}
-
 
 		public Boolean contains(Range range) {
 
@@ -844,6 +914,21 @@ public abstract class Range implements AbstractSet<Value.Atomic, Range> {
 
 		public Boolean containsItem(Value.Atomic item) {
 			return value.type == Value.Type.PARAM ? null : item.greaterThan(this.value);
+		}
+		
+		public Boolean intersects(Range range) {
+
+			if (range instanceof Unbounded) return Boolean.TRUE;
+			if (range instanceof Between || range instanceof Intersection)
+				return range.intersects(this);
+			if (range instanceof GreaterThan || range instanceof GreaterThanOrEqual) 
+				return Boolean.TRUE;
+			if (range instanceof LessThan || range instanceof LessThanOrEqual) 
+				return ((OpenRange)range).value.greaterThan(value);
+			if (range instanceof Equals) 
+				return ((Equals)range).value.greaterThan(value);
+
+			throw new IllegalArgumentException("Uknown range type: " + range);
 		}
 
 		public Range intersect(Range range) {
@@ -904,10 +989,25 @@ public abstract class Range implements AbstractSet<Value.Atomic, Range> {
 		}
 
 
-		@Override
-		public Range union(Range other) {
-			// TODO Auto-generated method stub
-			return null;
+		public Range merge(Range range) {
+			if (range instanceof Unbounded) return UNBOUNDED;
+			if (range instanceof Union) return null;
+			if (range instanceof Intersection) return null;
+			if (intersect(range) == null) return null;
+			if (range instanceof Equals)
+				return this;
+			if (range instanceof LessThan || range instanceof LessThanOrEqual) 
+				return UNBOUNDED;
+			if (range instanceof Between)
+				return merge(((Between)range).lower_bound);
+			if (range instanceof GreaterThan || range instanceof GreaterThanOrEqual) {
+				Boolean result = value.lessThan(((OpenRange)range).value);
+				if (result == Boolean.TRUE) return this;
+				if (result == Boolean.FALSE) return range;
+				return null;	
+			}
+				
+			throw new IllegalArgumentException("Uknown range type: " + range);
 		}
 
 	}
@@ -916,7 +1016,7 @@ public abstract class Range implements AbstractSet<Value.Atomic, Range> {
 	 *
 	 * @private
 	 */
-	private static class GreaterThanOrEqual extends OpenRange {
+	public static class GreaterThanOrEqual extends OpenRange {
 
 		public static String OPERATOR = ">=";
 
@@ -943,7 +1043,21 @@ public abstract class Range implements AbstractSet<Value.Atomic, Range> {
 			return value.type == Value.Type.PARAM ? null : item.greaterThanOrEqual(this.value);
 		}
 
+		public Boolean intersects(Range range) {
 
+			if (range instanceof Unbounded) return Boolean.TRUE;
+			if (range instanceof Between || range instanceof Intersection)
+				return range.intersects(this);
+			if (range instanceof GreaterThan || range instanceof GreaterThanOrEqual) 
+				return Boolean.TRUE;
+			if (range instanceof LessThan || range instanceof LessThanOrEqual) 
+				return ((OpenRange)range).value.greaterThanOrEqual(value);
+			if (range instanceof Equals) 
+				return ((Equals)range).value.greaterThanOrEqual(value);
+
+			throw new IllegalArgumentException("Uknown range type: " + range);
+		}
+		
 		public Range intersect(Range range) {
 
 			if (range instanceof Unbounded) return this;
@@ -1021,128 +1135,33 @@ public abstract class Range implements AbstractSet<Value.Atomic, Range> {
 			throw new IllegalArgumentException("Uknown range type: " + range);
 		}
 
-		public Range union(Range other) {
-			// TODO: implemnet
-			return null;
-		}
-	}
-
-	/** Range has element within some bound.
-	*
-	* @private
-	*/
-	class HasElementsMatching extends Range {
-
-		public static final String OPERATOR = "has";
-		
-		private List<Range> bounds;
-
-		@SafeVarargs
-		public HasElementsMatching(Range... bounds) {
-			this.bounds = Arrays.asList(bounds);
-		}
-
-		private HasElementsMatching(List<Range> bounds) {
-			this.bounds = bounds;
-		}
-
-		// For containment, this range must match all array elements matched by the other range. Otherwise, the other range
-		// could match an element not matched by this range, which implies this range does not contain the other.
-		//
-		// If all bounds defined in the other range are contained by at least one bound in this range, this condition
-		// is met.
-		public Boolean contains(Range range) {
-			if (range instanceof HasElementsMatching)
-				// use Stream versions of every and other because of tri-state implementation 
-				return Tristate.every(
-					((HasElementsMatching)range).bounds, 
-					range_bound -> 
-						Tristate.any(bounds, this_bound -> this_bound.contains(range_bound))
-				);
-			return false;
-		}
-
-		// For every bound, there is some element in item that matches that bound.
-		public Boolean containsItem(Value.Atomic item) {
-			// TODO: need to support array items at this point
-			Collection<Value.Atomic> items = Collections.singletonList(item);
-			return Tristate.every(bounds, bound -> Tristate.any(items, element -> bound.containsItem(element))); 
-		}
-
-		// hmm, remember that $and : [ { y : { $has : 'numpty' } }, { y : { $has : 'flash' } } ] is not the same as 
-		// { y : { $has : Range.and(Range.equals('numpty'), range.equals('flash')) }. The former should match any element
-		// with y containing both numpty and flash. The second will match nothing since no array element will equal both
-		// numpty and flash.
-		public Range intersect(Range range) {
-			if (range == UNBOUNDED) return this;
-			if (range instanceof HasElementsMatching) {
-
-				List<Range> new_bounds = new ArrayList<Range>(bounds);
-				for (Range new_bound : ((HasElementsMatching)range).bounds) {
-					if (Boolean.FALSE != Tristate.any(this.bounds, this_bound -> { return this_bound.contains(new_bound); }))
-						new_bounds.add(new_bound);
-				}
-
-				return new HasElementsMatching(new_bounds);
+		public Range merge(Range range) {
+			if (range instanceof Unbounded) return UNBOUNDED;
+			if (range instanceof Union) return null;
+			if (range instanceof Intersection) return null;
+			if (intersect(range) == null) return null;
+			if (range instanceof Equals)
+				return this;
+			if (range instanceof LessThan || range instanceof LessThanOrEqual) 
+				return UNBOUNDED;
+			if (range instanceof Between)
+				return merge(((Between)range).lower_bound);
+			if (range instanceof GreaterThan || range instanceof GreaterThanOrEqual) {
+				Boolean result = value.lessThanOrEqual(((OpenRange)range).value);
+				if (result == Boolean.TRUE) return this;
+				if (result == Boolean.FALSE) return range;
+				return null;	
 			}
-			throw new RuntimeException("Can't mix array operations and scalar operations on a single field");
-		}
-
-		public <U> U toExpression(Formatter<U> formatter) { 
-			return formatter.subExpr(OPERATOR, bounds.stream().map(range->range.toExpression(formatter)));
-		}
-
-		public boolean equals(Range range) { 
-			// Strictly the bounds arrays should be equal if they have the same items irrespective of order;
-			// however to do that we'd have to find a better comparison algorithm.
-			return range instanceof HasElementsMatching 
-				&& bounds.equals(((HasElementsMatching)range).bounds); 
-		}
-		
-		public Boolean maybeEquals(Range range) {
-			//TODO
-			return null;
-		}
-
-		public JsonObject toJSON() {
-			//return this.toBoundsObject();
-			return null;
-		}	
-
-		public Range bind(Map<Param,Value> parameters) {
-
-			/*
-			let bounds = Stream.from(this.bounds)
-				.map(bound=>bound.bind(parameters))
-				.filter(bound => bound !== null)
-				.reduce((new_bounds,value) => 
-					Stream.from(new_bounds).some(bound => 
-						bound.contains(value)
-					) ? new_bounds : (new_bounds.push(value), new_bounds),
-					[]
-				);
-
-			if (bounds.length === 0) return null;
-			if (this.bounds.length === bounds.length 
-				&& this.bounds.every((bound,index) => bound === bounds[index])) return this;
-			return new HasElementsMatching(bounds);
-			*/
-			return this;
-		}
-		
-		public Range union(Range other) {
-			// TODO: implement
-			return null;
+				
+			throw new IllegalArgumentException("Uknown range type: " + range);
 		}
 	}
-
-
 
 	/** Support a deferred intersection between parametrized ranges.
 	 *
 	 * @private 
 	 */
-	public static class Intersection extends Range {
+	public static class Intersection implements Range {
 
 		public static final String OPERATOR = "$and";
 
@@ -1289,6 +1308,15 @@ public abstract class Range implements AbstractSet<Value.Atomic, Range> {
 			return null;
 		}
 
+		public Boolean intersects(Range range) {
+			if (range instanceof Unbounded) return Boolean.TRUE;
+
+			return Tristate.and(
+						range.intersects(this.known_bounds),
+						Tristate.every(this.parametrized_bounds.values(), bound->bound.intersects(range))
+					);
+		}
+		
 		public <U> U toExpression(Formatter<U> formatter)	{ 
 			Stream<Range> ranges = Stream.concat(
 					Stream.of(known_bounds), 
@@ -1312,6 +1340,7 @@ public abstract class Range implements AbstractSet<Value.Atomic, Range> {
 			}
 			return false;
 		}
+
 		
 		public Boolean maybeEquals(Range range) {
 			if (range instanceof Intersection) return maybeEquals((Intersection)range);
@@ -1342,69 +1371,53 @@ public abstract class Range implements AbstractSet<Value.Atomic, Range> {
 
 		@Override
 		public Range union(Range other) {
+			return from(this, other);
+			
+		}
+
+		@Override
+		public Range merge(Range other) {
 			// TODO Auto-generated method stub
 			return null;
 		}	
+		
+		public String toString() {
+			return toExpression(Formatter.DEFAULT);
+		}
+
 	}
 	
-	public static class Union extends Range {
-
-		private Range a;
-		private Range b;
+	public static List<Range> simplify(List<Range> list) {
+		List<Range> result = new ArrayList<Range>();
+		result.add(list.get(0));
+		for (int i = 0; i < list.size(); i++) {
+			Range merged = null;
+			for (int j = 1; j < result.size() && merged == null; j++) 
+				merged = list.get(j).merge(result.get(i));
+			if (merged != null) 
+				result.set(i, merged);
+			else
+				result.add(list.get(i));
+		}
+		return result;
+	}
 		
-		public Union(Range a, Range b) {
-			this.a = a;
-			this.b = b;
-		}
 		
-		@Override
-		public Range union(Range other) {
-			// TODO Auto-generated method stub
-			return null;
+	public static class RangeUnion extends Union<Value.Atomic, Range> implements Range   {
+		public RangeUnion(List<Range> range, Function<List<Range>, Range> from) {
+			super(range, from);
 		}
-
-		@Override
-		public Boolean maybeEquals(Range other) {
-			// TODO Auto-generated method stub
-			return null;
-		}
-
-		@Override
-		public Boolean contains(Range range) {
-			// TODO Auto-generated method stub
-			return null;
-		}
-
-		@Override
-		public Boolean containsItem(Atomic item) {
-			// TODO Auto-generated method stub
-			return null;
-		}
-
-		@Override
-		public Range intersect(Range range) {
-			// TODO Auto-generated method stub
-			return null;
-		}
-
-		@Override
-		public  <U> U toExpression(Formatter<U> formatter) {
-			// TODO Auto-generated method stub
-			return null;
-		}
-
-		@Override
-		public JsonValue toJSON() {
-			// TODO Auto-generated method stub
-			return null;
-		}
-
-		@Override
-		public Range bind(Map<Param, Value> parameters) {
-			// TODO Auto-generated method stub
-			return null;
-		}
-		
+	}
+	
+	public static Range from(List<Range> list) {
+		list = simplify(list);
+		if (list.size() == 0) return null;
+		if (list.size() == 1) return list.get(0);
+		return new RangeUnion(list, Range::from);
+	}
+	
+	public static Range from(Range... list) {
+		return from(Arrays.asList(list));
 	}
 }
 

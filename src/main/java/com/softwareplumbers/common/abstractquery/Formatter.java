@@ -44,6 +44,7 @@ public interface Formatter<T> {
 		}
 
 		String printDimension() {
+			if (parent == null) return "$self";
 			if (parent.dimension == null) return dimension;
 			return parent.printDimension() + "." + dimension;
 		}

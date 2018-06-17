@@ -15,6 +15,8 @@ public interface AbstractSet<T extends Value, U extends AbstractSet<T,U>> {
 	 */	
 	U intersect(U other);
 	
+	Boolean intersects(U other);
+	
 	U union(U other);
 	
 	/** Check if this range contains a value.

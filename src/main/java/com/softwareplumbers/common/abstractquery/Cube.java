@@ -177,6 +177,17 @@ public class Cube implements AbstractSet<Value.MapValue, Cube>{
 				entry -> containsItem(entry, item));		
 	}
 	
+	public <T extends Value,U extends AbstractSet<T,U>> Boolean intersects(String dimension, Cube other) {
+		U constraint1 = (U)constraints.get(dimension);
+		U constraint2 = (U)other.constraints.get(dimension);
+		if (constraint1 == null || constraint2 == null) return Boolean.TRUE;
+		return constraint1.intersects(constraint2);
+	}
+	
+	public Boolean intersects(Cube other) {
+		return Tristate.every(constraints.keySet(), dimension->intersects(dimension, other));
+	}
+	
 	private <T extends Value,U extends AbstractSet<T,U>> U intersect(String dimension, Cube other) {
 		// TODO: We should do some type checking here. Notionally that constraint1.type equals constraint2.type
 		U constraint1 = (U)constraints.get(dimension);
