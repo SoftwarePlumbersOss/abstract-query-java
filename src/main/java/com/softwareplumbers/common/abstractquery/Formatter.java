@@ -20,10 +20,6 @@ import javax.json.JsonValue;
  */
 public interface Formatter<T> {
 	
-	public interface CanFormat {
-		public <T> T toExpression(Formatter<T> formatter);
-	}
-	
 	/** Create a representation of a constraint on a dimension */
 	T operExpr(String operator, Value value);
 	/** Create a representation of an intersection of constraints */

@@ -5,13 +5,10 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
-import java.util.function.Predicate;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import javax.json.Json;
@@ -21,7 +18,7 @@ import javax.json.JsonObject;
 import javax.json.JsonObjectBuilder;
 import javax.json.JsonValue;
 
-import com.softwareplumbers.common.abstractquery.Formatter.CanFormat;
+import com.softwareplumbers.common.abstractquery.Value.Atomic;
 
 /** Range is an abstract class representing a range of values.
  *
@@ -35,7 +32,7 @@ import com.softwareplumbers.common.abstractquery.Formatter.CanFormat;
  * usually of some subclass of range).
  *
  */
-public abstract class Range implements CanFormat {
+public abstract class Range implements AbstractSet<Value.Atomic, Range> {
 
 	/** Check if this range contain another range.
 	 * 
@@ -57,7 +54,7 @@ public abstract class Range implements CanFormat {
 	 * @param range Range to compare to this range.
 	 * @return True if this range contains the given value, False if not, null if this cannot be determined
 	 */
-	public abstract Boolean containsItem(Value item);
+	public abstract Boolean containsItem(Value.Atomic item);
 	
 	/** Create a new range that contains only those values contained by both ranges.
 	 * 
@@ -73,19 +70,19 @@ public abstract class Range implements CanFormat {
 	 * @param formatter Formatter object to create expression
 	 * @return An expression (usually a string).
 	 */
-	public abstract <T> T toExpression(Formatter<T> formatter);
+	public abstract <U> U toExpression(Formatter<U> formatter);
 	
 	public String toString() { return toJSON().toString(); }
 	
 	public abstract JsonValue toJSON();
-	public abstract Range bind(Map<String,Value> parameters);
-	public abstract Boolean mightEquals(Range other);
+	public abstract Range bind(Map<Param,Value> parameters);
 	
 	public boolean equals(Range other) {
-		Boolean mightEqual = mightEquals(other);
+		Boolean mightEqual = maybeEquals(other);
 		return mightEqual == Boolean.TRUE;
 	}
 	
+	@SuppressWarnings("unchecked")
 	public boolean equals(Object other) {
 		return other instanceof Range && equals((Range)other);
 	}
@@ -103,27 +100,34 @@ public abstract class Range implements CanFormat {
 	 * | "$has"			 | Range.has 				|
 	 * | "$hasAll"		 | Range.hasAll 				|
 	 */
-	static Map<String, Function<Value,Range>> RANGE_OPERATORS = new HashMap<String, Function<Value,Range>>() {{
-
-		put(">", v->Range.greaterThan(v));
-		put("<", v->Range.lessThan(v));
-		put(">=", v->Range.greaterThanOrEqual(v));
-		put("<=", v->Range.lessThanOrEqual(v));
-		put("=",  v->Range.equals(v));
-	}};
-
-	static final Predicate<String> VALID_OPERATOR = key -> RANGE_OPERATORS.containsKey(key);
-
-	static Range getRange(String operator, Value value) {
-		return RANGE_OPERATORS.get(operator).apply(value);
+	static Range getRange(String operator, Value.Atomic value) {
+		switch(operator) {
+			case ">" : return Range.greaterThan(value);
+			case "<" : return Range.lessThan(value);
+			case ">=" : return Range.greaterThanOrEqual(value);
+			case "<=" : return Range.lessThanOrEqual(value);
+			case "=" : return Range.equals(value);
+		}
+		throw new IllegalArgumentException("Invalid operator" +  operator);
 	}
+	
+	static boolean validOperator(String operator) {
+		switch(operator) {
+		case ">" : return true;
+		case "<" : return true;
+		case ">=" : return true;
+		case "<=" : return true;
+		case "=" : return true;
+		default: return false;
+		}
+	}		
 
 	/** Create a range containing a single value 
 	 *
 	 * @param value - value to search for
 	 * @returns a Range object
 	 */
-	public static Range equals(Value value) 				
+	public static  Range equals(Value.Atomic value) 				
 	{ return new Equals(value); }
 
 	/** Create a range containing values less than a given value 
@@ -131,28 +135,28 @@ public abstract class Range implements CanFormat {
 	 * @param value - value to search for
 	 * @returns a Range object
 	 */
-	public static Range lessThan(Value value) 		
+	public static  Range lessThan(Value.Atomic value) 		
 	{ return new LessThan(value); }
 
 	/** Create a range containing values less than or equal to a given value 
 	 * @param value - value to search for
 	 * @returns a Range object
 	 */
-	public static Range lessThanOrEqual(Value value) 		
+	public static  Range lessThanOrEqual(Value.Atomic value) 		
 	{ return new LessThanOrEqual(value); }
 
 	/** Create a range containing values greater than a given value 
 	 * @param value - value to search for
 	 * @returns a Range object
 	 */		
-	public static Range greaterThan(Value value) 	
+	public static  Range greaterThan(Value.Atomic value) 	
 	{ return new GreaterThan(value); }
 
 	/** Create a range containing values greater than or equal to a given value 
 	 * @param value - value to search for
 	 * @returns a Range object
 	 */		
-	public static Range greaterThanOrEqual(Value value)  	
+	public static  Range greaterThanOrEqual(Value.Atomic value)  	
 	{ return new GreaterThanOrEqual(value); }
 
 	/** Create a range containing values between the given values
@@ -161,7 +165,7 @@ public abstract class Range implements CanFormat {
 	 * @param upper - upper range boundary (exclusive by default)
 	 * @returns a Range object
 	 */
-	public static Range between(Value lower, Value upper)	{ 
+	public static  Range between(Value.Atomic lower, Value.Atomic upper)	{ 
 
 		Range lowerr = greaterThanOrEqual(lower);
 		Range upperr = lessThan(upper);
@@ -175,14 +179,14 @@ public abstract class Range implements CanFormat {
 	 * @param upper
 	 * @return
 	 */
-	public static Range between(Range lower, Range upper) {
+	public static  Range between(Range lower, Range upper) {
 		if (lower instanceof LessThanOrEqual) return null;
 		if (lower instanceof LessThan) return null;
 		if (upper instanceof GreaterThanOrEqual) return null;
 		if (upper instanceof GreaterThan) return null;
 		if (lower instanceof OpenRange 
 			&& upper instanceof OpenRange
-			&& ValueComparator.getInstance().lessThan(((OpenRange)lower).value, ((OpenRange)upper).value) != Boolean.FALSE)
+			&& ((OpenRange)lower).value.lessThan(((OpenRange)upper).value) != Boolean.FALSE)
 			return new Between(lower, upper);
 		return null;
 	}
@@ -190,96 +194,7 @@ public abstract class Range implements CanFormat {
 	/** Provide access to global Unbounded range
 	 */
 	public static final Range UNBOUNDED = new Unbounded();
-
-	/** Create a range containing values in all the given ranges
-	 *
-	 * TODO: consider if this needs to support Between parameters.
-	 *
-	 * @param ranges
-	 * @returns a Range object
-	 */
-	public static Range and(Range[] ranges) {
-
-		Range intersection = Range.UNBOUNDED;
-
-		for (int i=0; i < ranges.length && intersection != null; i++) {
-			intersection = intersection.intersect(ranges[i]);
-		}
-
-		return intersection;
-	}
-
-	/** Create a range with a subquery
-	 * 
-	 * NOT IMPLEMENTED YET 
-	 *
-	 * Objects we are querying may be complex. Where an object property contains an object or an array, we may
-	 * what to execute a subquery on data contained by that object or array in order to determine if the original
-	 * high-level object is matched or not. A trivial case would be a constraint that reads something like:
-	 * ```
-	 * 	{name : { last: 'Essex'}}
-	 * ```
-	 *
-	 * @param query  Subquery (which must select data for this range criterion to be satisfied)
-	 * @returns  a Range object
-	 */
-	public static Range subqueryObject(Query query) {
-		// TODO: implement
-		throw new UnsupportedOperationException();
-	}
-
-	/** Create a range with a subquery
-	 * 
-	 * NOT IMPLEMENTED YET 
-	 *
-	 * Objects we are querying may be complex. Where an object property contains an object or an array, we may
-	 * what to execute a subquery on data contained by that object or array in order to determine if the original
-	 * high-level object is matched or not. A trivial case would be a constraint that reads something like:
-	 * ```
-	 * 	{name : { last: 'Essex'}}
-	 * ```
-	 *
-	 * @param query  Subquery (which must select data for this range criterion to be satisfied)
-	 * @returns  a Range object
-	 */
-	public static Range subqueryArray(Query query) {
-		// TODO: implement
-		throw new UnsupportedOperationException();
-	}
-
-	/** Create a range which includes items containing an array which has elements within a range
-	 *
-	 * Objects we are querying may be complex. Where an object property contains an array of simple objects, we may
-	 * what to execute a search data contained by that object or array in order to determine if the origninal
-	 * high-level object is matched or not. A trivial case would be a constraint that reads something like:
-	 * ```
-	 * 	{tags : { $has: 'javascript'}}
-	 * ```
-	 * to select objects with the word 'javascript' in the tags array. 
-	 * @param bounds ranges that select items in the list
-	 * @returns {Range} a Range object
-	 */
-	public static Range has(Range bounds) {
-		// TODO: implement		
-		throw new UnsupportedOperationException();
-	}
-
-	/** Create a range which includes items containing an array which has elements within a range
-	 *
-	 * Objects we are querying may be complex. Where an object property contains an array of simple objects, we may
-	 * what to execute a search data contained by that object or array in order to determine if the origninal
-	 * high-level object is matched or not. A trivial case would be a constraint that reads something like:
-	 * ```
-	 * 	{tags : { $hasAll: ['javascript','framework'] } }
-	 * ```
-	 * @param bounds {Range[]} ranges that select items in the array
-	 * @returns {Range} a Range object
-	 */
-	public static Range hasAll(Range bounds) {
-		// TODO: implement
-		throw new UnsupportedOperationException();
-	}	
-
+	
 	/** Check to see if a JSON object is a Range 
 	 *
 	 * @param obj - object to check.
@@ -293,7 +208,7 @@ public abstract class Range implements CanFormat {
 		if (obj instanceof JsonObject) {
 			JsonObject asObj = (JsonObject)obj;
 			return asObj.keySet().stream()
-					.anyMatch(key -> RANGE_OPERATORS.containsKey(key) && Value.isAtomicValue(asObj.get(key)));
+					.anyMatch(key -> validOperator(key) && Value.isAtomicValue(asObj.get(key)));
 		}
 		return false;
 	}
@@ -320,27 +235,28 @@ public abstract class Range implements CanFormat {
 	 * @param  obj
 	 * @return  a range if obj is a bounds object, null otherwise
 	 */
-	static Range fromOpenRangeOrValue(JsonValue obj, Function<Value,Range> operator) {
+	@SuppressWarnings("unchecked")
+	static  Range fromOpenRangeOrValue(JsonValue obj, Function<Value.Atomic,Range> operator) {
 
 		if (obj instanceof JsonObject) {
 
 			JsonObject asObj = (JsonObject)obj;
 			Optional<String> propname = asObj.keySet().stream()
-					.filter(VALID_OPERATOR)
+					.filter(Range::validOperator)
 					.findFirst();
 
 			if (propname.isPresent()) {
 				JsonValue value = asObj.get(propname.get());
-				return Value.isAtomicValue(value) ? getRange(propname.get(), Value.from(value)) : null;
+				return Value.isAtomicValue(value) ? getRange(propname.get(), (Value.Atomic)Value.Atomic.from(value)) : null;
 			} else if (asObj.containsKey("$")) {
-				return Range.equals(Param.from(asObj));
+				return Range.equals((Value.Atomic)Value.Atomic.from(asObj));
 			} else {
 				return null;
 			}
 		} else if (obj == JsonValue.NULL) {
 			return UNBOUNDED;
 		} else {
-			return operator.apply(Value.from(obj));
+			return operator.apply((Atomic)Value.Atomic.from(obj));
 		}
 	}
 
@@ -349,15 +265,16 @@ public abstract class Range implements CanFormat {
 	 * @param  obj
 	 * @return  a range if obj is a bounds object, null otherwise
 	 */
-	static Range fromOpenRange(JsonObject obj) {
+	@SuppressWarnings("unchecked")
+	static  Range fromOpenRange(JsonObject obj) {
 
 		Optional<String> propname = obj.keySet().stream()
-				.filter(VALID_OPERATOR)
+				.filter(Range::validOperator)
 				.findFirst();
 
 		if (propname.isPresent()) {
 			JsonValue value = obj.get(propname);
-			return Value.isAtomicValue(value) ? getRange(propname.get(), Value.from(value)) : null;
+			return Value.isAtomicValue(value) ? getRange(propname.get(), (Value.Atomic)Value.Atomic.from(value)) : null;
 		} else {
 			return null;
 		}
@@ -370,7 +287,7 @@ public abstract class Range implements CanFormat {
 	 * @param bounds bounding values for range
 	 * @returns a range, or undefined if paramters are not compatible.
 	 */
-	static Range fromClosedRange(JsonValue bounds) 	{ 
+	static  Range fromClosedRange(JsonValue bounds) 	{ 
 
 		if (bounds instanceof JsonArray) {
 			JsonArray array = (JsonArray)bounds;
@@ -379,7 +296,7 @@ public abstract class Range implements CanFormat {
 			if (array.size() > 2 || array.size() == 0) return null;
 
 			if (array.size() > 0) {
-				lower = Range.fromOpenRangeOrValue(array.get(0), value->greaterThanOrEqual(value));				upper = UNBOUNDED;
+				lower = Range.fromOpenRangeOrValue(array.get(0), value->greaterThanOrEqual(value));
 			}
 
 			if (array.size() > 1) {					
@@ -401,7 +318,7 @@ public abstract class Range implements CanFormat {
 	 * @param jsonValue - value
 	 * @returns a range
 	 */
-	static Range from(JsonValue jsonValue) {
+	static  Range  from(JsonValue jsonValue) {
 		if (jsonValue == null) return null;
 		if (Range.isOpenRangeOrValue(jsonValue)) return Range.fromOpenRangeOrValue(jsonValue, value->equals(value));
 		if (Range.isClosedRange(jsonValue)) return Range.fromClosedRange(jsonValue);
@@ -409,7 +326,7 @@ public abstract class Range implements CanFormat {
 		return null;
 	}
 
-	static Range from(String value) {
+	static  Range  from(String value) {
 		return from(JsonUtil.parseValue(value));
 	}
 
@@ -423,7 +340,7 @@ public abstract class Range implements CanFormat {
 			return true;
 		}
 
-		public Boolean containsItem(Value item) {
+		public Boolean containsItem(Value.Atomic item) {
 			return true;
 		}
 
@@ -432,18 +349,22 @@ public abstract class Range implements CanFormat {
 			return range;
 		}
 
-		public <T> T toExpression(Formatter<T> formatter)	{ 
+		public <U> U toExpression(Formatter<U> formatter)	{ 
 			return formatter.operExpr("=", Value.from("*")); 
 		}
+		
+		public Range union(Range other) {
+			return this;
+		}
 
-		public Boolean mightEquals(Range range)	{ return range instanceof Unbounded; }
+		public Boolean maybeEquals(Range range)	{ return range instanceof Unbounded; }
 
 		public JsonValue toJSON() {
 			// TODO: fixme
 			return null;
 		}
 
-		public Range bind(Map<String,Value> parameters) {
+		public Range bind(Map<Param,Value> parameters) {
 			return this;
 		}
 	}
@@ -455,22 +376,22 @@ public abstract class Range implements CanFormat {
 	private static abstract class OpenRange extends Range {
 
 		protected String operator;
-		protected Value value;
+		protected Value.Atomic value;
 
-		public OpenRange(String operator, Value value) {
+		public OpenRange(String operator, Value.Atomic value) {
 			super();
 			this.value = value;
 			this.operator = operator;
 		}
 
-		public <T> T toExpression(Formatter<T> formatter)	{ 
+		public <U> U toExpression(Formatter<U> formatter)	{ 
 			return formatter.operExpr(this.operator, this.value); 
 		}
 
-		public Boolean mightEquals(Range range)	{ 
+		public Boolean maybeEquals(Range range)	{ 
 			if (range instanceof OpenRange) {
 				if (this.operator.equals(((OpenRange)range).operator)) 
-					return ValueComparator.getInstance().equals(value, ((OpenRange)range).value);
+					return value.maybeEquals(((OpenRange)range).value);
 				else
 					return false;
 			}
@@ -484,11 +405,14 @@ public abstract class Range implements CanFormat {
 			return builder.build();
 		}
 
-		public Range bind(Map<String,Value> parameters) {
+		@SuppressWarnings("unchecked")
+		public Range bind(Map<Param,Value> parameters) {
 			if (value.type == Value.Type.PARAM) {
-				Value param = parameters.get(this.value.value);
+				Param param = (Param)((Value.Atomic)this.value).value;
+				//TODO: Ranges should have a type?
+				Value.Atomic value = (Atomic) parameters.get(param);
 				// TODO: worry about undefined
-				if (param != null) return getRange(operator, param);
+				if (value != null) return getRange(operator, value);
 			}
 			return this;
 		}
@@ -512,7 +436,7 @@ public abstract class Range implements CanFormat {
 			return this.lower_bound.contains(range) && this.upper_bound.contains(range);
 		}
 
-		public Boolean containsItem(Value item) {
+		public Boolean containsItem(Value.Atomic item) {
 			return this.lower_bound.containsItem(item) && this.upper_bound.containsItem(item);
 		}
 
@@ -538,18 +462,18 @@ public abstract class Range implements CanFormat {
 			return null;
 		}
 
-		public <T> T toExpression(Formatter<T> formatter)	{ 
+		public <U> U toExpression(Formatter<U> formatter)	{ 
 			return formatter.andExpr(
 					Stream.of(lower_bound, upper_bound)
 					.map(range -> range.toExpression(formatter))
 					);
 		}
 
-		public Boolean mightEquals(Range range) { 
+		public Boolean maybeEquals(Range range) { 
 			if (range instanceof Between) {
-				Boolean lower = this.lower_bound.mightEquals(((Between)range).lower_bound);
+				Boolean lower = this.lower_bound.maybeEquals(((Between)range).lower_bound);
 				if (lower == Boolean.FALSE) return Boolean.FALSE;
-				Boolean upper = this.upper_bound.mightEquals(((Between)range).upper_bound);
+				Boolean upper = this.upper_bound.maybeEquals(((Between)range).upper_bound);
 				if (upper == Boolean.FALSE) return Boolean.FALSE;
 				if (lower == Boolean.TRUE && upper == Boolean.TRUE) return Boolean.TRUE;
 				return null;
@@ -573,11 +497,29 @@ public abstract class Range implements CanFormat {
 			return builder.build();
 		}
 
-		public Range bind(Map<String,Value> parameters) {
+		public Range bind(Map<Param,Value> parameters) {
 			Range new_lower_bound = lower_bound.bind(parameters);
 			Range new_upper_bound = upper_bound.bind(parameters);
 			if (lower_bound == new_lower_bound && upper_bound == new_upper_bound) return this;
 			return new_lower_bound.intersect(new_upper_bound);
+		}
+
+		@Override
+		public Range union(Range range) {
+			if (range instanceof Unbounded) return UNBOUNDED;
+			if (intersect(range) == null)
+				return new Union(this, range);
+			else {
+				if (range instanceof Between)
+					return between(lower_bound.union(((Between)range).lower_bound), upper_bound.union(((Between)range).upper_bound));
+				if (range instanceof Intersection) 
+					return new Union(this, range);
+				if (range instanceof LessThan || range instanceof LessThanOrEqual) 
+					return between(lower_bound, upper_bound.union(range));
+				if (range instanceof GreaterThan || range instanceof GreaterThanOrEqual)
+					return between(lower_bound.union(range), upper_bound);
+				throw new IllegalArgumentException("Unsupported range type");
+			}
 		}
 	}
 
@@ -586,24 +528,24 @@ public abstract class Range implements CanFormat {
 	 */
 	private static class Equals extends Range {
 
-		private Value value;
+		private Value.Atomic value;
 
-		public Equals(Value value) {
+		public Equals(Value.Atomic value) {
 			this.value = value;
 		}
 
 		public Boolean contains(Range range) {
-			return this.mightEquals(range);
+			return this.maybeEquals(range);
 		}
 
 
-		public Boolean containsItem(Value item) {
-			return ValueComparator.getInstance().equals(value, item);
+		public Boolean containsItem(Value.Atomic item) {
+			return value.maybeEquals(item);
 		}
 
 		public Range intersect(Range range) {
 			if (range instanceof Equals) { 
-				Boolean is_equal = ValueComparator.getInstance().equals(this.value, ((Equals)range).value);
+				Boolean is_equal = value.maybeEquals(((Equals)range).value);
 				if (is_equal == null) return new Intersection(this, range);
 				if (is_equal) return this;
 				return null;
@@ -611,14 +553,20 @@ public abstract class Range implements CanFormat {
 				return (range.intersect(this));
 			}
 		}
+		
+		public Range union(Range other) {
+			if (intersect(other) == null)
+				return new Union(this, other);
+			return other;
+		}
 
-		public <T> T toExpression(Formatter<T> formatter)	{ 
+		public <U> U toExpression(Formatter<U> formatter)	{ 
 			return formatter.operExpr("=", this.value); 
 		}
 
-		public Boolean mightEquals(Range range) {
+		public Boolean maybeEquals(Range range) {
 			if (range instanceof Equals) {
-				Boolean result = ValueComparator.getInstance().equals(this.value, ((Equals)range).value);
+				Boolean result = value.maybeEquals(((Equals)range).value);
 				return result;
 			} else
 				return Boolean.FALSE;
@@ -628,9 +576,12 @@ public abstract class Range implements CanFormat {
 			return value.toJSON();
 		}
 
-		public Range bind(Map<String, Value> parameters) {
+		public Range bind(Map<Param, Value> parameters) {
 			if (value.type == Value.Type.PARAM) {
-				Value new_value = parameters.get(value.value);
+				@SuppressWarnings("unchecked")
+				Param param = (Param)((Value.Atomic)value).value;
+				@SuppressWarnings("unchecked")
+				Value.Atomic new_value = (Value.Atomic)parameters.get(param);
 				if (new_value != null) return new Equals(new_value);
 			}
 			return this;	
@@ -645,19 +596,17 @@ public abstract class Range implements CanFormat {
 
 		public static final String OPERATOR = "<";
 
-		public LessThan(Value value) {
+		public LessThan(Value.Atomic value) {
 			super(OPERATOR, value);
 		}
 
 		public Boolean contains(Range range) {
-			ValueComparator comparator = ValueComparator.getInstance();
-
 			if (range instanceof Equals)
-				return comparator.lessThan(((Equals)range).value, value);
+				return ((Equals)range).value.lessThan(value);
 			if (range instanceof LessThanOrEqual) 
-				return comparator.lessThan(((LessThanOrEqual)range).value, value);
+				return ((LessThanOrEqual)range).value.lessThan(value);
 			if (range instanceof LessThan) 
-				return comparator.lessThanOrEqual(((LessThan)range).value, value);
+				return ((LessThan)range).value.lessThanOrEqual(value);
 			if (range instanceof Between) 
 				return this.contains(((Between)range).upper_bound);
 			if (range instanceof Intersection) {
@@ -666,12 +615,11 @@ public abstract class Range implements CanFormat {
 			return false; 
 		}
 
-		public Boolean containsItem(Value item) {
-			return value.type == Value.Type.PARAM ? null : ValueComparator.getInstance().lessThan(item, this.value);
+		public Boolean containsItem(Value.Atomic item) {
+			return item.lessThan(this.value);
 		}
 
 		public Range intersect(Range range) {
-			ValueComparator comparator = ValueComparator.getInstance();
 
 			if (range instanceof Unbounded) return this;
 
@@ -682,14 +630,14 @@ public abstract class Range implements CanFormat {
 			// a < x && a < y  -> a < x if x <= y, a < y otherwise
 			// a < x && a <= y -> a < x if x <= y, a <= y otherwise 
 			if (range instanceof LessThan || range instanceof LessThanOrEqual) {			
-				Value rvalue = ((OpenRange)range).value;
+				Value.Atomic rvalue = ((OpenRange)range).value;
 
 				if (value.type == Value.Type.PARAM || rvalue.type == Value.Type.PARAM) {
 					// tricky - a < z && a <= z -> a < z
 					if (value.type == rvalue.type && value.equals(rvalue)) return this;
 					return new Intersection(this,range);
 				} else {
-					if (comparator.lessThanOrEqual(value, rvalue)) return this;
+					if (value.lessThanOrEqual(rvalue)) return this;
 					return range;
 				}
 			}
@@ -697,14 +645,14 @@ public abstract class Range implements CanFormat {
 			// a < x && a > y -> y<a<x if y < x, null otherwise	
 			// a < x && a >= y -> y<=a<x if y < x, null otherwise	
 			if (range instanceof GreaterThan || range instanceof GreaterThanOrEqual) {
-				Value rvalue = ((OpenRange)range).value;
+				Value.Atomic rvalue = ((OpenRange)range).value;
 				if (value.type == Value.Type.PARAM || rvalue.type == Value.Type.PARAM) {
 
 					if (value.type == rvalue.type && value.equals(rvalue)) return null;
 					return new Between(range,this);
 				} else {
 
-					if (comparator.lessThan(rvalue, value) == Boolean.TRUE) {
+					if (rvalue.lessThan(value) == Boolean.TRUE) {
 						return new Between(range, this);
 					} else {
 						return null;
@@ -714,12 +662,12 @@ public abstract class Range implements CanFormat {
 
 			// a < x && a = y -> a = y if y < x; null otherwise
 			if (range instanceof Equals) {
-				Value rvalue = ((Equals)range).value;
+				Value.Atomic rvalue = ((Equals)range).value;
 				if (value.type == Value.Type.PARAM || rvalue.type == Value.Type.PARAM) {
 					if (value.type == rvalue.type && value.equals(rvalue)) return null;
 					return new Intersection(this,range);
 				} else {
-					if (comparator.lessThan(rvalue, value)) {
+					if (rvalue.lessThan(value)) {
 						return range;
 					} else {
 						return null;
@@ -728,6 +676,27 @@ public abstract class Range implements CanFormat {
 			}
 
 			throw new IllegalArgumentException("Uknown range type: " + range);
+		}
+		
+		public Range union(Range other) {
+			if (intersect(other) == null) {
+				return new Union(this, other);
+			} else {
+				if (other instanceof Between)
+					return between(((Between)other).lower_bound, union(((Between)other).upper_bound));
+				if (other instanceof Intersection) 
+					return new Union(this, other);
+				if (other instanceof LessThan || other instanceof LessThanOrEqual) {
+					Boolean comparison = value.lessThanOrEqual(((OpenRange)other).value);
+					if (comparison == Boolean.TRUE) return other;
+					if (comparison == null) return new Union(this, other);
+					return this;
+				}
+				if (other instanceof GreaterThan || other instanceof GreaterThanOrEqual)
+					return UNBOUNDED;
+				throw new IllegalArgumentException("Unsupported range type");
+
+			}
 		}
 
 	}
@@ -741,17 +710,16 @@ public abstract class Range implements CanFormat {
 
 		public static final String OPERATOR = "<=";
 
-		public LessThanOrEqual(Value value) {
+		public LessThanOrEqual(Value.Atomic value) {
 			super(OPERATOR, value);
 		}
 
 		public Boolean contains(Range range) {
-			ValueComparator comparator = ValueComparator.getInstance();
 
 			if (range instanceof Equals)
-				return comparator.lessThanOrEqual(((Equals)range).value, this.value);
+				return ((Equals)range).value.lessThanOrEqual(this.value);
 			if (range instanceof LessThan || range instanceof LessThanOrEqual) 
-				return comparator.lessThanOrEqual(((OpenRange)range).value, this.value);
+				return ((OpenRange)range).value.lessThanOrEqual(this.value);
 			if (range instanceof Between) 
 				return contains(((Between)range).upper_bound);
 			if (range instanceof Intersection) {
@@ -760,13 +728,12 @@ public abstract class Range implements CanFormat {
 			return false;
 		}
 
-		public Boolean containsItem(Value item) {
-			return value.type == Value.Type.PARAM ? null : ValueComparator.getInstance().lessThanOrEqual(item, this.value);
+		public Boolean containsItem(Value.Atomic item) {
+			return value.type == Value.Type.PARAM ? null : item.lessThanOrEqual(this.value);
 		}
 
 		public Range intersect(Range range) {
-			ValueComparator comparator = ValueComparator.getInstance();
-
+			
 			if (range instanceof Unbounded) return this;
 
 			// Complex ranges always handled by their own class
@@ -776,25 +743,25 @@ public abstract class Range implements CanFormat {
 			// a <= x && a < y  -> a <= x if x < y, a < y otherwise
 			// a <= x && a <= y -> a <= x if x < y, a <= y otherwise 
 			if (range instanceof LessThan || range instanceof LessThanOrEqual) {
-				Value rvalue = ((OpenRange)range).value;
+				Value.Atomic rvalue = ((OpenRange)range).value;
 				if (value.type == Value.Type.PARAM || rvalue.type == Value.Type.PARAM) {
 					if (value.type == rvalue.type && this.value.equals(rvalue)) return range;
 					return new Intersection(this,range);
 				} else {
-					if (comparator.lessThanOrEqual(this.value,rvalue)) return this;
+					if (value.lessThanOrEqual(rvalue)) return this;
 					return range;
 				}
 			}
 
 			// a <= x && a > y -> y<a<=x if y < x, null otherwise	
 			if (range instanceof GreaterThan) {
-				Value rvalue = ((OpenRange)range).value;
+				Value.Atomic rvalue = ((OpenRange)range).value;
 				if (value.type == Value.Type.PARAM || rvalue.type == Value.Type.PARAM) {
 					if (value.type == rvalue.type && value.equals(rvalue)) return null;
 					return new Between(range,this);
 				} else {
 
-					if (comparator.lessThan(rvalue, this.value)) {
+					if (rvalue.lessThan(this.value)) {
 						return new Between(range, this);
 					} else {
 						return null;
@@ -804,17 +771,17 @@ public abstract class Range implements CanFormat {
 
 			// a <= x && a >= y -> y<=a<=x if y < x, a = x if y = x, null otherwise	
 			if (range instanceof GreaterThanOrEqual) {
-				Value rvalue = ((OpenRange)range).value;
+				Value.Atomic rvalue = ((OpenRange)range).value;
 				if (value.type == Value.Type.PARAM || rvalue.type == Value.Type.PARAM) {
 
 					if (value.type == rvalue.type && this.value.equals(rvalue)) return new Equals(this.value);
 					return new Intersection(this,range);
 				} else {
 
-					if (comparator.lessThan(rvalue, this.value) == Boolean.TRUE) {
+					if (rvalue.lessThan(this.value) == Boolean.TRUE) {
 						return new Between(range, this);
 					} 
-					if (comparator.equals(rvalue, this.value) == Boolean.TRUE) {
+					if (rvalue.equals(this.value) == Boolean.TRUE) {
 						return new Equals(rvalue);
 					} 
 					return null;
@@ -823,12 +790,12 @@ public abstract class Range implements CanFormat {
 
 			// a <= x && a = y -> a = y if y <= x; null otherwise
 			if (range instanceof Equals) {
-				Value rvalue = ((Equals)range).value;
+				Value.Atomic rvalue = ((Equals)range).value;
 				if (value.type == Value.Type.PARAM || rvalue.type == Value.Type.PARAM) {
 					if (value.type == rvalue.type && this.value.equals(rvalue)) return range;
 					return new Intersection(this,range);
 				} else {
-					if (comparator.lessThanOrEqual(rvalue, this.value)) {
+					if (rvalue.lessThanOrEqual(this.value)) {
 						return range;
 					} else {
 						return null;
@@ -837,6 +804,12 @@ public abstract class Range implements CanFormat {
 			}
 
 			throw new IllegalArgumentException("Unknown range type: " + range);
+		}
+
+		@Override
+		public Range union(Range other) {
+			// TODO Auto-generated method stub
+			return null;
 		}
 	}
 
@@ -848,20 +821,19 @@ public abstract class Range implements CanFormat {
 
 		public static final String OPERATOR = ">";
 
-		public GreaterThan(Value value) {
+		public GreaterThan(Value.Atomic value) {
 			super(GreaterThan.OPERATOR, value);
 		}
 
 
 		public Boolean contains(Range range) {
-			ValueComparator comparator = ValueComparator.getInstance();
 
 			if (range instanceof Equals)
-				return comparator.greaterThan(((Equals)range).value, this.value);
+				return ((Equals)range).value.greaterThan(this.value);
 			if (range instanceof GreaterThanOrEqual) 
-				return comparator.greaterThan(((OpenRange)range).value, this.value);
+				return ((OpenRange)range).value.greaterThan(this.value);
 			if (range instanceof GreaterThan) 
-				return comparator.greaterThanOrEqual(((OpenRange)range).value, this.value);
+				return ((OpenRange)range).value.greaterThanOrEqual(this.value);
 			if (range instanceof Between) 
 				return this.contains(((Between)range).lower_bound);
 			if (range instanceof Intersection) {
@@ -870,14 +842,12 @@ public abstract class Range implements CanFormat {
 			return false;
 		}
 
-		public Boolean containsItem(Value item) {
-			return value.type == Value.Type.PARAM ? null : ValueComparator.getInstance().greaterThan(item, this.value);
+		public Boolean containsItem(Value.Atomic item) {
+			return value.type == Value.Type.PARAM ? null : item.greaterThan(this.value);
 		}
 
 		public Range intersect(Range range) {
 			if (range instanceof Unbounded) return this;
-			ValueComparator comparator = ValueComparator.getInstance();
-
 
 			// Complex ranges are directly handled by their own class.
 			if (range instanceof Between || range instanceof Intersection)
@@ -886,12 +856,12 @@ public abstract class Range implements CanFormat {
 			// a > x && a > y  -> a > x if x >= y, a > y otherwise
 			// a > x && a >= y -> a < x if x >= y, a >= y otherwise 
 			if (range instanceof GreaterThan || range instanceof GreaterThanOrEqual) {
-				Value rvalue = ((OpenRange)range).value;
+				Value.Atomic rvalue = ((OpenRange)range).value;
 				if (value.type == Value.Type.PARAM || rvalue.type == Value.Type.PARAM) {
 					if (value.type == Value.Type.PARAM && this.value.equals(rvalue)) return this;
 					return new Intersection(this,range);
 				} else {
-					if (comparator.greaterThanOrEqual(this.value, rvalue)) return this;
+					if (this.value.greaterThanOrEqual(rvalue)) return this;
 					return range;
 				}
 			}
@@ -900,13 +870,13 @@ public abstract class Range implements CanFormat {
 			// a > x && a < y -> x<a<y if x < y, null otherwise	
 			// a > x && a <= y -> x<a<=y if x < y, null otherwise	
 			if (range instanceof LessThan || range instanceof LessThanOrEqual) {
-				Value rvalue = ((OpenRange)range).value;
+				Value.Atomic rvalue = ((OpenRange)range).value;
 				if (value.type == Value.Type.PARAM || rvalue.type == Value.Type.PARAM) {
 					if (value.type == Value.Type.PARAM && this.value.equals(rvalue)) return null;
 					return new Between(this,range);
 				} else {
 
-					if (comparator.lessThan(this.value, rvalue)) {
+					if (this.value.lessThan(rvalue)) {
 						return new Between(this, range);
 					} else {
 						return null;
@@ -916,13 +886,13 @@ public abstract class Range implements CanFormat {
 
 			// a > x && a = y -> a = y if y > x; null otherwise
 			if (range instanceof Equals) {
-				Value rvalue = ((Equals)range).value;
+				Value.Atomic rvalue = ((Equals)range).value;
 
 				if (value.type == Value.Type.PARAM || rvalue.type == Value.Type.PARAM) {
 					if (value.type == Value.Type.PARAM && this.value.equals(rvalue)) return null;
 					return new Intersection(this,range);
 				} else {
-					if (comparator.greaterThan(rvalue, this.value)) {
+					if (rvalue.greaterThan(this.value)) {
 						return range;
 					} else {
 						return null;
@@ -931,6 +901,13 @@ public abstract class Range implements CanFormat {
 			}
 
 			throw new IllegalArgumentException("Unknown range type: " + range);
+		}
+
+
+		@Override
+		public Range union(Range other) {
+			// TODO Auto-generated method stub
+			return null;
 		}
 
 	}
@@ -943,18 +920,17 @@ public abstract class Range implements CanFormat {
 
 		public static String OPERATOR = ">=";
 
-		public GreaterThanOrEqual(Value value) {
+		public GreaterThanOrEqual(Value.Atomic value) {
 			super(GreaterThanOrEqual.OPERATOR, value);
 		}
 
 
 		public Boolean contains(Range range) {
-			ValueComparator comparator = ValueComparator.getInstance();
 
 			if (range instanceof Equals)
-				return comparator.greaterThanOrEqual(((Equals)range).value, this.value);
+				return ((Equals)range).value.greaterThanOrEqual(this.value);
 			if (range instanceof GreaterThan  || range instanceof GreaterThanOrEqual) 
-				return comparator.greaterThanOrEqual(((OpenRange)range).value, this.value);
+				return ((OpenRange)range).value.greaterThanOrEqual(this.value);
 			if (range instanceof Between) 
 				return this.contains(((Between)range).lower_bound);
 			if (range instanceof Intersection) {
@@ -963,8 +939,8 @@ public abstract class Range implements CanFormat {
 			return false;
 		}
 
-		public Boolean containsItem(Value item) {
-			return value.type == Value.Type.PARAM ? null : ValueComparator.getInstance().greaterThanOrEqual(item, this.value);
+		public Boolean containsItem(Value.Atomic item) {
+			return value.type == Value.Type.PARAM ? null : item.greaterThanOrEqual(this.value);
 		}
 
 
@@ -975,32 +951,30 @@ public abstract class Range implements CanFormat {
 			if (range instanceof Between || range instanceof Intersection)
 				return range.intersect(this);
 
-			ValueComparator comparator = ValueComparator.getInstance();
-
 			// a >= x && a > y  -> a >= x if x > y, a > y otherwise
 			// a >= x && a >= y -> a >= x if x > y, a >= y otherwise 
 			if (range instanceof GreaterThan || range instanceof GreaterThanOrEqual) {
-				Value rvalue = ((OpenRange)range).value;
+				Value.Atomic rvalue = ((OpenRange)range).value;
 
 				if (value.type == Value.Type.PARAM || rvalue.type == Value.Type.PARAM) {
 					if (value.type == Value.Type.PARAM && this.value.equals(rvalue)) return range;
 					return new Intersection(this,range);
 				} else {
-					if (comparator.greaterThanOrEqual(this.value,rvalue)) return this;
+					if (this.value.greaterThanOrEqual(rvalue)) return this;
 					return range;
 				}
 			}
 
 			// a >= x && a < y -> x<=a<y if y > x, null otherwise	
 			if (range instanceof LessThan) {
-				Value rvalue = ((OpenRange)range).value;
+				Value.Atomic rvalue = ((OpenRange)range).value;
 
 				if (value.type == Value.Type.PARAM || rvalue.type == Value.Type.PARAM) {
 					if (value.type == Value.Type.PARAM && this.value.equals(rvalue)) return null;
 					return new Between(this,range);
 				} else {
 
-					if (comparator.greaterThan(rvalue, this.value)) {
+					if (rvalue.greaterThan(this.value)) {
 						return new Between(this,range);
 					} else {
 						return null;
@@ -1010,7 +984,7 @@ public abstract class Range implements CanFormat {
 
 			// a >= x && a <= y -> x<=a<=y if y > x, a = x if y = x, null otherwise	
 			if (range instanceof LessThanOrEqual) {
-				Value rvalue = ((OpenRange)range).value;
+				Value.Atomic rvalue = ((OpenRange)range).value;
 
 				if (value.type == Value.Type.PARAM || rvalue.type == Value.Type.PARAM) {
 
@@ -1018,10 +992,10 @@ public abstract class Range implements CanFormat {
 					return new Intersection(this,range);
 				} else {
 
-					if (comparator.greaterThan(rvalue, this.value) == Boolean.TRUE) {
+					if (rvalue.greaterThan(this.value) == Boolean.TRUE) {
 						return new Between(range, this);
 					} 
-					if (comparator.equals(rvalue, this.value) == Boolean.TRUE) {
+					if (rvalue.equals(this.value) == Boolean.TRUE) {
 						return new Equals(rvalue);
 					} 
 					return null;
@@ -1030,13 +1004,13 @@ public abstract class Range implements CanFormat {
 
 			// a >= x && a = y -> a = y if y >= x; null otherwise
 			if (range instanceof Equals) {
-				Value rvalue = ((Equals)range).value;
+				Value.Atomic rvalue = ((Equals)range).value;
 
 				if (value.type == Value.Type.PARAM || rvalue.type == Value.Type.PARAM) {
 					if (value.type == Value.Type.PARAM && value.equals(rvalue)) return range;
 					return new Intersection(this,range);
 				} else {
-					if (comparator.greaterThanOrEqual(rvalue, this.value)) {
+					if (rvalue.greaterThanOrEqual(this.value)) {
 						return range;
 					} else {
 						return null;
@@ -1047,36 +1021,10 @@ public abstract class Range implements CanFormat {
 			throw new IllegalArgumentException("Uknown range type: " + range);
 		}
 
-	}
-	
-	private static <T> Boolean every(Collection<T> items, Predicate<T> test) {
-		Boolean result = Boolean.TRUE;
-		Iterator<T> iterator = items.iterator();
-		while (iterator.hasNext() && result != Boolean.FALSE) {
-			Boolean next = test.test(iterator.next());
-			if (result == null) 
-				result = next == Boolean.FALSE ? Boolean.FALSE : null;
-			else if (next == null) 
-				result = null;
-			else
-				result = next;
+		public Range union(Range other) {
+			// TODO: implemnet
+			return null;
 		}
-		return result;
-	}
-	
-	private static <T> Boolean some(Collection<T> items, Predicate<T> test) {
-		Boolean result = Boolean.FALSE;
-		Iterator<T> iterator = items.iterator();
-		while (iterator.hasNext() && result != Boolean.TRUE) {
-			Boolean next = test.test(iterator.next());
-			if (result == null) 
-				result = next == Boolean.TRUE ? Boolean.TRUE : null;
-			else if (next == null) 
-				result = null;
-			else
-				result = next;
-		}
-		return result;
 	}
 
 	/** Range has element within some bound.
@@ -1089,6 +1037,7 @@ public abstract class Range implements CanFormat {
 		
 		private List<Range> bounds;
 
+		@SafeVarargs
 		public HasElementsMatching(Range... bounds) {
 			this.bounds = Arrays.asList(bounds);
 		}
@@ -1105,19 +1054,19 @@ public abstract class Range implements CanFormat {
 		public Boolean contains(Range range) {
 			if (range instanceof HasElementsMatching)
 				// use Stream versions of every and other because of tri-state implementation 
-				return every(
+				return Tristate.every(
 					((HasElementsMatching)range).bounds, 
 					range_bound -> 
-						some(bounds, this_bound -> this_bound.contains(range_bound))
+						Tristate.any(bounds, this_bound -> this_bound.contains(range_bound))
 				);
 			return false;
 		}
 
 		// For every bound, there is some element in item that matches that bound.
-		public Boolean containsItem(Value item) {
+		public Boolean containsItem(Value.Atomic item) {
 			// TODO: need to support array items at this point
-			Collection<Value> items = Collections.singletonList(item);
-			return every(bounds, bound -> some(items, element -> bound.containsItem(element))); 
+			Collection<Value.Atomic> items = Collections.singletonList(item);
+			return Tristate.every(bounds, bound -> Tristate.any(items, element -> bound.containsItem(element))); 
 		}
 
 		// hmm, remember that $and : [ { y : { $has : 'numpty' } }, { y : { $has : 'flash' } } ] is not the same as 
@@ -1130,7 +1079,7 @@ public abstract class Range implements CanFormat {
 
 				List<Range> new_bounds = new ArrayList<Range>(bounds);
 				for (Range new_bound : ((HasElementsMatching)range).bounds) {
-					if (Boolean.FALSE != some(this.bounds, this_bound -> { return this_bound.contains(new_bound); }))
+					if (Boolean.FALSE != Tristate.any(this.bounds, this_bound -> { return this_bound.contains(new_bound); }))
 						new_bounds.add(new_bound);
 				}
 
@@ -1139,7 +1088,7 @@ public abstract class Range implements CanFormat {
 			throw new RuntimeException("Can't mix array operations and scalar operations on a single field");
 		}
 
-		public <T> T toExpression(Formatter<T> formatter) { 
+		public <U> U toExpression(Formatter<U> formatter) { 
 			return formatter.subExpr(OPERATOR, bounds.stream().map(range->range.toExpression(formatter)));
 		}
 
@@ -1150,7 +1099,7 @@ public abstract class Range implements CanFormat {
 				&& bounds.equals(((HasElementsMatching)range).bounds); 
 		}
 		
-		public Boolean mightEquals(Range range) {
+		public Boolean maybeEquals(Range range) {
 			//TODO
 			return null;
 		}
@@ -1160,7 +1109,7 @@ public abstract class Range implements CanFormat {
 			return null;
 		}	
 
-		public Range bind(Map<String,Value> parameters) {
+		public Range bind(Map<Param,Value> parameters) {
 
 			/*
 			let bounds = Stream.from(this.bounds)
@@ -1180,6 +1129,11 @@ public abstract class Range implements CanFormat {
 			*/
 			return this;
 		}
+		
+		public Range union(Range other) {
+			// TODO: implement
+			return null;
+		}
 	}
 
 
@@ -1193,8 +1147,8 @@ public abstract class Range implements CanFormat {
 		public static final String OPERATOR = "$and";
 
 		private Range known_bounds;
-		private Map<String,Range> parametrized_bounds;
-		private List<String> parameters;
+		private Map<Param,Range> parametrized_bounds;
+		private List<Param> parameters;
 
 		/** construct an intersection
 		 *
@@ -1204,10 +1158,11 @@ public abstract class Range implements CanFormat {
 		 * 
 		 * Use repeated calls of .intersect to build an intersection without these limitations.
 		 */
+		@SafeVarargs
 		public Intersection(Range... ranges) {
-			this.known_bounds = Range.UNBOUNDED;
-			this.parametrized_bounds = new HashMap<String,Range>();
-			this.parameters = new ArrayList<String>();
+			this.known_bounds = UNBOUNDED;
+			this.parametrized_bounds = new HashMap<Param,Range>();
+			this.parameters = new ArrayList<Param>();
 			for (Range range : ranges) {
 				if (!this.addRange(range)) throw new IllegalArgumentException("Range excludes previously added ranges");
 			}
@@ -1215,8 +1170,8 @@ public abstract class Range implements CanFormat {
 
 		public Intersection(Intersection to_copy) {
 			this.known_bounds = to_copy.known_bounds;
-			this.parametrized_bounds = new HashMap<String,Range>(to_copy.parametrized_bounds);
-			this.parameters = new ArrayList<String>(to_copy.parameters);
+			this.parametrized_bounds = new HashMap<Param,Range>(to_copy.parametrized_bounds);
+			this.parameters = new ArrayList<Param>(to_copy.parameters);
 		}
 
 		/** Add a range to this intersection.
@@ -1247,7 +1202,8 @@ public abstract class Range implements CanFormat {
 			if (range instanceof OpenRange) rvalue = ((OpenRange)range).value;
 
 			if (rvalue.type == Value.Type.PARAM) {
-				String pname = (String)rvalue.value;
+				Param pname = (Param)((Value.Atomic)rvalue).value;
+
 				Range old_param = this.parametrized_bounds.getOrDefault(pname, UNBOUNDED);
 				Range new_param = old_param.intersect(range);
 				if (new_param == null)  {
@@ -1275,7 +1231,7 @@ public abstract class Range implements CanFormat {
 			return result;
 		}
 
-		public Boolean containsItem(Value item) {
+		public Boolean containsItem(Value.Atomic item) {
 			Boolean result = this.known_bounds.containsItem(item);
 			for (int i = 0; i < this.parameters.size() && result != null && result; i++)
 				result = this.parametrized_bounds.get(this.parameters.get(i)).containsItem(item);
@@ -1295,13 +1251,13 @@ public abstract class Range implements CanFormat {
 			if (range instanceof OpenRange) {
 				Value rvalue = ((OpenRange)range).value;
 				if (rvalue.type == Value.Type.PARAM) {
-					return range.contains(this.parametrized_bounds.getOrDefault((String)rvalue.value, UNBOUNDED));
+					return range.contains(this.parametrized_bounds.getOrDefault((Param)((Value.Atomic)rvalue).value, UNBOUNDED));
 				}
 			}
 			if (range instanceof Equals) {
 				Value rvalue = ((Equals)range).value;
 				if (rvalue.type == Value.Type.PARAM) {
-					return range.contains(this.parametrized_bounds.getOrDefault((String)rvalue.value, UNBOUNDED));
+					return range.contains(this.parametrized_bounds.getOrDefault((Param)((Value.Atomic)rvalue).value, UNBOUNDED));
 				}
 			}
 
@@ -1333,7 +1289,7 @@ public abstract class Range implements CanFormat {
 			return null;
 		}
 
-		public <T> T toExpression(Formatter<T> formatter)	{ 
+		public <U> U toExpression(Formatter<U> formatter)	{ 
 			Stream<Range> ranges = Stream.concat(
 					Stream.of(known_bounds), 
 					parametrized_bounds.values().stream()
@@ -1342,12 +1298,12 @@ public abstract class Range implements CanFormat {
 			return formatter.andExpr(ranges.map(range->range.toExpression(formatter)));
 		}
 
-		public Boolean mightEquals(Intersection range) { 
+		public Boolean maybeEquals(Intersection range) { 
 			if (this.known_bounds.equals(range.known_bounds)) {
 				if (parameters.size() == range.parameters.size()) {
 					Boolean  result = true;
 					for (int i = 0; i < parameters.size() && result != null && result; i++) {
-						String param = parameters.get(i);
+						Param param = parameters.get(i);
 						Range other_bound = range.parametrized_bounds.get(param);
 						result = other_bound != null ? parametrized_bounds.get(param).equals(other_bound) : false;
 					}
@@ -1357,8 +1313,8 @@ public abstract class Range implements CanFormat {
 			return false;
 		}
 		
-		public Boolean mightEquals(Range range) {
-			if (range instanceof Intersection) return mightEquals((Intersection)range);
+		public Boolean maybeEquals(Range range) {
+			if (range instanceof Intersection) return maybeEquals((Intersection)range);
 			return Boolean.FALSE;
 		}
 
@@ -1376,12 +1332,79 @@ public abstract class Range implements CanFormat {
 			return obj.build();
 		}
 
-		public Range bind(Map<String,Value> param_map) {
+		public Range bind(Map<Param,Value> param_map) {
 			Range result = known_bounds;
-			for (int i = 0; i < parameters.size() && result != null; i++)
+			for (int i = 0; i < parameters.size() && result != null; i++) {
 				result = result.intersect(parametrized_bounds.get(parameters.get(i)).bind(param_map));
+			}
 			return result;
-		}		
+		}
+
+		@Override
+		public Range union(Range other) {
+			// TODO Auto-generated method stub
+			return null;
+		}	
+	}
+	
+	public static class Union extends Range {
+
+		private Range a;
+		private Range b;
+		
+		public Union(Range a, Range b) {
+			this.a = a;
+			this.b = b;
+		}
+		
+		@Override
+		public Range union(Range other) {
+			// TODO Auto-generated method stub
+			return null;
+		}
+
+		@Override
+		public Boolean maybeEquals(Range other) {
+			// TODO Auto-generated method stub
+			return null;
+		}
+
+		@Override
+		public Boolean contains(Range range) {
+			// TODO Auto-generated method stub
+			return null;
+		}
+
+		@Override
+		public Boolean containsItem(Atomic item) {
+			// TODO Auto-generated method stub
+			return null;
+		}
+
+		@Override
+		public Range intersect(Range range) {
+			// TODO Auto-generated method stub
+			return null;
+		}
+
+		@Override
+		public  <U> U toExpression(Formatter<U> formatter) {
+			// TODO Auto-generated method stub
+			return null;
+		}
+
+		@Override
+		public JsonValue toJSON() {
+			// TODO Auto-generated method stub
+			return null;
+		}
+
+		@Override
+		public Range bind(Map<Param, Value> parameters) {
+			// TODO Auto-generated method stub
+			return null;
+		}
+		
 	}
 }
 

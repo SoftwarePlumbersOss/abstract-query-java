@@ -377,7 +377,7 @@ public class Query {
 	* @param item to test
 	* @returns true, false or null
 	*/
-	public boolean containsItem(Value item) {
+	public boolean containsItem(Value.MapValue<?> item) {
 		for (Cube c : this.union) {
 			Boolean contains_item = c.containsItem(item);
 			if (contains_item == null || contains_item) return contains_item;
@@ -456,7 +456,7 @@ public class Query {
 	* @param parameters map of parameter values
 	* @returns new query, with parameter values set.
 	*/
-	public Query bind(Map<String,Value> parameters) {
+	public Query bind(Map<Param,Value> parameters) {
 		List<Cube> cubes = this.union.stream()
 			.map(cube -> cube.bind(parameters))
 			.filter(cube -> cube != null)

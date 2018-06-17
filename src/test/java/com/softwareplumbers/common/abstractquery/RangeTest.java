@@ -1,6 +1,9 @@
 package com.softwareplumbers.common.abstractquery;
 
 import org.junit.runner.RunWith;
+
+import com.softwareplumbers.common.abstractquery.Value.Atomic;
+
 import org.junit.Test;
 
 import static org.junit.Assert.*;
@@ -120,29 +123,29 @@ public class RangeTest {
 	@Test
     public void canCompareParametrizedRangesWithEquals() {
         Range range1 = Range.equals(Value.from(37));
-        Range range2 = Range.equals(Param.from("param1"));
-        Range range3 = Range.equals(Param.from("param2"));
-        Range range4 = Range.equals(Param.from("param1"));
-        assertEquals(null, range2.mightEquals(range3));
-        assertEquals(true, range2.mightEquals(range4));
-        assertEquals(null, range2.mightEquals(range1));
-        assertEquals(null, range1.mightEquals(range2));
+        Range range2 = Range.equals(Value.param("param1"));
+        Range range3 = Range.equals(Value.param("param2"));
+        Range range4 = Range.equals(Value.param("param1"));
+        assertEquals(null, range2.maybeEquals(range3));
+        assertEquals(true, range2.maybeEquals(range4));
+        assertEquals(null, range2.maybeEquals(range1));
+        assertEquals(null, range1.maybeEquals(range2));
 
-        Range range5 = Range.lessThan(Param.from("param1"));
-        Range range6 = Range.lessThan(Param.from("param1"));
-        Range range7 = Range.lessThan(Param.from("param2"));
-        assertEquals(true, range5.mightEquals(range6));
-        assertEquals(null, range5.mightEquals(range7));
-        assertEquals(false, range1.mightEquals(range5));
+        Range range5 = Range.lessThan(Value.param("param1"));
+        Range range6 = Range.lessThan(Value.param("param1"));
+        Range range7 = Range.lessThan(Value.param("param2"));
+        assertEquals(true, range5.maybeEquals(range6));
+        assertEquals(null, range5.maybeEquals(range7));
+        assertEquals(false, range1.maybeEquals(range5));
 
-        Range range8 = Range.between(Value.from(5), Param.from("param2"));
-        Range range9 = Range.between(Value.from(5), Param.from("param1"));
-        Range range10 = Range.between(Value.from(5), Param.from("param2"));
-        Range range11 = Range.between(Value.from(4), Param.from("param2"));
+        Range range8 = Range.between(Value.from(5), Value.param("param2"));
+        Range range9 = Range.between(Value.from(5), Value.param("param1"));
+        Range range10 = Range.between(Value.from(5), Value.param("param2"));
+        Range range11 = Range.between(Value.from(4), Value.param("param2"));
 
-        assertEquals(null, range8.mightEquals(range9));
-        assertEquals(true, range8.mightEquals(range10));
-        assertEquals(false, range8.mightEquals(range11));
+        assertEquals(null, range8.maybeEquals(range9));
+        assertEquals(true, range8.maybeEquals(range10));
+        assertEquals(false, range8.maybeEquals(range11));
     }
 
 	@Test
@@ -159,7 +162,7 @@ public class RangeTest {
 	@Test
     public void correctContainmentForEqualsWithParameters() {
         Range range1 = Range.equals(Value.from(37));
-        Range range2 = Range.equals(Param.from("param"));
+        Range range2 = Range.equals(Value.param("param"));
 
         assertEquals(null, range1.contains(range2));
         assertEquals(null, range2.contains(range1));
@@ -179,8 +182,8 @@ public class RangeTest {
 	@Test
     public void correctContainmentForLessThanWithParameters() {
         Range range1 = Range.lessThan(Value.from(37));
-        Range range2 = Range.lessThan(Param.from("param"));
-        Range range3 = Range.lessThan(Param.from("param"));
+        Range range2 = Range.lessThan(Value.param("param"));
+        Range range3 = Range.lessThan(Value.param("param"));
 
         assertEquals(null, range1.contains(range2));
         assertEquals(null, range2.contains(range1));
@@ -190,10 +193,10 @@ public class RangeTest {
 	@Test
     public void correctContainmentForlessThanAndIntersection() {
         Range range1 = Range.lessThan(Value.from(37));
-        Range range2 = Range.lessThan(Param.from("param1"));
-        Range range3 = Range.lessThan(Param.from("param2"));
+        Range range2 = Range.lessThan(Value.param("param1"));
+        Range range3 = Range.lessThan(Value.param("param2"));
         Range range4 = range1.intersect(range2).intersect(range3);
-        Range range5 = Range.greaterThan(Param.from("param1"));
+        Range range5 = Range.greaterThan(Value.param("param1"));
         Range range7 = Range.lessThan(Value.from(8));
 
         assertTrue(range1.contains(range4));
@@ -217,8 +220,8 @@ public class RangeTest {
 	@Test
     public void correctContainmentForlessThanOrEqualWithParameters() {
         Range range1 = Range.lessThanOrEqual(Value.from(37));
-        Range range2 = Range.lessThanOrEqual(Param.from("param"));
-        Range range3 = Range.lessThanOrEqual(Param.from("param"));
+        Range range2 = Range.lessThanOrEqual(Value.param("param"));
+        Range range3 = Range.lessThanOrEqual(Value.param("param"));
 
         assertEquals(null, range1.contains(range2));
         assertEquals(null, range2.contains(range1));
@@ -239,9 +242,9 @@ public class RangeTest {
 
 	@Test
     public void correctContainmentForlessThanOrEqualLessThanEqualsWithParameters() {
-        Range range1 = Range.lessThanOrEqual(Param.from("param"));
-        Range range2 = Range.equals(Param.from("param"));
-        Range range3 = Range.lessThan(Param.from("param"));
+        Range range1 = Range.lessThanOrEqual(Value.param("param"));
+        Range range2 = Range.equals(Value.param("param"));
+        Range range3 = Range.lessThan(Value.param("param"));
 
 
         assertTrue(range1.contains(range3));
@@ -299,10 +302,10 @@ public class RangeTest {
 
 	@Test
     public void correctContainmentForgreaterThanLessThanWithParameters(){
-        Range range1 = Range.greaterThan(Param.from("param1"));
-        Range range2 = Range.greaterThan(Param.from("param2"));
-        Range range3 = Range.lessThan(Param.from("param1"));
-        Range range4 = Range.lessThan(Param.from("param2"));
+        Range range1 = Range.greaterThan(Value.param("param1"));
+        Range range2 = Range.greaterThan(Value.param("param2"));
+        Range range3 = Range.lessThan(Value.param("param1"));
+        Range range4 = Range.lessThan(Value.param("param2"));
 
         assertFalse(range1.contains(range3));
         assertFalse(range1.contains(range4));
@@ -328,10 +331,10 @@ public class RangeTest {
 
 	@Test
     public void correctContainmentForbetweenWithParameters() {
-        Range range1 = Range.between(Value.from(14),Param.from("param1"));
-        Range range2 = Range.between(Value.from(15),Param.from("param1"));
-        Range range3 = Range.between(Param.from("param1"),Value.from(15));
-        Range range4 = Range.between(Param.from("param1"),Value.from(14));
+        Range range1 = Range.between(Value.from(14),Value.param("param1"));
+        Range range2 = Range.between(Value.from(15),Value.param("param1"));
+        Range range3 = Range.between(Value.param("param1"),Value.from(15));
+        Range range4 = Range.between(Value.param("param1"),Value.from(14));
         assertTrue(range1.contains(range2));
         assertTrue(range3.contains(range4));
     }
@@ -345,10 +348,10 @@ public class RangeTest {
     }
 
     public void correctContainmentForsubqueryWithParameters(){
-        Range range1 = Range.from({count: [Param.from("param")1,]}
-        Range range2 = Range.from({count: [Param.from("param2"),]}
-        Range range3 = Range.from({count: Param.from("param")1}
-        assertEquals(null, range1.contains(range2)); // cant tell, contains if Param.from("param")1 === Param.from("param2")
+        Range range1 = Range.from({count: [Value.param("param")1,]}
+        Range range2 = Range.from({count: [Value.param("param2"),]}
+        Range range3 = Range.from({count: Value.param("param")1}
+        assertEquals(null, range1.contains(range2)); // cant tell, contains if Value.param("param")1 === Value.param("param2")
         assertEquals(null, range2.contains(range1));
         assertTrue(range1.contains(range3)); 
     }
@@ -367,9 +370,9 @@ public class RangeTest {
 
 	@Test
     public void CorrectIntersectionForEqualsWithParameters() {
-        Range range1 = Range.equals(Param.from("param1"));
+        Range range1 = Range.equals(Value.param("param1"));
         Range range2 = Range.equals(Value.from(14));
-        Range range3 = Range.equals(Param.from("param1"));
+        Range range3 = Range.equals(Value.param("param1"));
 
         assertEquals(range1.intersect(range2), range2.intersect(range1));
         assertEquals(range1.intersect(range3),range1);
@@ -388,9 +391,9 @@ public class RangeTest {
 
 	@Test
     public void CorrectIntersectionForlessThanWithParameters() {
-        Range range1 = Range.lessThan(Param.from("param"));
+        Range range1 = Range.lessThan(Value.param("param"));
         Range range2 = Range.lessThan(Value.from(14));
-        Range range3 = Range.lessThan(Param.from("param"));
+        Range range3 = Range.lessThan(Value.param("param"));
         
         assertEquals(range1.intersect(range2), range2.intersect(range1));
         assertEquals(range1, range1.intersect(range3));
@@ -410,9 +413,9 @@ public class RangeTest {
 
 	@Test
     public void CorrectIntersectionForgreaterThanWithParameters() {
-        Range range1 = Range.greaterThan(Param.from("param"));
+        Range range1 = Range.greaterThan(Value.param("param"));
         Range range2 = Range.greaterThan(Value.from(14));
-        Range range3 = Range.greaterThan(Param.from("param"));
+        Range range3 = Range.greaterThan(Value.param("param"));
 
         assertEquals(range1.intersect(range2), range2.intersect(range1));
         assertEquals(range1, range1.intersect(range3));    
@@ -434,10 +437,10 @@ public class RangeTest {
 
 	@Test
     public void CorrectIntersectionForgreaterThanLessThanWithParameters() {
-        Range range1 = Range.lessThan(Param.from("param1"));
-        Range range2 = Range.greaterThan(Param.from("param2"));
-        Range range3 = Range.lessThan(Param.from("param2"));
-        Range range4 = Range.greaterThan(Param.from("param1"));
+        Range range1 = Range.lessThan(Value.param("param1"));
+        Range range2 = Range.greaterThan(Value.param("param2"));
+        Range range3 = Range.lessThan(Value.param("param2"));
+        Range range4 = Range.greaterThan(Value.param("param1"));
 
         assertEquals(range1.intersect(range2),Range.between(range2,range1));
         assertEquals(range2.intersect(range1),Range.between(range2,range1));
@@ -467,8 +470,8 @@ public class RangeTest {
 	
 	@Test
     public void canCreaterangeWithParameters() {
-        Range range1 = Range.lessThan(Param.from("bottom"));
-        Range range2 = Range.lessThan(Param.from("top"));
+        Range range1 = Range.lessThan(Value.param("bottom"));
+        Range range2 = Range.lessThan(Value.param("top"));
         assertNotEquals(range1, range2);
     }
 /*
@@ -505,62 +508,63 @@ public class RangeTest {
     public void CorrectIntersectionForbetweenWithParameters() {
 
         Range range1 = Range.between(Value.from(14),37);
-        Range range2 = Range.between(Param.from("param1"),Value.from(36));
+        Range range2 = Range.between(Value.param("param1"),Value.from(36));
         Range range3 = range1.intersect(range2);
 
         expect(range3.known_bounds).to.deep.equal(Range.between(Value.from(14),Value.from(36)));
-        expect(range3.parametrized_bounds.param1).to.deep.equal(Range.greaterThanOrEqual(Param.from("param1")));
+        expect(range3.parametrized_bounds.param1).to.deep.equal(Range.greaterThanOrEqual(Value.param("param1")));
 
-        Range range4 = Range.between(Value.from(14),Param.from("param1"));
+        Range range4 = Range.between(Value.from(14),Value.param("param1"));
         Range range5 = Range.between(Value.from(15),Value.from(36));
         Range range6 = range4.intersect(range5);
 
         expect(range6.known_bounds).to.deep.equal(Range.between(Value.from(15),Value.from(36)));
-        expect(range6.parametrized_bounds.param1).to.deep.equal(Range.lessThan(Param.from("param1")));
+        expect(range6.parametrized_bounds.param1).to.deep.equal(Range.lessThan(Value.param("param1")));
 
-        Range range7 = Range.between(Value.from(14),Param.from("param1"));
-        Range range8 = Range.between(Value.from(15),Param.from("param1"));
+        Range range7 = Range.between(Value.from(14),Value.param("param1"));
+        Range range8 = Range.between(Value.from(15),Value.param("param1"));
         Range range9 = range7.intersect(range8);
 
-        expect(range9).to.deep.equal(Range.between(Value.from(15), Param.from("param1")));
+        expect(range9).to.deep.equal(Range.between(Value.from(15), Value.param("param1")));
 
-        Range range10 = Range.between(Value.from(14),Param.from("param1"));
-        Range range11 = Range.between(Param.from("param1"),Value.from(36));
+        Range range10 = Range.between(Value.from(14),Value.param("param1"));
+        Range range11 = Range.between(Value.param("param1"),Value.from(36));
         Range range12 = range10.intersect(range11);
 
         expect(range12).to.be.null;
     }
 */
-    @Test
+    @SuppressWarnings("serial")
+	@Test
     public void canBindParameters() {
     	
-    	final Map<String,Value> map1 = new HashMap<String,Value>() {{
-    		put("param1", Value.from("34"));
-    		put("param2", Value.from("55"));
+    	final Map<Param, Value> map1 = new HashMap<Param, Value>() {{
+    		put(Param.from("param1"), Value.from(34));
+    		put(Param.from("param2"), Value.from(55));
     	}};
 
-    	final Map<String,Value> map2 = new HashMap<String,Value>() {{
-    		put("param1", Value.from("55"));
-    		put("param2", Value.from("34"));
+    	final Map<Param, Value> map2 = new HashMap<Param, Value>() {{
+    		put(Param.from("param1"), Value.from(55));
+    		put(Param.from("param2"), Value.from(34));
     	}};
 
-    	final Map<String,Value> map3 = new HashMap<String,Value>() {{
-    		put("param2", Value.from("34"));
+    	final Map<Param, Value> map3 = new HashMap<Param, Value>() {{
+    		put(Param.from("param2"), Value.from(34));
     	}};
 
-    	final Map<String,Value> map4 = new HashMap<String,Value>() {{
-    		put("param1", Value.from("55"));
+    	final Map<Param, Value> map4 = new HashMap<Param, Value>() {{
+    		put(Param.from("param1"), Value.from(55));
     	}};
 
-        Range range1 = Range.between(Param.from("param1"), Param.from("param2")).intersect(Range.lessThan(Value.from(50)));
+        Range range1 = Range.between(Value.param("param1"), Value.param("param2")).intersect(Range.lessThan(Value.from(50)));
         assertEquals(range1.bind(map1),Range.between(Value.from(34), Value.from(50)));
         assertNull(range1.bind(map2));
-        assertEquals(range1.bind(map3), Range.between(Param.from("param1"), Value.from("34")));
+        assertEquals(range1.bind(map3), Range.between(Value.param("param1"), Value.from(34)));
         assertNull(range1.bind(map4));
     }
 /*
     public void canBindParametersForHas() {
-        Range range1 = Range.hasAll([Param.from("param")1, Param.from("param2")]);
+        Range range1 = Range.hasAll([Value.param("param")1, Value.param("param2")]);
         expect(range1.bind({param1: 34, param2: 55})).to.deep.equal(Range.hasAll([34, 55]));
         expect(range1.bind({param1: 34, param2: 34})).to.deep.equal(Range.has(34));
     }
@@ -580,6 +584,6 @@ public class RangeTest {
     	range = Range.from("[2,null]");
     	assertEquals(Range.greaterThanOrEqual(Value.from(2)), range);
     	range = Range.from("{ '$': 'param1'}");
-    	assertEquals(Range.equals(Param.from("param1")), range);
+    	assertEquals(Range.equals(Value.param("param1")), range);
     }
 }

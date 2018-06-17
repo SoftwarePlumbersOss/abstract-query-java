@@ -13,9 +13,9 @@ public class QueryTest {
 	@Test
     public void canCreateQuery() {
     	Query query = Query.from("{ 'x':2, 'y':4}");
-    	assertTrue(query.containsItem(Value.fromJson("{ 'x':2, 'y':4}")));
-    	assertFalse(query.containsItem(Value.fromJson("{ 'x':3, 'y':4}")));
-    	assertFalse(query.containsItem(Value.fromJson("{ 'x':2, 'y':5}")));
+    	assertTrue(query.containsItem(Value.MapValue.fromJson("{ 'x':2, 'y':4}")));
+    	assertFalse(query.containsItem(Value.MapValue.fromJson("{ 'x':3, 'y':4}")));
+    	assertFalse(query.containsItem(Value.MapValue.fromJson("{ 'x':2, 'y':5}")));
     }
 
 	@Test
@@ -33,8 +33,8 @@ public class QueryTest {
     		.from("{'x': 2, 'y': 4}")
     		.or(Query.from("{'z': 5}"));
 
-    	assertTrue(query.containsItem(Value.fromJson("{ 'x':2, 'y':4, 'z':3}")));
-    	assertTrue(query.containsItem(Value.fromJson("{ 'x':3, 'y':4, 'z':5}")));
+    	assertTrue(query.containsItem(Value.MapValue.fromJson("{ 'x':2, 'y':4, 'z':3}")));
+    	assertTrue(query.containsItem(Value.MapValue.fromJson("{ 'x':3, 'y':4, 'z':5}")));
     }
 
     /*

@@ -4,14 +4,17 @@ import javax.json.JsonObject;
 
 /** Class representing a query parameter than can be set later.
 */
-public class Param extends Value {
+public class Param implements Comparable<Param> {
+	
+	// The name of the parameter
+	public final String name;
 	
 	/** Create a new query parameter
 	*
 	* @param name - the name of the query parameter 
 	*/
-	protected Param(String name) {
-		super(Type.PARAM, name);
+	public Param(String name) {
+		this.name = name;
 	}
 
 	/** Create a new query parameter
@@ -39,6 +42,20 @@ public class Param extends Value {
 		return obj.containsKey("$");
 	}
 
+	@Override
+	public int compareTo(Param o) {
+		return name.compareTo(o.name);
+	}
+	
+	@Override
+	public boolean equals(Object o) {
+		return o instanceof Param && compareTo((Param)o) == 0;
+	}
+	
+	@Override
+	public int hashCode() {
+		return name.hashCode();
+	}
 }
 
 

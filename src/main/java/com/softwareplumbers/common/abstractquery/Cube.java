@@ -158,14 +158,12 @@ public class Cube {
 	 * @param item Item to compare
 	 * @return true if this cube contains the item, false if not, null if we cannot tell.
 	 */
-	public Boolean containsItem(Value item) {
-		Optional<Boolean> nomatch = constraints.entrySet().stream()
-				.map(entry -> entry.getValue().containsItem(item.getProperty(entry.getKey())))
-				.filter(result -> result != Boolean.TRUE)
-				.findAny();
-				
-		return nomatch.isPresent() ? nomatch.get() : Boolean.TRUE;	
+	public Boolean containsItem(Value.MapValue<?> item) {
+		return Tristate.every(constraints.entrySet(),
+				entry -> entry.getValue().containsItem((Value.Atomic)item.getProperty(entry.getKey())));		
 	}
+	
+
 
 	/** Intersect this cube with some other
 	 * 
@@ -261,7 +259,7 @@ public class Cube {
 	 * @param parameters A map of parameter names to parameter values.
 	 * @return A cube with any matching parameters substituted with the given values.
 	 */
-	public Cube bind(Map<String, Value> parameters) {
+	public Cube bind(Map<Param, Value> parameters) {
 		HashMap<String,Range> new_constraints = new HashMap<String,Range>();
 		for (Map.Entry<String,Range> entry : constraints.entrySet()) {
 			Range new_constraint = entry.getValue().bind(parameters);
@@ -284,7 +282,7 @@ public class Cube {
 	public Cube bind(JsonObject parameters) {
 		return bind(parameters.entrySet()
 			.stream()
-			.collect(Collectors.toMap(e->e.getKey(), e->Value.from(e.getValue()))));
+			.collect(Collectors.toMap(e->Param.from(e.getKey()), e->(Value.Atomic)Value.from(e.getValue()))));
 	}
 	
 	/** Bind parameterized values to concrete values. 
