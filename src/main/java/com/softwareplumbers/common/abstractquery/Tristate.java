@@ -2,6 +2,7 @@ package com.softwareplumbers.common.abstractquery;
 
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.stream.Stream;
 
 public class Tristate {
 	
@@ -36,13 +37,21 @@ public class Tristate {
 		return result;
 	}
 	
-	public static <T> Boolean any(Collection<T> collection, Predicate<T> condition) {
+	public static <T> Boolean any(Iterator<T> collection, Predicate<T> condition) {
 		Boolean result = Boolean.FALSE;
-		for (T item : collection) {
-			result = or(result, condition.test(item));
+		while (collection.hasNext() && result != Boolean.TRUE) {
+			result = or(result, condition.test(collection.next()));
 			if (result == Boolean.TRUE) return result;
 		}
 		return result;
+	}
+	
+	public static <T> Boolean any(Collection<T> collection, Predicate<T> condition) {
+		return any(collection.iterator(), condition);
+	}
+	
+	public static <T> Boolean any(Stream<T> stream, Predicate<T> condition) {
+		return any(stream.iterator(), condition);
 	}
 	
 	public static <T,U> Boolean compareCollections(Collection<? extends T> a, Collection<? extends U> b, BiPredicate<T,U> condition) {

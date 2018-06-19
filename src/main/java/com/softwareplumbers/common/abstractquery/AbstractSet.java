@@ -45,5 +45,5 @@ public interface AbstractSet<T extends Value, U extends AbstractSet<T,U>> {
 	
 	JsonValue toJSON();
 	
-	U bind(Map<Param,Value> values);
+	U bind(Value.MapValue values);
 }

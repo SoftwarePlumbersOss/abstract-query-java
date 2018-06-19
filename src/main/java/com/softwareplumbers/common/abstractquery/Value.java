@@ -3,12 +3,12 @@ package com.softwareplumbers.common.abstractquery;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import javax.json.Json;
 import javax.json.JsonArray;
@@ -51,7 +51,17 @@ public abstract class Value {
 	public boolean equals(Object other) {
 		return other instanceof Value && equals((Value)other);
 	}
+	
+	public ArrayValue toArray() {
+		if (type == Type.ARRAY) return (ArrayValue)this;
+		throw new RuntimeException("tried to convert " + type + " to array");
+	}
 		
+	public MapValue toMap() {
+		if (type == Type.MAP) return (MapValue)this;
+		throw new RuntimeException("tried to convert " + type + " to map");
+	}
+
 	public static class Atomic extends Value implements Comparable<Atomic> {
 
 		public final Comparable value;
@@ -128,7 +138,7 @@ public abstract class Value {
 			switch (type) {
 			case STRING: 	return Json.createValue((String)value);
 			case NUMBER: 	return Json.createValue((BigDecimal)value);
-			case PARAM: 	return Json.createObjectBuilder().add("$", (String)value).build();
+			case PARAM: 	return Json.createObjectBuilder().add("$", value.toString()).build();
 			default:		throw new IllegalArgumentException("Unhandled type: " + type);
 			}
 		}
@@ -178,6 +188,10 @@ public abstract class Value {
 			return (Value)makeValue.apply(map.get(key));
 		}
 		
+		public boolean hasProperty(String key) {
+			return propertySet().contains(key);
+		}
+		
 		private static <T,U> Boolean compareEntries(Function<Object,Value> makeValue1, Function<Object,Value> makeValue2, Map.Entry<String, ?> entry1, Map.Entry<String, ?> entry2) {
 			if (entry1.getKey().equals(entry2.getKey())) {
 				return makeValue1.apply(entry1.getValue()).maybeEquals(makeValue2.apply(entry2.getValue()));
@@ -215,7 +229,7 @@ public abstract class Value {
 		}
 		
 		public static MapValue from(JsonObject o) {
-			return new MapValue(o, Value::from);
+			return new MapValue(o, (JsonValue item) -> from(item));
 		}
 		
 		public static MapValue fromJson(String json) {
@@ -234,7 +248,7 @@ public abstract class Value {
 		}
 
 		public static ArrayValue from(JsonArray value) {
-			return new ArrayValue(value, Value::from);
+			return new ArrayValue(value, (JsonValue item) -> from(item));
 		}
 		
 		/** Get the size of the array
@@ -252,6 +266,10 @@ public abstract class Value {
 			return makeValue.apply(data.get(index));
 		}
 		
+		public Stream<Value> stream() {
+			return data.stream().map(makeValue);
+		}
+
 		private static Boolean compareValues(Function<Object,Value> makeValue1, Function<Object,Value> makeValue2, Object value1, Object value2) {
 			return makeValue1.apply(value1).maybeEquals(makeValue2.apply(value2));
 		}
@@ -323,10 +341,10 @@ public abstract class Value {
 			if (Param.isParam(asObj)) {
 				return from(Param.from(asObj));
 			} else {
-				return from(new MapValue(asObj, Value::from));
+				return MapValue.from(asObj);
 			}
 		} else if (obj instanceof JsonArray) {
-			from((JsonArray)obj);
+			return ArrayValue.from((JsonArray)obj);
 		}
 		throw new IllegalArgumentException("Not a value type:" + obj);
 	}
@@ -351,13 +369,12 @@ public abstract class Value {
 	public static ArrayValue from(List<Object> values) {
 		return new ArrayValue(new ArrayList<Object>(values), Value::from);
 	}
-
-
+	
 	/** Convert from a list of values 
 	 *
 	 * The values array is not copied.
 	 */
-	public static Value from(Object... values) {
+	public static ArrayValue from(Object... values) {
 		return new ArrayValue(Arrays.asList(values), Value::from);
 	}
 

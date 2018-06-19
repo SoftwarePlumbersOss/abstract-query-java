@@ -27,7 +27,7 @@ public interface Formatter<T> {
 	/** Create a representation of a union of constraints */
 	T orExpr(Stream<T> expressions);
 	/** Create a representation of an operation over subexpressions */
-	T subExpr(String operator, Stream<T> items);
+	T subExpr(String operator, T sub);
 	/** Create a formatter in context of parent */
 	Formatter<T> in(String dimension);
 	
@@ -73,8 +73,8 @@ public interface Formatter<T> {
     			return printDimension() + operator + printValue(value) ;
     	}
     	
-    	public String subExpr(String operator, Stream<String> subs) {
-    		return "has (" +  andExpr(subs) + ")";
+    	public String subExpr(String operator, String sub) {
+    		return "has (" +  sub + ")";
     	}
     	
     	public Formatter<String> in(String dimension) {
@@ -114,11 +114,8 @@ public interface Formatter<T> {
     		return object.build();
     	}
     	
-    	public JsonValue subExpr(String operator, Stream<JsonValue> subs) {
-    		JsonArrayBuilder array = Json.createArrayBuilder();
-    		subs.forEach(value->
-    			array.add(Json.createObjectBuilder().add(operator, value)));
-    		return Json.createObjectBuilder().add("operator", array).build();
+    	public JsonValue subExpr(String operator, JsonValue sub) {
+    		return Json.createObjectBuilder().add(operator, sub).build();
     	}
     	
     	public Formatter<JsonValue> in(String dimension) {

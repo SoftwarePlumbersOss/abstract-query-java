@@ -456,7 +456,7 @@ public class Query {
 	* @param parameters map of parameter values
 	* @returns new query, with parameter values set.
 	*/
-	public Query bind(Map<Param,Value> parameters) {
+	public Query bind(Value.MapValue parameters) {
 		List<Cube> cubes = this.union.stream()
 			.map(cube -> cube.bind(parameters))
 			.filter(cube -> cube != null)

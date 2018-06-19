@@ -10,8 +10,12 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import javax.json.Json;
+import javax.json.JsonArray;
 import javax.json.JsonObjectBuilder;
 import javax.json.JsonValue;
+
+import com.softwareplumbers.common.abstractquery.Value.MapValue;
+
 import javax.json.JsonObject;
 
 /** A cube maps each dimension in an abstract space to a range.
@@ -49,34 +53,6 @@ public class Cube implements AbstractSet<Value.MapValue, Cube>{
 		this.constraints.put(dimension, range);
 	}
 	
-	/** Create a cube from a Json object.
-	 * 
-	 * @see Range in this package for valid Json formats for ranges.
-	 * 
-	 * @param json object with properties that are valid ranges
-	 */
-	public Cube(JsonObject json) {
-		this.constraints = new HashMap<String, AbstractSet<? extends Value,?>>();
-		for (Map.Entry<String, JsonValue> entry : json.entrySet()) {
-			Range range = Range.from(entry.getValue());
-			if (range == null) throw new IllegalArgumentException("Don't know what to do with:" + entry.getKey());
-			constraints.put(entry.getKey(), range);
-		}
-	}
-
-	/** Create a cube from a string representation of a Json object.
-	 * 
-	 * Properties of the json object are dimension names, values of properties
-	 * must be valid Range objects.
-	 * 
-	 * @see Range in this package for valid JSON formats for ranges.
-	 * 
-	 * @param json JSON-formatted string
-	 */
-	public Cube(String json) {
-		this(JsonUtil.parseObject(json));
-	}
-	
 	public Cube() {
 		this.constraints = new HashMap<String,AbstractSet<? extends Value,?>>();
 	}
@@ -111,7 +87,7 @@ public class Cube implements AbstractSet<Value.MapValue, Cube>{
 	 * @return true if cubes are equal
 	 */
 	public boolean equals(Cube other) {
-		return this.constraints.equals(other.constraints);
+		return this.maybeEquals(other) ==  Boolean.TRUE;
 	}
 	
 	/** Check whether this cube is equal to some other object
@@ -246,8 +222,7 @@ public class Cube implements AbstractSet<Value.MapValue, Cube>{
 	 * 
 	 */
 	public String toString() {
-		// TODO: maybe this should use the default formatter?
-		return toJSON().toString();
+		return toExpression(Formatter.DEFAULT);
 	}
 	
 	/** Convert to JSON.
@@ -287,7 +262,7 @@ public class Cube implements AbstractSet<Value.MapValue, Cube>{
 	 * @param parameters A map of parameter names to parameter values.
 	 * @return A cube with any matching parameters substituted with the given values.
 	 */
-	public Cube bind(Map<Param, Value> parameters) {
+	public Cube bind(Value.MapValue parameters) {
 		HashMap<String,AbstractSet<? extends Value,?>> new_constraints = new HashMap<String,AbstractSet<? extends Value,?>>();
 		for (Map.Entry<String,AbstractSet<? extends Value,?>> entry : constraints.entrySet()) {
 			AbstractSet<? extends Value,?> new_constraint = entry.getValue().bind(parameters);
@@ -308,9 +283,7 @@ public class Cube implements AbstractSet<Value.MapValue, Cube>{
 	 * @return A cube with any matching parameters substituted with the given values.
 	 */
 	public Cube bind(JsonObject parameters) {
-		return bind(parameters.entrySet()
-			.stream()
-			.collect(Collectors.toMap(e->Param.from(e.getKey()), e->(Value.Atomic)Value.from(e.getValue()))));
+		return bind(MapValue.from(parameters));
 	}
 	
 	/** Bind parameterized values to concrete values. 
@@ -325,15 +298,46 @@ public class Cube implements AbstractSet<Value.MapValue, Cube>{
 		return bind(JsonUtil.parseObject(parameters));
 	}
 	
+	private static void collectElement(String dimension, JsonValue value, Map<String, AbstractSet<? extends Value,?>> results) {
+		if (value instanceof JsonObject) {
+			JsonObject asObj = (JsonObject)value;
+			if (asObj.containsKey("$has")) {
+				JsonArray arraydata = asObj.getJsonArray("$has");
+				results.put(dimension, Has.matchRanges(arraydata));
+			} else {
+				results.put(dimension, Cube.from(asObj));
+			}
+		} else {
+			results.put(dimension, Range.from(value));
+		}
+	}
+	
 	public static Cube from(JsonObject object)  {
-		return new Cube(
-			object.entrySet().stream().collect(
-				Collectors.toMap(
-					e->e.getKey(), 
-					e->Range.from(e.getValue())
-				)
-			)
-		);
+		HashMap<String, AbstractSet<? extends Value, ?>> results = new HashMap<String, AbstractSet<? extends Value, ?>>();
+		
+		for (Map.Entry<String,JsonValue> entry: object.entrySet()) {
+			String dimension = entry.getKey();
+			JsonValue value = entry.getValue();
+			if (value instanceof JsonObject) {
+				JsonObject asObj = (JsonObject)value;
+				if (asObj.containsKey("$has")) {
+					JsonArray arraydata = asObj.getJsonArray("$has");
+					results.put(dimension, Has.matchRanges(arraydata));
+				} else {
+					if (Range.isRange(asObj))
+						results.put(entry.getKey(), Range.from(asObj));
+					else 
+						results.put(entry.getKey(), Cube.from(asObj));
+				}
+			} else {
+				results.put(dimension, Range.from(value));
+			}	
+		}
+		return new Cube(results);
+	}
+	
+	public static Cube fromJson(String object) {
+		return Cube.from(JsonUtil.parseObject(object));
 	}
 
 	@Override
@@ -351,6 +355,7 @@ public class Cube implements AbstractSet<Value.MapValue, Cube>{
 	
 	@Override
 	public Boolean maybeEquals(Cube other) {
+		if (constraints.size() != other.constraints.size()) return Boolean.FALSE;
 		return Tristate.every(constraints.keySet(), dimension->maybeEquals(dimension, other));
 	}
 }

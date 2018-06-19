@@ -66,6 +66,10 @@ public class Union<T extends Value, U extends AbstractSet<T,U>> implements Abstr
 		if (!(other instanceof Union)) return false;
 		return Tristate.every(data, constraint->Tristate.any(((Union<T,U>)other).data, oconstraint->constraint.maybeEquals(oconstraint)));
 	}
+	
+	public boolean equals(Object other) {
+		return other instanceof Union && Boolean.TRUE == maybeEquals((U)other);
+	}
 
 	@Override
 	public <V> V toExpression(Formatter<V> formatter) {
@@ -78,7 +82,7 @@ public class Union<T extends Value, U extends AbstractSet<T,U>> implements Abstr
 	}
 
 	@Override
-	public U bind(Map<Param, Value> parameters) {
+	public U bind(Value.MapValue parameters) {
 		
 		List<U> result = new ArrayList<U>();
 		

@@ -3,6 +3,7 @@ package com.softwareplumbers.common.abstractquery;
 import org.junit.runner.RunWith;
 
 import com.softwareplumbers.common.abstractquery.Value.Atomic;
+import com.softwareplumbers.common.abstractquery.Value.MapValue;
 
 import org.junit.Test;
 
@@ -56,19 +57,15 @@ public class RangeTest {
     	assertEquals(range1, range2);
     }
 
-    /*
-    public void canCreatesubquery() {
-    	Range range1 = Range.from({ name: 'test'}
-    	expect(range1.query.union[0].name).to.deep.equal(Range.equals('test'));
+    public void canCreateHas() {
+        Has<Value.Atomic,Range> range1 = Has.match(Range.equals(Value.from("mytag")));
+        
+        Value.ArrayValue val1 = Value.from("one","two", "mytag","arkensaw");
+        Value.ArrayValue val2 = Value.from("one","two", "arkensaw");
+        assertTrue(range1.containsItem(val1));
+        assertTrue(range1.containsItem(val2));
     }
-
-    public void canCreatehas() {
-        Range range1 = Range.has('mytag');
-        expect(range1.bounds[0]).to.deep.equal(Range.equals('mytag'));
-        range1 = Range.has({ ">": 'bound'}
-        expect(range1.bounds[0]).to.deep.equal(Range.greaterThan('bound'));
-    }
-    */
+    
 
 	@Test
     public void canCreateRangesFromBoundsObject() {
@@ -341,8 +338,8 @@ public class RangeTest {
 
     /*
     public void correctContainmentForsubquery(){
-    	Range range1 = Range.from({count: [3,]}
-    	Range range2 = Range.from({count: [1,]}
+    	Range range1 = Range.from({count: [3,]});
+    	Range range2 = Range.from({count: [1,]});
     	assertFalse(range1.contains(range2));
     	assertTrue(range2.contains(range1)).to.be.true;
     }
@@ -538,23 +535,10 @@ public class RangeTest {
 	@Test
     public void canBindParameters() {
     	
-    	final Map<Param, Value> map1 = new HashMap<Param, Value>() {{
-    		put(Param.from("param1"), Value.from(34));
-    		put(Param.from("param2"), Value.from(55));
-    	}};
-
-    	final Map<Param, Value> map2 = new HashMap<Param, Value>() {{
-    		put(Param.from("param1"), Value.from(55));
-    		put(Param.from("param2"), Value.from(34));
-    	}};
-
-    	final Map<Param, Value> map3 = new HashMap<Param, Value>() {{
-    		put(Param.from("param2"), Value.from(34));
-    	}};
-
-    	final Map<Param, Value> map4 = new HashMap<Param, Value>() {{
-    		put(Param.from("param1"), Value.from(55));
-    	}};
+    	Value.MapValue map1 = Value.MapValue.fromJson("{'param1':34, 'param2':55}");
+    	Value.MapValue map2 = Value.MapValue.fromJson("{'param1':55, 'param2':34}");
+    	Value.MapValue map3 = Value.MapValue.fromJson("{'param2':34}");
+    	Value.MapValue map4 = Value.MapValue.fromJson("{'param1':55}");
 
         Range range1 = Range.between(Value.param("param1"), Value.param("param2")).intersect(Range.lessThan(Value.from(50)));
         assertEquals(range1.bind(map1),Range.between(Value.from(34), Value.from(50)));
@@ -562,6 +546,12 @@ public class RangeTest {
         assertEquals(range1.bind(map3), Range.between(Value.param("param1"), Value.from(34)));
         assertNull(range1.bind(map4));
     }
+    
+	@Test public void canBindParameterInClosedRange() {
+		Range r1 = Range.from("[22, {'$':'param1' } ]");
+		Range r2 = r1.bind("{ 'param1': 25}");
+		assertEquals(Range.from("[22, 25]"), r2);
+	}
 /*
     public void canBindParametersForHas() {
         Range range1 = Range.hasAll([Value.param("param")1, Value.param("param2")]);
@@ -585,5 +575,60 @@ public class RangeTest {
     	assertEquals(Range.greaterThanOrEqual(Value.from(2)), range);
     	range = Range.from("{ '$': 'param1'}");
     	assertEquals(Range.equals(Value.param("param1")), range);
+    }
+    
+    @Test public void canUnionLessThan() {
+    	Range range1 = Range.lessThan(Value.from(27));
+       	Range range2 = Range.lessThan(Value.from(37));
+       	Range range3 = Range.lessThanOrEqual(Value.from(27));
+       	assertEquals(range2, range1.union(range2));
+       	assertEquals(range2, range2.union(range1));
+       	assertEquals(range3, range1.union(range3));
+       	assertEquals(range3, range3.union(range1));
+       	assertEquals(range2, range3.union(range2));
+       	assertEquals(range2, range2.union(range3));
+    }
+    
+    @Test public void canUnionGreaterThan() {
+    	Range range1 = Range.greaterThan(Value.from(27));
+       	Range range2 = Range.greaterThan(Value.from(37));
+       	Range range3 = Range.greaterThanOrEqual(Value.from(27));
+       	assertEquals(range1, range1.union(range2));
+       	assertEquals(range1, range2.union(range1));
+       	assertEquals(range3, range1.union(range3));
+       	assertEquals(range3, range3.union(range1));
+       	assertEquals(range3, range3.union(range2));
+       	assertEquals(range3, range2.union(range3));
+    }
+    
+    @Test public void canUnionLessThanAndGreaterThan() {
+    	Range range1 = Range.greaterThan(Value.from(27));
+       	Range range2 = Range.lessThan(Value.from(37));
+    	Range range3 = Range.greaterThan(Value.from(37));
+       	Range range4 = Range.lessThan(Value.from(27));
+       	Range range5 = Range.greaterThanOrEqual(Value.from(27));
+       	Range range6 = Range.lessThanOrEqual(Value.from(27));
+       	assertEquals(Range.UNBOUNDED, range1.union(range2));
+       	assertTrue(range3.union(range4) instanceof Union);
+       	assertTrue(range1.union(range4) instanceof Union);
+       	assertEquals(Range.UNBOUNDED, range5.union(range6));
+    }
+
+    @Test public void canUnionEquals() {
+    	Range range1 = Range.equals(Value.from(27));
+       	Range range2 = Range.equals(Value.from(37));
+    	Range range3 = Range.equals(Value.from(37));
+       	assertTrue(range1.union(range2) instanceof Union);
+       	assertEquals(range2, range2.union(range3));
+    }
+    
+    @Test public void canDoComplicatedUnion() {
+    	Range range1 = Range.lessThan(Value.from(27));
+       	Range range2 = Range.greaterThan(Value.from(37));
+       	Range range3 = Range.greaterThanOrEqual(Value.from(36));
+    	Range range4 = Range.equals(Value.from(29));
+    	Range range5 = Range.lessThan(Value.from(26));
+    	Range range6 = Range.equals(Value.from(29));
+       	assertEquals(Range.from(range1,range3,range4), Range.from(range1,range2,range3,range4,range5,range6));
     }
 }

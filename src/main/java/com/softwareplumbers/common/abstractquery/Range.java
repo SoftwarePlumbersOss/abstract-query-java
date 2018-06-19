@@ -43,6 +43,10 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 		return from(this, other);
 	}
 	
+	public default Range bind(String params) {
+		return this.bind(Value.MapValue.fromJson(params));
+	}
+	
 	/** Object mapping of range operators to constructor functions
 	 *
 	 * | Operator String | Constructor Function 	|
@@ -205,7 +209,7 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 				JsonValue value = asObj.get(propname.get());
 				return Value.isAtomicValue(value) ? getRange(propname.get(), (Value.Atomic)Value.Atomic.from(value)) : null;
 			} else if (asObj.containsKey("$")) {
-				return Range.equals((Value.Atomic)Value.Atomic.from(asObj));
+				return operator.apply((Value.Atomic)Value.Atomic.from(asObj));
 			} else {
 				return null;
 			}
@@ -328,7 +332,7 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 			return null;
 		}
 
-		public Range bind(Map<Param,Value> parameters) {
+		public Range bind(Value.MapValue parameters) {
 			return this;
 		}
 		
@@ -386,13 +390,14 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 		}
 		
 		@SuppressWarnings("unchecked")
-		public Range bind(Map<Param,Value> parameters) {
+		public Range bind(Value.MapValue parameters) {
 			if (value.type == Value.Type.PARAM) {
 				Param param = (Param)((Value.Atomic)this.value).value;
 				//TODO: Ranges should have a type?
-				Value.Atomic value = (Atomic) parameters.get(param);
-				// TODO: worry about undefined
-				if (value != null) return getRange(operator, value);
+				if (parameters.hasProperty(param.name)) {
+					Value.Atomic value = (Atomic) parameters.getProperty(param.name);
+					return getRange(operator, value);
+				}
 			}
 			return this;
 		}
@@ -508,7 +513,7 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 			return toExpression(Formatter.DEFAULT);
 		}
 
-		public Range bind(Map<Param,Value> parameters) {
+		public Range bind(Value.MapValue parameters) {
 			Range new_lower_bound = lower_bound.bind(parameters);
 			Range new_upper_bound = upper_bound.bind(parameters);
 			if (lower_bound == new_lower_bound && upper_bound == new_upper_bound) return this;
@@ -520,7 +525,7 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 			if (range instanceof Unbounded) return UNBOUNDED;
 			if (range instanceof Union) return null;
 			if (range instanceof Intersection) return null;
-			if (intersect(range) == null) return null;
+			if (intersects(range) != Boolean.TRUE) return null;
 			if (range instanceof Between)
 				return between(lower_bound.union(((Between)range).lower_bound), upper_bound.union(((Between)range).upper_bound));
 			if (range instanceof LessThan || range instanceof LessThanOrEqual) 
@@ -576,7 +581,7 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 			if (range instanceof Unbounded) return UNBOUNDED;
 			if (range instanceof Union) return null;
 			if (range instanceof Intersection) return null;
-			if (intersect(range) == null) return null;
+			if (intersects(range) != Boolean.TRUE) return null;
 			return range;
 		}
 
@@ -601,12 +606,10 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 			return value.toJSON();
 		}
 
-		public Range bind(Map<Param, Value> parameters) {
+		public Range bind(Value.MapValue parameters) {
 			if (value.type == Value.Type.PARAM) {
-				@SuppressWarnings("unchecked")
 				Param param = (Param)((Value.Atomic)value).value;
-				@SuppressWarnings("unchecked")
-				Value.Atomic new_value = (Value.Atomic)parameters.get(param);
+				Value.Atomic new_value = (Value.Atomic)parameters.getProperty(param.name);
 				if (new_value != null) return new Equals(new_value);
 			}
 			return this;	
@@ -722,7 +725,7 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 			if (range instanceof Unbounded) return UNBOUNDED;
 			if (range instanceof Union) return null;
 			if (range instanceof Intersection) return null;
-			if (intersect(range) == null) return null;
+			if (intersects(range) != Boolean.TRUE) return null;
 			if (range instanceof Equals)
 				return this;
 			if (range instanceof GreaterThan || range instanceof GreaterThanOrEqual) 
@@ -866,7 +869,7 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 			if (range instanceof Unbounded) return UNBOUNDED;
 			if (range instanceof Union) return null;
 			if (range instanceof Intersection) return null;
-			if (intersect(range) == null) return null;
+			if (intersects(range) != Boolean.TRUE) return null;
 			if (range instanceof Equals)
 				return this;
 			if (range instanceof GreaterThan || range instanceof GreaterThanOrEqual) 
@@ -993,7 +996,7 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 			if (range instanceof Unbounded) return UNBOUNDED;
 			if (range instanceof Union) return null;
 			if (range instanceof Intersection) return null;
-			if (intersect(range) == null) return null;
+			if (intersects(range) != Boolean.TRUE) return null;
 			if (range instanceof Equals)
 				return this;
 			if (range instanceof LessThan || range instanceof LessThanOrEqual) 
@@ -1139,7 +1142,7 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 			if (range instanceof Unbounded) return UNBOUNDED;
 			if (range instanceof Union) return null;
 			if (range instanceof Intersection) return null;
-			if (intersect(range) == null) return null;
+			if (intersects(range) != Boolean.TRUE) return null;
 			if (range instanceof Equals)
 				return this;
 			if (range instanceof LessThan || range instanceof LessThanOrEqual) 
@@ -1361,7 +1364,7 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 			return obj.build();
 		}
 
-		public Range bind(Map<Param,Value> param_map) {
+		public Range bind(Value.MapValue param_map) {
 			Range result = known_bounds;
 			for (int i = 0; i < parameters.size() && result != null; i++) {
 				result = result.intersect(parametrized_bounds.get(parameters.get(i)).bind(param_map));
@@ -1390,13 +1393,13 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 	public static List<Range> simplify(List<Range> list) {
 		List<Range> result = new ArrayList<Range>();
 		result.add(list.get(0));
-		for (int i = 0; i < list.size(); i++) {
+		for (int i = 1; i < list.size(); i++) {
 			Range merged = null;
-			for (int j = 1; j < result.size() && merged == null; j++) 
-				merged = list.get(j).merge(result.get(i));
-			if (merged != null) 
-				result.set(i, merged);
-			else
+			for (int j = 0; j < result.size() && merged == null; j++) {
+				merged = list.get(i).merge(result.get(j));
+				if (merged != null) result.set(j, merged);
+			}
+			if (merged == null) 
 				result.add(list.get(i));
 		}
 		return result;
