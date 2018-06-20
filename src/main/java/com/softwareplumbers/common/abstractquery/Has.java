@@ -79,13 +79,13 @@ public class Has<V extends Value, S extends AbstractSet<V,S>> implements Abstrac
 	}
 	
 	public static Has<Value.Atomic, Range> matchAny(Range... matches) {
-		return new Has<Value.Atomic, Range>(Range.from(matches));
+		return new Has<Value.Atomic, Range>(Range.union(matches));
 	}
 	
 	public static Has<Value.Atomic, Range> matchRanges(JsonValue matches) {
 		Range constraint;
 		if (matches instanceof JsonArray) {
-			constraint = Range.from(((JsonArray) matches).stream().map(value -> Range.from(value)).collect(Collectors.toList()));
+			constraint = Range.union(((JsonArray) matches).stream().map(value -> Range.from(value)).collect(Collectors.toList()));
 		} else {
 			constraint = Range.from(matches);
 		}

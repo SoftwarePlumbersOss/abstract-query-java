@@ -44,7 +44,7 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 	}
 	
 	public default Range union(Range other) {
-		return from(this, other);
+		return union(this, other);
 	}
 	
 	public default Range bind(String params) {
@@ -1393,7 +1393,7 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 
 		@Override
 		public Range union(Range other) {
-			return from(this, other);
+			return Range.union(this, other);
 			
 		}
 
@@ -1441,15 +1441,15 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 		}
 	}
 	
-	public static Range from(List<Range> list) {
+	public static Range union(List<Range> list) {
 		list = simplify(list);
 		if (list.size() == 0) return null;
 		if (list.size() == 1) return list.get(0);
-		return new RangeUnion(list, Range::from);
+		return new RangeUnion(list, Range::union);
 	}
 	
-	public static Range from(Range... list) {
-		return from(Arrays.asList(list));
+	public static Range union(Range... list) {
+		return union(Arrays.asList(list));
 	}
 }
 

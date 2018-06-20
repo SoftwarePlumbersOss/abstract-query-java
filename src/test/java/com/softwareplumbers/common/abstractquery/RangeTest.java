@@ -629,6 +629,6 @@ public class RangeTest {
     	Range range4 = Range.equals(Value.from(29));
     	Range range5 = Range.lessThan(Value.from(26));
     	Range range6 = Range.equals(Value.from(29));
-       	assertEquals(Range.from(range1,range3,range4), Range.from(range1,range2,range3,range4,range5,range6));
+       	assertEquals(Range.union(range1,range3,range4), Range.union(range1,range2,range3,range4,range5,range6));
     }
 }
