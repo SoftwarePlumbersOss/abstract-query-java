@@ -226,9 +226,9 @@ public class Query {
 				FactorResult result = this.factor(factor);
 
 				if (result.factored != null && result.remainder != null) 
-					return formatter.orExpr(
+					return formatter.orExpr(null,
 						Stream.of(
-							formatter.andExpr(
+							formatter.andExpr(null,
 								Stream.of(
 									range.toExpression(formatter.in(dimension)), 
 									result.factored.toExpression(formatter)
@@ -239,14 +239,14 @@ public class Query {
 					);
 
 				if (result.factored != null) 
-					return formatter.andExpr(
+					return formatter.andExpr(null,
 						Stream.of(
 							range.toExpression(formatter.in(dimension)), 
 							result.factored.toExpression(formatter)
 						)
 					);
 			} else {
-				return formatter.orExpr(
+				return formatter.orExpr(null,
 						this.union.stream().map(
 							cube -> cube.toExpression(formatter)
 						)

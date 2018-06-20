@@ -249,6 +249,7 @@ public class Cube implements AbstractSet<Value.MapValue, Cube>{
 	 */
 	public <T> T toExpression(Formatter<T> formatter) {
 		return formatter.andExpr(
+				Value.Type.MAP,
 			constraints.entrySet().stream().map(
 				entry -> entry.getValue().toExpression(formatter.in(entry.getKey()))
 			)

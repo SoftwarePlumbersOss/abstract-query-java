@@ -2,11 +2,13 @@ package com.softwareplumbers.common.abstractquery;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 import javax.json.Json;
@@ -33,6 +35,8 @@ import com.softwareplumbers.common.abstractquery.Value.Atomic;
 public interface Range extends AbstractSet<Value.Atomic, Range> {
 	
 	public Range merge(Range other);
+	
+	public Value.Type getType();
 	
 	public default boolean equals(Range other) {
 		Boolean mightEqual = maybeEquals(other);
@@ -343,6 +347,10 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 		public String toString() {
 			return toExpression(Formatter.DEFAULT);
 		}
+		
+		public Value.Type getType() {
+			return null;
+		}
 	}
 
 	/** Base class for ranges with a single bound (e.g. less than, greater than etc.)
@@ -400,6 +408,10 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 				}
 			}
 			return this;
+		}
+		
+		public Value.Type getType() {
+			return value.type;
 		}
 	}
 
@@ -471,7 +483,7 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 		}
 
 		public <U> U toExpression(Formatter<U> formatter)	{ 
-			return formatter.andExpr(
+			return formatter.andExpr(null,
 					Stream.of(lower_bound, upper_bound)
 					.map(range -> range.toExpression(formatter))
 					);
@@ -535,6 +547,11 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 			if (range instanceof Equals)
 				return this;
 			throw new IllegalArgumentException("Unsupported range type");
+		}
+		
+		public Value.Type getType() {
+			if (lower_bound.getType() != null && lower_bound.getType() != Value.Type.PARAM) return lower_bound.getType();
+			return upper_bound.getType();
 		}
 	}
 
@@ -614,6 +631,8 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 			}
 			return this;	
 		}
+		
+		public Value.Type getType() { return value.type; }
 	}
 
 	/** Range less than some bound.
@@ -1326,7 +1345,7 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 					parametrized_bounds.values().stream()
 					);
 
-			return formatter.andExpr(ranges.map(range->range.toExpression(formatter)));
+			return formatter.andExpr(null,ranges.map(range->range.toExpression(formatter)));
 		}
 
 		public Boolean maybeEquals(Intersection range) { 
@@ -1388,6 +1407,12 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 			return toExpression(Formatter.DEFAULT);
 		}
 
+		public Value.Type getType() {
+			Value.Type type = known_bounds.getType();
+			if (type != null) return type;
+			type = Range.getType(parametrized_bounds.values());
+			return type;
+		}
 	}
 	
 	public static List<Range> simplify(List<Range> list) {
@@ -1405,10 +1430,14 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 		return result;
 	}
 		
+	public static Value.Type getType(Collection<Range> range) {
+		Predicate<Value.Type> useful_type = type -> (type != Value.Type.PARAM && type != null);
+		return range.stream().map(Range::getType).filter(useful_type).findAny().orElse(null);
+	}
 		
 	public static class RangeUnion extends Union<Value.Atomic, Range> implements Range   {
 		public RangeUnion(List<Range> range, Function<List<Range>, Range> from) {
-			super(range, from);
+			super(Range.getType(range), range, from);
 		}
 	}
 	

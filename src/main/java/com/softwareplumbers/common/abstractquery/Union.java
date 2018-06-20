@@ -11,10 +11,12 @@ public class Union<T extends Value, U extends AbstractSet<T,U>> implements Abstr
 	
 	protected List<U> data;
 	protected Function<List<U>,U> from;
+	protected Value.Type type;
 	
-	public Union(List<U> data, Function<List<U>,U> from) {
+	public Union(Value.Type type, List<U> data, Function<List<U>,U> from) {
 		this.data = data;
 		this.from = from;
+		this.type = type;
 	}
 	
 	@Override
@@ -73,7 +75,7 @@ public class Union<T extends Value, U extends AbstractSet<T,U>> implements Abstr
 
 	@Override
 	public <V> V toExpression(Formatter<V> formatter) {
-		return formatter.orExpr(data.stream().map(item -> item.toExpression(formatter)));
+		return formatter.orExpr(type, data.stream().map(item -> item.toExpression(formatter)));
 	}
 
 	@Override
@@ -100,5 +102,8 @@ public class Union<T extends Value, U extends AbstractSet<T,U>> implements Abstr
 		return from.apply(result);
 	}
 
+	public Value.Type getType() {
+		return type;
+	}
 
 }

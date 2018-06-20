@@ -1,5 +1,8 @@
 package com.softwareplumbers.common.abstractquery;
 
+import java.util.AbstractList;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -23,9 +26,9 @@ public interface Formatter<T> {
 	/** Create a representation of a constraint on a dimension */
 	T operExpr(String operator, Value value);
 	/** Create a representation of an intersection of constraints */
-	T andExpr(Stream<T> expressions);
+	T andExpr(Value.Type type, Stream<T> expressions);
 	/** Create a representation of a union of constraints */
-	T orExpr(Stream<T> expressions);
+	T orExpr(Value.Type type, Stream<T> expressions);
 	/** Create a representation of an operation over subexpressions */
 	T subExpr(String operator, T sub);
 	/** Create a formatter in context of parent */
@@ -53,11 +56,11 @@ public interface Formatter<T> {
 			return value.type == Value.Type.STRING ? "\"" + value.toString() + "\"" : value.toString();
 		}
 
-    	public String andExpr(Stream<String> ands) { 
+    	public String andExpr(Value.Type type, Stream<String> ands) { 
     		return ands.collect(Collectors.joining(" and ")); 
     	}
     	
-    	public String orExpr(Stream<String> ors) { 
+    	public String orExpr(Value.Type type, Stream<String> ors) { 
     		return "(" + ors.collect(Collectors.joining(" or ")) + ")"; 
     	}
     	
@@ -92,7 +95,7 @@ public interface Formatter<T> {
 			this.dimension = dimension;
 		}
 				
-    	public JsonValue andExpr(Stream<JsonValue> ands) { 
+    	public JsonValue andExpr(Value.Type type, Stream<JsonValue> ands) { 
     		JsonArrayBuilder array = Json.createArrayBuilder();
     		ands.forEach(value->array.add(value));
     		JsonObjectBuilder object = Json.createObjectBuilder();
@@ -100,7 +103,7 @@ public interface Formatter<T> {
     		return object.build();
     	}
     	
-    	public JsonValue orExpr(Stream<JsonValue> ors) { 
+    	public JsonValue orExpr(Value.Type type, Stream<JsonValue> ors) { 
     		JsonArrayBuilder array = Json.createArrayBuilder();
     		ors.forEach(value->array.add(value));
     		JsonObjectBuilder object = Json.createObjectBuilder();
@@ -122,7 +125,61 @@ public interface Formatter<T> {
     		return new JsonFormat(dimension);
     	}
 	};
+	
+	public interface Node extends List<Node> {
+//		public <T> T toExpression(Formatter<T> format);
+	}
+	
+	public class Operator extends AbstractList<Node> implements Node {
+		@Override public Node get(int index) { return null; }
+		@Override public int size() { return 0; };
+		public final String operator;
+		public final Value value;
+		public Operator(String operator, Value value) { this.operator = operator; this.value = value; }
+	}
+	
+	public class And extends ArrayList<Node> implements Node { }
+	public class Or extends ArrayList<Node> implements Node { }
+	
+	public class Sub extends AbstractList<Node> implements Node {
+		@Override public Node get(int index) { return subexpression; }
+		@Override public int size() { return 1; }
+		public final String operator;
+		public final Node subexpression;
+		public Sub(String operator, Node subexpression) { this.operator = operator; this.subexpression = subexpression; }
+		
+	}
+	
 
+	public class TreeFormatter implements Formatter<Node> {
+
+		@Override
+		public Node operExpr(String operator, Value value) { 
+			return new Operator(operator, value);
+		}
+
+		@Override
+		public Node andExpr(Value.Type type, Stream<Node> expressions) {
+			return expressions.collect(And::new, And::add, And::addAll);
+		}
+
+		@Override
+		public Node orExpr(Value.Type type, Stream<Node> expressions) {
+			return expressions.collect(Or::new, Or::add, Or::addAll);
+		}
+
+		@Override
+		public Node subExpr(String operator, Node sub) {
+			return new Sub(operator, sub);
+		}
+
+		@Override
+		public Formatter<Node> in(String dimension) {
+			return this;
+		}	
+	}
+	
+	public Formatter<Node> TREE = new TreeFormatter();
 	/** Default formatter creates a compact string expression */
 	public Formatter<String> DEFAULT = new DefaultFormat(null, null);
 	/** Default JSON creates a JSON representation */
