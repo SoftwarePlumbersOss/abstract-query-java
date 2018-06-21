@@ -360,8 +360,8 @@ public class RangeTest {
     	Range range2 = Range.equals(Value.from(14));
     	Range range3 = Range.equals(Value.from(37));
 
-    	assertEquals(null,range1.intersect(range2));
-    	assertEquals(null,range2.intersect(range1));
+    	assertEquals(Range.EMPTY,range1.intersect(range2));
+    	assertEquals(Range.EMPTY,range2.intersect(range1));
     	assertEquals(range1.intersect(range3),range1);
     }
 
@@ -428,8 +428,8 @@ public class RangeTest {
 
     	assertEquals(range1.intersect(range2), Range.between(range2,range1));
     	assertEquals(range2.intersect(range1), Range.between(range2,range1));
-    	assertNull(range3.intersect(range4));
-    	assertNull(range4.intersect(range3));
+    	assertEquals(Range.EMPTY, range3.intersect(range4));
+    	assertEquals(Range.EMPTY, range4.intersect(range3));
     }
 
 	@Test
@@ -441,8 +441,8 @@ public class RangeTest {
 
         assertEquals(range1.intersect(range2),Range.between(range2,range1));
         assertEquals(range2.intersect(range1),Range.between(range2,range1));
-        assertNull(range1.intersect(range4));
-        assertNull(range2.intersect(range3));
+        assertEquals(Range.EMPTY,range1.intersect(range4));
+        assertEquals(Range.EMPTY,range2.intersect(range3));
         assertEquals(range1.intersect(range3),range3.intersect(range1));
         assertEquals(range2.intersect(range4),range4.intersect(range2));
     }
@@ -492,13 +492,13 @@ public class RangeTest {
         Range range5 = Range.between(Value.from(29),Value.from(36));
         Range range6 = range4.intersect(range5);
 
-        assertNull(range6);
+        assertEquals(range6, Range.EMPTY);
 
         Range range7 = Range.between(Value.from(14),Value.from(17));
         Range range8 = Range.between(Value.from(17),Value.from(36));
         Range range9 = range7.intersect(range8);
 
-        assertNull(range9);
+        assertEquals(range9, Range.EMPTY);
 
     }
 /*
@@ -542,9 +542,9 @@ public class RangeTest {
 
         Range range1 = Range.between(Value.param("param1"), Value.param("param2")).intersect(Range.lessThan(Value.from(50)));
         assertEquals(range1.bind(map1),Range.between(Value.from(34), Value.from(50)));
-        assertNull(range1.bind(map2));
+        assertEquals(Range.EMPTY, range1.bind(map2));
         assertEquals(range1.bind(map3), Range.between(Value.param("param1"), Value.from(34)));
-        assertNull(range1.bind(map4));
+        assertEquals(Range.EMPTY,range1.bind(map4));
     }
     
 	@Test public void canBindParameterInClosedRange() {

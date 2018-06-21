@@ -1,7 +1,5 @@
 package com.softwareplumbers.common.abstractquery;
 
-import java.util.Map;
-
 import javax.json.JsonValue;
 
 public interface AbstractSet<T extends Value, U extends AbstractSet<T,U>> {
@@ -41,9 +39,12 @@ public interface AbstractSet<T extends Value, U extends AbstractSet<T,U>> {
 	Boolean contains(U set);
 	Boolean maybeEquals(U other);
 	
-	<U> U toExpression(Formatter<U> formatter);
+	<X> X toExpression(Formatter<X> formatter);
 	
 	JsonValue toJSON();
 	
 	U bind(Value.MapValue values);
+	
+	boolean isEmpty();
+	boolean isUnconstrained();
 }

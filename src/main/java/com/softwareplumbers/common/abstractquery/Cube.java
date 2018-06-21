@@ -21,7 +21,7 @@ import javax.json.JsonObject;
 /** A cube maps each dimension in an abstract space to a range.
  *
  */
-public class Cube implements AbstractSet<Value.MapValue, Cube>{
+public class Cube implements AbstractSet<Value.MapValue, Cube> {
 	
 	public static final Cube UNBOUNDED = new Cube();
 
@@ -187,7 +187,7 @@ public class Cube implements AbstractSet<Value.MapValue, Cube>{
 		
 		for (String dimension : other.constraints.keySet()) {
 			AbstractSet<? extends Value, ?> intersection = intersect(dimension, other);
-			if (intersection == null) return null;
+			if (intersection.isEmpty()) return null; // TODO: replace with an EMPTY class
 			result.put(dimension, intersection);
 		}
 
@@ -267,7 +267,7 @@ public class Cube implements AbstractSet<Value.MapValue, Cube>{
 		HashMap<String,AbstractSet<? extends Value,?>> new_constraints = new HashMap<String,AbstractSet<? extends Value,?>>();
 		for (Map.Entry<String,AbstractSet<? extends Value,?>> entry : constraints.entrySet()) {
 			AbstractSet<? extends Value,?> new_constraint = entry.getValue().bind(parameters);
-			if (new_constraint != null)
+			if (!new_constraint.isEmpty())
 				new_constraints.put(entry.getKey(), new_constraint);
 			else
 				return null;
@@ -358,6 +358,14 @@ public class Cube implements AbstractSet<Value.MapValue, Cube>{
 	public Boolean maybeEquals(Cube other) {
 		if (constraints.size() != other.constraints.size()) return Boolean.FALSE;
 		return Tristate.every(constraints.keySet(), dimension->maybeEquals(dimension, other));
+	}
+	
+	public boolean isEmpty() {
+		return false;
+	}
+	
+	public boolean isUnconstrained() {
+		return false;
 	}
 }
 

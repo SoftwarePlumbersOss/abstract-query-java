@@ -92,4 +92,11 @@ public class Has<V extends Value, S extends AbstractSet<V,S>> implements Abstrac
 		return match(constraint);
 	}
 	
+	public boolean isEmpty() {
+		return match.isEmpty();
+	}
+	
+	public boolean isUnconstrained() {
+		return match.isUnconstrained();
+	}
 }

@@ -95,15 +95,20 @@ public class Union<T extends Value, U extends AbstractSet<T,U>> implements Abstr
 		
 		return from.apply(result);
 	}
-	
-	public U merge(U other) {
-		List<U> result = new ArrayList<U>(this.data);
-		result.add(other);
-		return from.apply(result);
-	}
 
 	public Value.Type getType() {
 		return type;
 	}
+	
+	public String toString() {
+		return toExpression(Formatter.DEFAULT);
+	}
 
+	public boolean isEmpty() {
+		return false;
+	}
+	
+	public boolean isUnconstrained() {
+		return false;
+	}
 }

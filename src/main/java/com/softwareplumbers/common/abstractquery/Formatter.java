@@ -11,6 +11,8 @@ import javax.json.JsonArrayBuilder;
 import javax.json.JsonObjectBuilder;
 import javax.json.JsonValue;
 
+import com.softwareplumbers.common.abstractquery.Value.Type;
+
 /** Format a Query
  * 
  * Used to walk the logical structure of a query, building a representation of
@@ -177,6 +179,40 @@ public interface Formatter<T> {
 		public Formatter<Node> in(String dimension) {
 			return this;
 		}	
+	}
+	
+	public class Builder implements Formatter<AbstractSet<? extends Value, ?>> {
+
+		@Override
+		public AbstractSet<? extends Value, ?> operExpr(String operator, Value value) {
+			// TODO: should change type of value to AtomicValue?
+			return Range.getRange(operator, (Value.Atomic)value);
+		}
+
+		@Override
+		public AbstractSet<? extends Value, ?> andExpr(Type type, Stream<AbstractSet<? extends Value, ?>> expressions) {
+			//if (type == Value.Type.MAP) return Cube.intersect(expressions.map(set -> (Cube)set));
+			return null;
+		}
+
+		@Override
+		public AbstractSet<? extends Value, ?> orExpr(Type type, Stream<AbstractSet<? extends Value, ?>> expressions) {
+			// TODO Auto-generated method stub
+			return null;
+		}
+
+		@Override
+		public AbstractSet<? extends Value, ?> subExpr(String operator, AbstractSet<? extends Value, ?> sub) {
+			// TODO Auto-generated method stub
+			return null;
+		}
+
+		@Override
+		public Formatter<AbstractSet<? extends Value, ?>> in(String dimension) {
+			// TODO Auto-generated method stub
+			return null;
+		}
+
 	}
 	
 	public Formatter<Node> TREE = new TreeFormatter();
