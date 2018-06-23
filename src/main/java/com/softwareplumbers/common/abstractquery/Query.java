@@ -187,7 +187,7 @@ public class Query {
 	public Cube findFactor() {
 		ArrayList<Bucket> buckets = new ArrayList<Bucket>();
 		for (Cube cube : this.union) {
-			for (String dimension : cube.getDimensions()) {
+			for (String dimension : cube.getConstraints()) {
 				boolean match = false;
 				for (Bucket bucket : buckets) {
 					if (bucket.dimension.equals(dimension) && bucket.range.equals(cube.getConstraint(dimension))) {
@@ -221,7 +221,7 @@ public class Query {
 			Cube factor = this.findFactor();
 
 			if (factor != null) {
-				String dimension = factor.getDimensions().iterator().next();
+				String dimension = factor.getConstraints().iterator().next();
 				AbstractSet<? extends Value, ?> range = factor.getConstraint(dimension);
 				FactorResult result = this.factor(factor);
 
@@ -475,24 +475,7 @@ public class Query {
 		return Json.createObjectBuilder().add("$or", builder).build();
 	}
 	
-	/** Convert query to something that is URL-safe.
-	 * 
-	 * @return A url-safe string
-	 */
-	public String urlEncode() {
-		// TODO: maybe do this better, like use JSURL. Or alternatively add compression?
-		return Base64.getUrlEncoder().encodeToString(toJSON().toString().getBytes());
-	}
 
-	/** Read a query from url-safe representation
-	 * 
-	 * @param query An url-safe representation, as originally returned by urlEncode()
-	 * @return A query
-	 */
-	public static Query urlDecode(String query) {
-		// TODO: maybe do this better, like use JSURL. Or alternatively add compression?
-		return Query.from(new String(Base64.getUrlDecoder().decode(query)));
-	}
 
 }
 

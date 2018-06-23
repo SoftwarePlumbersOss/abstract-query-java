@@ -566,10 +566,7 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 		}
 
 		public <U> U toExpression(Formatter<U> formatter)	{ 
-			return formatter.andExpr(null,
-					Stream.of(lower_bound, upper_bound)
-					.map(range -> range.toExpression(formatter))
-					);
+			return formatter.betweenExpr(getType(), lower_bound.toExpression(formatter), upper_bound.toExpression(formatter));
 		}
 
 		public Boolean maybeEquals(Range range) { 
@@ -654,6 +651,8 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 	 * 
 	 */
 	public static class Equals implements Range {
+		
+		public static final String OPERATOR = "=";
 
 		Value.Atomic value;
 
@@ -692,7 +691,7 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 		}
 
 		public <U> U toExpression(Formatter<U> formatter)	{ 
-			return formatter.operExpr("=", this.value); 
+			return formatter.operExpr(OPERATOR, this.value); 
 		}
 
 		public Boolean maybeEquals(Range range) {

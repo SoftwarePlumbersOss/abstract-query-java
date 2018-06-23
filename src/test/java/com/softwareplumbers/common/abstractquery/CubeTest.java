@@ -36,7 +36,7 @@ public class CubeTest {
 
 	@Test
     public void hasWorkingRemoveContainsMethodIn2dd() {
-    	Cube cube1 = Cube.fromJson("{ 'x': 43, 'y': 33 }");
+    	Cube.Impl cube1 = (Cube.Impl)Cube.fromJson("{ 'x': 43, 'y': 33 }");
 
 		Cube cube2 = cube1.removeConstraints(Cube.fromJson("{'x':43}")); 
 		assertEquals(Cube.fromJson("{'y':33}"), cube2);
@@ -63,11 +63,11 @@ public class CubeTest {
     }
 	
 	@Test public void canProgramaticallyCreateSubquery() {
-		Cube x = new Cube("x", Range.lessThan(Value.from(19)));
-		Cube y = new Cube("y", Range.greaterThan(Value.from(21)));
+		Cube x = Cube.from("x", Range.lessThan(Value.from(19)));
+		Cube y = Cube.from("y", Range.greaterThan(Value.from(21)));
 		Cube sub = x.intersect(y);
-		Cube tags = new Cube("tags", Has.matchAny(Range.equals(Value.from("a")), Range.equals(Value.from("c"))));
-		Cube location = new Cube("location", sub);
+		Cube tags = Cube.from("tags", Has.matchAny(Range.equals(Value.from("a")), Range.equals(Value.from("c"))));
+		Cube location = Cube.from("location", sub);
 		Cube object = tags.intersect(location);
 		
 		Value.MapValue value1 = MapValue.fromJson("{ 'location': { 'x': 17, 'y': 22 }, 'tags': [ 'a', 'g' ] }");
@@ -77,11 +77,11 @@ public class CubeTest {
 	}
 	
 	@Test public void canCreateSubqueryFromJson() {
-		Cube x = new Cube("x", Range.lessThan(Value.from(19)));
-		Cube y = new Cube("y", Range.greaterThan(Value.from(21)));
+		Cube x = Cube.from("x", Range.lessThan(Value.from(19)));
+		Cube y = Cube.from("y", Range.greaterThan(Value.from(21)));
 		Cube sub = x.intersect(y);
-		Cube tags = new Cube("tags", Has.matchAny(Range.equals(Value.from("a")), Range.equals(Value.from("c"))));
-		Cube location = new Cube("location", sub);
+		Cube tags = Cube.from("tags", Has.matchAny(Range.equals(Value.from("a")), Range.equals(Value.from("c"))));
+		Cube location = Cube.from("location", sub);
 		Cube object1 = tags.intersect(location);
 		
 		

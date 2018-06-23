@@ -6,13 +6,14 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 import javax.json.JsonObject;
+import javax.json.JsonValue;
 
 
 public class QueryTest {
 
 	@Test
-    public void canCreateQuery() {
-    	Query query = Query.from("{ 'x':2, 'y':4}");
+    public void canCreateCube() {
+    	Cube query = Cube.fromJson("{ 'x':2, 'y':4}");
     	assertTrue(query.containsItem(Value.MapValue.fromJson("{ 'x':2, 'y':4}")));
     	assertFalse(query.containsItem(Value.MapValue.fromJson("{ 'x':3, 'y':4}")));
     	assertFalse(query.containsItem(Value.MapValue.fromJson("{ 'x':2, 'y':5}")));
@@ -20,161 +21,168 @@ public class QueryTest {
 
 	@Test
     public void canUseAndToAddConstraints() {
-    	Query query = Query
-    		.from("{'x': 2, 'y': 4}")
-    		.and("{'z': 5}");
+    	Cube query = Cube
+    		.fromJson("{'x': 2, 'y': 4}")
+    		.intersect("{'z': 5}");
 
-    	assertEquals(Query.from("{'x': 2, 'y': 4, 'z': 5}"),query);
+    	assertEquals(Cube.fromJson("{'x': 2, 'y': 4, 'z': 5}"),query);
     }
 
 	@Test
     public void canUseOrToAddConstraints() {
-    	Query query = Query
-    		.from("{'x': 2, 'y': 4}")
-    		.or(Query.from("{'z': 5}"));
+    	Cube query = Cube
+    		.fromJson("{'x': 2, 'y': 4}")
+    		.union("{'z': 5}");
 
     	assertTrue(query.containsItem(Value.MapValue.fromJson("{ 'x':2, 'y':4, 'z':3}")));
     	assertTrue(query.containsItem(Value.MapValue.fromJson("{ 'x':3, 'y':4, 'z':5}")));
     }
 
-    /*
+	@Test
     public void canCreateSubqueries() {
-    	Query query = Query.from("{ currency: 'GBP', branch: { country: 'UK', type: 'accounting'}");
+    	Cube query = Cube.fromJson("{ 'currency': 'GBP', 'branch': { 'country': 'UK', 'type': 'accounting'}}");
+    	assertEquals("branch.country='UK' and branch.type='accounting' and currency='GBP'", query.toString());
     };
-    */
 
 	@Test
     public void redundantConstraintsAreSuppressed() {
-    	Query query = Query
-    		.from("{'x': 2, 'y': 4}")
-    		.or(Query.from("{ 'x': 2}"));
+    	Cube query = Cube
+    		.fromJson("{'x': 2, 'y': 4}")
+    		.union(Cube.fromJson("{ 'x': 2}"));
     	
-    	assertEquals(Query.from("{'x': 2}"), query);
+    	assertEquals(Cube.fromJson("{'x': 2}"), query);
     } 
 
 	@Test
     public void redundantParametrizedConstraintsAreSuppressed() {
-        Query query = Query
-            .from("{'x': { '$': 'param1'}, 'y':4}")
-            .or(Query.from("{'x': { '$': 'param1'}}"));
+        Cube query = Cube
+            .fromJson("{'x': { '$': 'param1'}, 'y':4}")
+            .union(Cube.fromJson("{'x': { '$': 'param1'}}"));
 
-        assertEquals(Query.from("{'x':{'$':'param1'}}"), query);
+        assertEquals(Cube.fromJson("{'x':{'$':'param1'}}"), query);
 
-        query = Query
-                .from("{'x': { '$': 'param1'}, 'y':4}")
-                .and(Query.from("{'x': { '$': 'param1'}}"));
+        query = Cube
+                .fromJson("{'x': { '$': 'param1'}, 'y':4}")
+                .intersect(Cube.fromJson("{'x': { '$': 'param1'}}"));
 
-        assertEquals(Query.from("{'x': { '$': 'param1'}, 'y':4}"), query);
+        assertEquals(Cube.fromJson("{'x': { '$': 'param1'}, 'y':4}"), query);
     } 
 
 	@Test
     public void createsExpression() {
-    	Query query = Query
-    		.from("{'x': [null,2], 'y': 4}")
-    		.and(Query.from("{ 'z': 5}"))
-    		.or(Query.from("{'x':[6,8], 'y':3, 'z':99}"));
+    	Cube query = Cube
+    		.fromJson("{'x': [null,2], 'y': 4}")
+    		.intersect(Cube.fromJson("{ 'z': 5}"))
+    		.union(Cube.fromJson("{'x':[6,8], 'y':3, 'z':99}"));
 
     	assertEquals("(x<2 and y=4 and z=5 or x>=6 and x<8 and y=3 and z=99)",query.toString());
     }    
 
 	@Test
     public void createsExpressionWithOr() {
-    	Query query = Query
-    		.from("{'x': [null,2], 'y': 4}")
-    		.and(Query.from("{ 'z': 5}").or(Query.from("{'z' : 8}")));
+    	Cube query = Cube
+    		.fromJson("{'x': [null,2], 'y': 4}")
+    		.intersect(Cube.fromJson("{ 'z': 5}").union(Cube.fromJson("{'z' : 8}")));
 
 
     	assertEquals("x<2 and y=4 and (z=5 or z=8)", query.toString());
     }
-/*
-    public void createsexpression with subquery() {
-    	let query = Query
-    		.from({x: [,2], y: { alpha: [2,6], beta: { nuts: 'brazil' }}}
 
-    	let expression = query.toExpression();
+	@Test
+    public void createsExpressionWithSubquery() {
+    	Cube query = Cube
+    		.fromJson("{'x': [null,2], 'y': { 'alpha': [2,6], 'beta': { 'nuts': 'brazil' }}}");
 
-    	expect(expression).to.equal('x<2 and y.alpha>=2 and y.alpha<6 and y.beta.nuts="brazil"');
+    	String expression = query.toString();
+
+    	assertEquals("x<2 and y.alpha>=2 and y.alpha<6 and y.beta.nuts='brazil'", expression);
     }
 
-    public void createsexpression with has() {
-        let query = Query
-            .from({x: [,2], y: { alpha: [2,6], nuts: { $has: 'brazil' }}}
+	@Test
+    public void createsExpressionWithHas() {
+        Cube query = Cube
+            .fromJson("{'x': [null,2], 'y': { 'alpha': [2,6], 'nuts': { '$has': 'brazil' }}}");
 
-        let expression = query.toExpression();
+        String expression = query.toString();
 
-        expect(expression).to.equal('x<2 and y.alpha>=2 and y.alpha<6 and y.nuts has($self="brazil")');
+        assertEquals("x<2 and y.alpha>=2 and y.alpha<6 and has (y.nuts='brazil')", expression);
     }
 
-    public void createsexpression with has and parameters() {
-        let query = Query
-            .from({x: [,2], y: { alpha: [2,6], nuts: { $has: $.param1 }}})
-            .and({ y : {nuts: { $has: $.param2 }}}
+	@Test
+	public void createsExpressionWithHasAndParameters() {
+        Cube query = Cube
+            .fromJson("{'x': [null,2], 'y': { 'alpha': [2,6], 'nuts': { '$has': { '$' : 'param1' } }}}")
+            .intersect("{ 'y' : {'nuts': { '$has': { '$' : 'param2' } }}}");
 
-        let expression = query.toExpression();
+        String expression = query.toString();
 
-        expect(expression).to.equal('x<2 and y.nuts has($self=$param2) and y.nuts has($self=$param1) and y.alpha>=2 and y.alpha<6');
+        assertEquals("x<2 and y.alpha>=2 and y.alpha<6 and has (y.nuts=$param1) and has (y.nuts=$param2)", expression);
     }
 
-    public void createsexpression with paramters() {
-        let query = Query
-            .from({x: [$.param1,2], y: $.param2}
+	@Test
+	public void createExpressionWithParamters() {
+        Cube query = Cube
+            .fromJson("{'x': [{'$':'param1'},2], 'y': {'$':'param2'}}");
 
-        let expression = query.toExpression();
+        String expression = query.toString();
 
-        expect(expression).to.equal('x>=$param1 and x<2 and y=$param2');
+        assertEquals("x>=$param1 and x<2 and y=$param2", expression);
     }
 
-    it('has working equals operation() {
-    	let query1 = Query
-    		.from({x: [,2], y: { alpha: [2,6], beta: { nuts: 'brazil' }}}
-    	let query2 = Query
-    		.from({y: { beta: { nuts: 'brazil' }, alpha: [2,6]}, x: [,2]}
-    	let query3 = Query
-    		.from({x: [,2], y: { alpha: [2,8], beta: { nuts: 'walnut' }}}
-    	let query4 = Query
-    		.from({x: [1,9], y: { alpha: [2,8], beta: { nuts: 'walnut' }}}
-    	expect(query1.equals(query2)).to.be.true;
-    	expect(query1.equals(query3)).to.be.false;
-    	expect(query1.equals(query4)).to.be.false;
-    	expect(query1.and(query3).equals(query3.and(query1))).to.be.true;
-    	expect(query1.or(query3).equals(query3.or(query1))).to.be.true;
+	@Test
+    public void hasWorkingEqualsOperation() {
+    	Cube query1 = Cube
+    		.fromJson("{'x': [null,2], 'y': { 'alpha': [2,6], 'beta': { 'nuts': 'brazil' }}}");
+    	Cube query2 = Cube
+    		.fromJson("{'y': { 'beta': { 'nuts': 'brazil' }, 'alpha': [2,6]}, 'x': [null,2]}");
+    	Cube query3 = Cube
+    		.fromJson("{'x': [null,2], 'y': { 'alpha': [2,8], 'beta': { 'nuts': 'walnut' }}}");
+    	Cube query4 = Cube
+    		.fromJson("{'x': [1,9], 'y': { 'alpha': [2,8], 'beta': { 'nuts': 'walnut' }}}");
+    	assertTrue(query1.equals(query2));
+    	assertFalse(query1.equals(query3));
+    	assertFalse(query1.equals(query4));
+    	assertTrue(query1.intersect(query3).equals(query3.intersect(query1)));
+    	assertTrue(query1.union(query3).equals(query3.union(query1)));
     }
 
-    it('has working equals operation with parameters() {
-        let query1 = Query
-            .from({x: [,$.param1], y: { alpha: [2,6], beta: { nuts: $.param2 }}}
-        let query2 = Query
-            .from({y: { beta: { nuts: $.param2 }, alpha: [2,6]}, x: [,$.param1]}
-        let query3 = Query
-            .from({x: [,$.param1], y: { alpha: [2,6], beta: { nuts: $.param3 }}}
-        expect(query1.equals(query2)).to.be.true;
-        expect(query1.equals(query3)).to.be.false;
+	@Test
+    public void hasWorkingEqualsOperationWithParameters(){
+        Cube query1 = Cube
+            .fromJson("{'x': [null,{'$':'param1'}], 'y': { 'alpha': [2,6], 'beta': { 'nuts': {'$':'param2'} }}}");
+        Cube query2 = Cube
+            .fromJson("{'y': { 'beta': { 'nuts': {'$':'param2'} }, 'alpha': [2,6]}, 'x': [null,{'$':'param1'}]}");
+        Cube query3 = Cube
+            .fromJson("{'x': [null,{'$':'param1'}], 'y': { 'alpha': [2,6], 'beta': { 'nuts': {'$':'param3'} }}}");
+        assertTrue(query1.equals(query2));
+        assertFalse(query1.equals(query3));
     }
+    /*
 
     it('has working contains operation() {
-    	let query1 = Query
-    		.from({x: [,2], y: { alpha: [2,6], beta: { nuts: 'brazil' }}}
-    	let query2 = Query
-    		.from({y: { beta: { nuts: 'brazil' }, alpha: [2,6]}, x: [,2]}
-    	let query3 = Query
-    		.from({x: [1,2], y: { alpha: [2,8], beta: { nuts: 'walnut' }}}
-    	let query4 = Query
-    		.from({x: [1,9], y: { alpha: [2,8], beta: { nuts: 'walnut' }}}
+    	Cube query1 = Cube
+    		.fromJson("{'x': [,2], 'y': { 'alpha': [2,6], 'beta': { 'nuts': 'brazil' }}}
+    	Cube query2 = Cube
+    		.fromJson("{'y': { 'beta': { 'nuts': 'brazil' }, 'alpha': [2,6]}, 'x': [,2]}
+    	Cube query3 = Cube
+    		.fromJson("{'x': [1,2], 'y': { 'alpha': [2,8], 'beta': { 'nuts': 'walnut' }}}
+    	Cube query4 = Cube
+    		.fromJson("{'x': [1,9], 'y': { 'alpha': [2,8], 'beta': { 'nuts': 'walnut' }}}
     	expect(query1.contains(query2)).to.be.true; // because equal
     	expect(query1.contains(query3)).to.be.false; // walnut != brazil
     	expect(query1.contains(query4)).to.be.false; // [,2] doesn't contain [1,9]
     	expect(query4.contains(query3)).to.be.true; 
-    	expect(query1.or(query4).contains(query1)).to.be.true;
-    	expect(query1.contains(query1.and(query4))).to.be.true;
+    	expect(query1.union(query4).contains(query1)).to.be.true;
+    	expect(query1.contains(query1.intersect(query4))).to.be.true;
    	}
 
     it('has working contains operation with parameters() {
-        let query2 = Query
-            .from({x: [$.param1,2], y: { alpha: [2,$.param3], beta: { nuts: $.param2 }}}
-        let query3 = Query
-            .from({x: [$.param1,2], y: { alpha: [2,8], beta: { nuts: $.param2 }}}
-        let query4 = Query
-            .from({x: [$.param1,9], y: { alpha: [2,8], beta: { nuts: $.param2 }}}
+        Cube query2 = Cube
+            .fromJson("{'x': [{'$':'param1'},2], 'y': { 'alpha': [2,{'$':'param3'}], 'beta': { 'nuts': {'$':'param2'} }}}
+        Cube query3 = Cube
+            .fromJson("{'x': [{'$':'param1'},2], 'y': { 'alpha': [2,8], 'beta': { 'nuts': {'$':'param2'} }}}
+        Cube query4 = Cube
+            .fromJson("{'x': [{'$':'param1'},9], 'y': { 'alpha': [2,8], 'beta': { 'nuts': {'$':'param2'} }}}
         expect(query4.contains(query3)).to.be.true; 
         expect(query3.contains(query4)).to.be.false; 
         expect(query3.contains(query2)).to.be.null;
@@ -182,36 +190,36 @@ public class QueryTest {
     }
 
     it('factorizes() {
-    	let query = Query
-    		.from({x: 2, y : [3,4], z : 8})
-    		.or({x:2, y: [,4], z: 7})
-    		.or({x:3, y: [3,], z: 7}
+    	Cube query = Cube
+    		.fromJson("{'x': 2, y : [3,4], z : 8})
+    		.union({'x':2, 'y': [,4], 'z': 7})
+    		.union({'x':3, 'y': [3,], 'z': 7}
 
-    	let factored_part = Query
-    		.from({y : [3,4], z : 8})
-    		.or({y: [,4], z: 7})
+    	let factored_part = Cube
+    		.fromJson("{y : [3,4], z : 8})
+    		.union({'y': [,4], 'z': 7})
 
-    	let { factored, remainder } = query.factor({ x: 2}
+    	let { factored, remainder } = query.factor({ 'x': 2}
 
-    	expect(remainder).to.deep.equal(Query.from({x:3, y: [3,], z: 7}));
+    	expect(remainder).to.deep.equal(Cube.fromJson("{'x':3, 'y': [3,], 'z': 7}));
     	expect(factored).to.deep.equal(factored_part);
     }
 
     it('has sane JSON representation', ()=>{
-    	let query = Query
-    		.from({x: 2, y : [3,4], z : 8})
-    		.or({x:2, y: [,4], z: 7})
-    		.or({x:3, y: [3,], z: $.param1}
+    	Cube query = Cube
+    		.fromJson("{'x': 2, y : [3,4], z : 8})
+    		.union({'x':2, 'y': [,4], 'z': 7})
+    		.union({'x':3, 'y': [3,], 'z': {'$':'param1'}}
     	let json = JSON.stringify(query);
     	expect(json).to.equal('{"union":[{"x":2,"y":[3,4],"z":8},{"x":2,"y":[null,4],"z":7},{"x":3,"y":[3,null],"z":{"$":"param1"}}]}');
     }
 
     it('sample code for README.md tests OK', ()=>{
-    	let query = Query
-    		.from({ course: 'javascript 101', student: { age : [21,] }, grade: [,'C']})
-    		.or({ course: 'medieval French poetry', student: { age: [40,65]}, grade: [,'C']})
+    	Cube query = Cube
+    		.fromJson("{ course: 'javascript 101', student: { age : [21,] }, grade: [,'C']})
+    		.union({ course: 'medieval French poetry', student: { age: [40,65]}, grade: [,'C']})
 
-    	let expr = query.toExpression();
+    	let expr = query.toString();
     	expect(expr).to.equal('grade<"C" and (course="javascript 101" and student.age>=21 or course="medieval French poetry" and student.age>=40 and student.age<65)');
     
 		const formatter = {
@@ -230,14 +238,14 @@ public class QueryTest {
 
 
     it('sample code for README.md with parameters tests OK', ()=>{
-        let query = Query
-            .from({ course: 'javascript 101', student: { age : [$.min_age,] }, grade: [,'C']})
-            .or({ course: 'medieval French poetry', student: { age: [$.min_age, 65]}, grade: [,'C']})
+        Cube query = Cube
+            .fromJson("{ course: 'javascript 101', student: { age : [$.min_age,] }, grade: [,'C']})
+            .union({ course: 'medieval French poetry', student: { age: [$.min_age, 65]}, grade: [,'C']})
 
-        let expr = query.toExpression();
+        let expr = query.toString();
         expect(expr).to.equal('grade<"C" and (course="javascript 101" and student.age>=$min_age or course="medieval French poetry" and student.age>=$min_age and student.age<65)');
 
-        let expr2 = query.bind({min_age: 27}).toExpression();
+        let expr2 = query.bind({min_age: 27}).toString();
         expect(expr2).to.equal('grade<"C" and (course="javascript 101" and student.age>=27 or course="medieval French poetry" and student.age>=27 and student.age<65)');
     }
 
@@ -249,7 +257,7 @@ public class QueryTest {
             { name: 'ada', age: 21} 
         ];
 
-        let query = Query.from({ age: [,18]}
+        Cube query = Cube.fromJson("{ age: [,18]}
         let result = data.filter(query.predicate);
 
         expect(result).to.have.length(1);
@@ -263,16 +271,16 @@ public class QueryTest {
                 { name: 'ada', age: 32, expertise: [ { language:'javascript', level:'expert'} ] } 
             ];
 
-            let expertise_query = Query.from({ language:'java' }
-            let query = Query.from({ age: [,50], expertise: { $has : expertise_query }}
+            let expertise_query = Cube.fromJson("{ language:'java' }
+            Cube query = Cube.fromJson("{ age: [,50], expertise: { $has : expertise_query }}
 
             debug(JSON.stringify(query));
 
             let result = data.filter(query.predicate);
 
             expect(result).to.have.length(2);
-            expect(query.toExpression()).to.equal('age<50 and expertise has(language="java")');
-            expect(query).to.deep.equal(Query.from({ age: [,50], expertise: { $has: { language:'java' }}}));
+            expect(query.toString()).to.equal('age<50 and expertise has(language="java")');
+            expect(query).to.deep.equal(Cube.fromJson("{ age: [,50], expertise: { $has: { language:'java' }}}));
 
     }
 
@@ -318,19 +326,19 @@ public class QueryTest {
             }
         ]
 
-        let query1 = Query.from({ age: [26,]}
+        Cube query1 = Cube.fromJson("{ age: [26,]}
         let result = data.filter(query1.predicate);
         expect(result).to.have.length(2);
         expect(result).to.deep.equal(data.filter(item=>item.age>=26));
-        let query2 = Query.from({ courses: { $has: { name: 'python'}}}
+        Cube query2 = Cube.fromJson("{ courses: { $has: { name: 'python'}}}
         let result2 = data.filter(query2.predicate);
         expect(result2).to.have.length(4);
         expect(result2).to.deep.equal(data.filter(item=>item.courses.find(course=>course.name==='python')));
-        let query3 = Query.from({ tags: {$has: 'dull'}}
+        Cube query3 = Cube.fromJson("{ tags: {$has: 'dull'}}
         let result3 = data.filter(query3.predicate);
         expect(result3).to.have.length(2);
         expect(result3).to.deep.equal(data.filter(item=>item.tags.includes('dull')));
-        let query4 = Query.from({ tags: {$hasAll: ['old','dull']}}
+        Cube query4 = Cube.fromJson("{ tags: {$hasAll: ['old','dull']}}
         let result4 = data.filter(query4.predicate);
         expect(result4).to.have.length(1);
         expect(result4).to.deep.equal(data.filter(item=>item.tags.includes('dull') && item.tags.includes('old')));
@@ -338,40 +346,44 @@ public class QueryTest {
        */
 
 	@Test
-	public void canCreateQueryWithAnd() {
-		Query query = Query.from("{ '$and': [ {'x':[2,5]}, {'x':[4,7]} ]}");
+	public void canCreateCubeWithAnd() {
+		Cube query = Cube.fromJson("{ '$and': [ {'x':[2,5]}, {'x':[4,7]} ]}");
 		assertEquals("x>=4 and x<5", query.toString());
 	}
 	
 	@Test
 	public void canCreateJsonOutput() {
-    	Query query = Query
-        		.from("{'x': [null,2], 'y': 4}")
-        		.and(Query.from("{ 'z': 5}"))
-        		.or(Query.from("{'x':[6,8], 'y':3, 'z':99}"));
-    	JsonObject json = query.toJSON();
+		Cube cube1 = Cube.fromJson("{'x': [null,2], 'y': 4}");
+		JsonValue json1 = cube1.toJSON();
+		Cube cube2 = Cube.fromJson("{ 'z': 5}");
+		JsonValue json2 = cube2.toJSON();
+		Cube cube3 = Cube.fromJson("{'x':[6,8], 'y':3, 'z':99}");
+		JsonValue json3 = cube3.toJSON();
+		
+    	Cube query = cube1.intersect(cube2).union(cube3);
+    	JsonValue json = query.toJSON();
     	assertEquals("{\"$or\":[{\"x\":{\"<\":2},\"y\":4,\"z\":5},{\"x\":[6,8],\"y\":3,\"z\":99}]}", json.toString());
 	}
 	
 	@Test
 	public void canRoundtripJsonOutput() {
-    	Query query = Query
-        		.from("{'x': [null,2], 'y': 4}")
-        		.and(Query.from("{ 'z': 5}"))
-        		.or(Query.from("{'x':[6,8], 'y':3, 'z':99}"));
-    	JsonObject json = query.toJSON();
-    	Query query2 = Query.from(json);
+    	Cube query = Cube
+        		.fromJson("{'x': [null,2], 'y': 4}")
+        		.intersect(Cube.fromJson("{ 'z': 5}"))
+        		.union(Cube.fromJson("{'x':[6,8], 'y':3, 'z':99}"));
+    	JsonValue json = query.toJSON();
+    	Cube query2 = Cube.from((JsonObject)json);
     	assertEquals(query, query2);
  	}
 
 	@Test
 	public void canRoundtripUrlEncodedOutput() {
-    	Query query = Query
-        		.from("{'x': [null,2], 'y': 4}")
-        		.and(Query.from("{ 'z': 5}"))
-        		.or(Query.from("{'x':[6,8], 'y':3, 'z':99}"));
+    	Cube query = Cube
+        		.fromJson("{'x': [null,2], 'y': 4}")
+        		.intersect(Cube.fromJson("{ 'z': 5}"))
+        		.union(Cube.fromJson("{'x':[6,8], 'y':3, 'z':99}"));
     	String encoded = query.urlEncode();
-    	Query query2 = Query.urlDecode(encoded);
+    	Cube query2 = Cube.urlDecode(encoded);
     	assertEquals(query, query2);
  	}
 
