@@ -512,7 +512,7 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 		public Boolean contains(Range range) {
 			if (range == UNBOUNDED) return Boolean.FALSE;
 			if (range == EMPTY) return Boolean.FALSE;
-			return this.lower_bound.contains(range) && this.upper_bound.contains(range);
+			return Tristate.and(this.lower_bound.contains(range), this.upper_bound.contains(range));
 		}
 
 		public Boolean containsItem(Value.Atomic item) {

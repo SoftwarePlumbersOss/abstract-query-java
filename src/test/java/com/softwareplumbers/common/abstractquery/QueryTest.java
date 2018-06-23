@@ -157,71 +157,70 @@ public class QueryTest {
         assertTrue(query1.equals(query2));
         assertFalse(query1.equals(query3));
     }
-    /*
 
-    it('has working contains operation() {
+	@Test
+    public void hasWorkingContainsOperator() {
     	Cube query1 = Cube
-    		.fromJson("{'x': [,2], 'y': { 'alpha': [2,6], 'beta': { 'nuts': 'brazil' }}}
+    		.fromJson("{'x': [null,2], 'y': { 'alpha': [2,6], 'beta': { 'nuts': 'brazil' }}}");
     	Cube query2 = Cube
-    		.fromJson("{'y': { 'beta': { 'nuts': 'brazil' }, 'alpha': [2,6]}, 'x': [,2]}
+    		.fromJson("{'y': { 'beta': { 'nuts': 'brazil' }, 'alpha': [2,6]}, 'x': [null,2]}");
     	Cube query3 = Cube
-    		.fromJson("{'x': [1,2], 'y': { 'alpha': [2,8], 'beta': { 'nuts': 'walnut' }}}
+    		.fromJson("{'x': [1,2], 'y': { 'alpha': [2,8], 'beta': { 'nuts': 'walnut' }}}");
     	Cube query4 = Cube
-    		.fromJson("{'x': [1,9], 'y': { 'alpha': [2,8], 'beta': { 'nuts': 'walnut' }}}
-    	expect(query1.contains(query2)).to.be.true; // because equal
-    	expect(query1.contains(query3)).to.be.false; // walnut != brazil
-    	expect(query1.contains(query4)).to.be.false; // [,2] doesn't contain [1,9]
-    	expect(query4.contains(query3)).to.be.true; 
-    	expect(query1.union(query4).contains(query1)).to.be.true;
-    	expect(query1.contains(query1.intersect(query4))).to.be.true;
+    		.fromJson("{'x': [1,9], 'y': { 'alpha': [2,8], 'beta': { 'nuts': 'walnut' }}}");
+    	assertTrue(query1.contains(query2)); // because equal
+    	assertFalse(query1.contains(query3)); // walnut != brazil
+    	assertFalse(query1.contains(query4)); // [null,2] doesn't contain [1,9]
+    	assertTrue(query4.contains(query3)); 
+    	assertTrue(query1.union(query4).contains(query1));
+    	// TODO: Do all sets contain the empty set? q1 intersect q2 is empty here
+    	//assertTrue(query1.contains(query1.intersect(query4)));
    	}
 
-    it('has working contains operation with parameters() {
+	@Test
+    public void hasWorkingContainsOperatorWithParameters() {
         Cube query2 = Cube
-            .fromJson("{'x': [{'$':'param1'},2], 'y': { 'alpha': [2,{'$':'param3'}], 'beta': { 'nuts': {'$':'param2'} }}}
+            .fromJson("{'x': [{'$':'param1'},2], 'y': { 'alpha': [2,{'$':'param3'}], 'beta': { 'nuts': {'$':'param2'} }}}");
         Cube query3 = Cube
-            .fromJson("{'x': [{'$':'param1'},2], 'y': { 'alpha': [2,8], 'beta': { 'nuts': {'$':'param2'} }}}
+            .fromJson("{'x': [{'$':'param1'},2], 'y': { 'alpha': [2,8], 'beta': { 'nuts': {'$':'param2'} }}}");
         Cube query4 = Cube
-            .fromJson("{'x': [{'$':'param1'},9], 'y': { 'alpha': [2,8], 'beta': { 'nuts': {'$':'param2'} }}}
-        expect(query4.contains(query3)).to.be.true; 
-        expect(query3.contains(query4)).to.be.false; 
-        expect(query3.contains(query2)).to.be.null;
-        expect(query2.contains(query3)).to.be.null;
+            .fromJson("{'x': [{'$':'param1'},9], 'y': { 'alpha': [2,8], 'beta': { 'nuts': {'$':'param2'} }}}");
+        assertTrue(query4.contains(query3)); 
+        assertFalse(query3.contains(query4)); 
+        assertNull(query3.contains(query2));
+        assertNull(query2.contains(query3));
     }
 
-    it('factorizes() {
+	@Test
+    public void factorizes() {
     	Cube query = Cube
-    		.fromJson("{'x': 2, y : [3,4], z : 8})
-    		.union({'x':2, 'y': [,4], 'z': 7})
-    		.union({'x':3, 'y': [3,], 'z': 7}
+    		.fromJson("{'x': 2, 'y' : [3,4], 'z' : 8}")
+    		.union("{'x':2, 'y': [null,4], 'z': 7}")
+    		.union("{'x':3, 'y': [3,null], 'z': 7}");
 
-    	let factored_part = Cube
-    		.fromJson("{y : [3,4], z : 8})
-    		.union({'y': [,4], 'z': 7})
-
-    	let { factored, remainder } = query.factor({ 'x': 2}
-
-    	expect(remainder).to.deep.equal(Cube.fromJson("{'x':3, 'y': [3,], 'z': 7}));
-    	expect(factored).to.deep.equal(factored_part);
+    	// TODO: factor should break out the y<4 but does not because it's hidden in a 'between'.
+    	assertEquals("(x=3 and y>=3 and z=7 or x=2 and (y>=3 and y<4 and z=8 or y<4 and z=7))", query.toExpression(Formatter.SIMPLIFY).toExpression(Formatter.DEFAULT));
     }
 
-    it('has sane JSON representation', ()=>{
+	@Test
+    public void hasSaneJSONRepresentation() {
     	Cube query = Cube
-    		.fromJson("{'x': 2, y : [3,4], z : 8})
-    		.union({'x':2, 'y': [,4], 'z': 7})
-    		.union({'x':3, 'y': [3,], 'z': {'$':'param1'}}
-    	let json = JSON.stringify(query);
-    	expect(json).to.equal('{"union":[{"x":2,"y":[3,4],"z":8},{"x":2,"y":[null,4],"z":7},{"x":3,"y":[3,null],"z":{"$":"param1"}}]}');
+    		.fromJson("{'x': 2, 'y' : [3,4], 'z' : 8}")
+    		.union("{'x':2, 'y': [null,4], 'z': 7}")
+    		.union("{'x':3, 'y': [3,null], 'z': {'$':'param1'}}");
+    	String json = query.toJSON().toString();
+    	assertEquals("{\"$or\":[{\"x\":2,\"y\":[3,4],\"z\":8},{\"x\":2,\"y\":{\"<\":4},\"z\":7},{\"x\":3,\"y\":{\">=\":3},\"z\":{\"$\":\"param1\"}}]}", json);
     }
 
-    it('sample code for README.md tests OK', ()=>{
+    @Test
+    public void sampleCodeForReadmeTestsOK() {
     	Cube query = Cube
-    		.fromJson("{ course: 'javascript 101', student: { age : [21,] }, grade: [,'C']})
-    		.union({ course: 'medieval French poetry', student: { age: [40,65]}, grade: [,'C']})
+    		.fromJson("{ 'course': 'javascript 101', 'student': { 'age' : [21, null] }, 'grade': [null,'C']}")
+    		.union("{ 'course': 'medieval French poetry', 'student': { 'age': [40,65]}, 'grade': [null,'C']}");
 
-    	let expr = query.toString();
-    	expect(expr).to.equal('grade<"C" and (course="javascript 101" and student.age>=21 or course="medieval French poetry" and student.age>=40 and student.age<65)');
-    
+    	String expr = query.toExpression(Formatter.SIMPLIFY).toExpression(Formatter.DEFAULT);
+    	assertEquals("(grade<'C' and (course='javascript 101' and student.age>=21 or course='medieval French poetry' and student.age>=40 and student.age<65))", expr);
+    /*
 		const formatter = {
     		andExpr(...ands) { return ands.join(' and ') }, 
     		orExpr(...ors) { return "(" + ors.join(' or ') + ")"},
@@ -234,13 +233,14 @@ public class QueryTest {
 
 		let expr2 = query.toExpression(formatter);
    		expect(expr2).to.equal('grade<"C" and (course="javascript 101" and student[age>="21"] or course="medieval French poetry" and student[age>="40" and age<"65"])');
+   	*/
     }
 
-
+/*
     it('sample code for README.md with parameters tests OK', ()=>{
         Cube query = Cube
-            .fromJson("{ course: 'javascript 101', student: { age : [$.min_age,] }, grade: [,'C']})
-            .union({ course: 'medieval French poetry', student: { age: [$.min_age, 65]}, grade: [,'C']})
+            .fromJson("{ course: 'javascript 101', student: { age : [$.min_age,] }, grade: [null,'C']})
+            .union({ course: 'medieval French poetry', student: { age: [$.min_age, 65]}, grade: [null,'C']})
 
         let expr = query.toString();
         expect(expr).to.equal('grade<"C" and (course="javascript 101" and student.age>=$min_age or course="medieval French poetry" and student.age>=$min_age and student.age<65)');
@@ -249,6 +249,7 @@ public class QueryTest {
         expect(expr2).to.equal('grade<"C" and (course="javascript 101" and student.age>=27 or course="medieval French poetry" and student.age>=27 and student.age<65)');
     }
 
+    /*
     it('sample code for README.md with predicate tests OK', ()=>{
 
         let data = [ 
@@ -257,7 +258,7 @@ public class QueryTest {
             { name: 'ada', age: 21} 
         ];
 
-        Cube query = Cube.fromJson("{ age: [,18]}
+        Cube query = Cube.fromJson("{ age: [null,18]}
         let result = data.filter(query.predicate);
 
         expect(result).to.have.length(1);
@@ -272,7 +273,7 @@ public class QueryTest {
             ];
 
             let expertise_query = Cube.fromJson("{ language:'java' }
-            Cube query = Cube.fromJson("{ age: [,50], expertise: { $has : expertise_query }}
+            Cube query = Cube.fromJson("{ age: [null,50], expertise: { $has : expertise_query }}
 
             debug(JSON.stringify(query));
 
@@ -280,7 +281,7 @@ public class QueryTest {
 
             expect(result).to.have.length(2);
             expect(query.toString()).to.equal('age<50 and expertise has(language="java")');
-            expect(query).to.deep.equal(Cube.fromJson("{ age: [,50], expertise: { $has: { language:'java' }}}));
+            expect(query).to.deep.equal(Cube.fromJson("{ age: [null,50], expertise: { $has: { language:'java' }}}));
 
     }
 

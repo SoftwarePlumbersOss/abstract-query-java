@@ -160,12 +160,7 @@ public interface Cube extends AbstractSet<Value.MapValue, Cube> {
 	 * @return true if this cube contains the other cube, false if not, null if we cannot tell.
 	 */
 	public Boolean contains(Cube other) {
-		Optional<Boolean> nomatch = constraints.keySet().stream()
-				.map(key -> containsConstraint(key, other))
-				.filter(result -> result != Boolean.TRUE)
-				.findAny();
-				
-		return nomatch.isPresent() ? nomatch.get() : Boolean.TRUE;
+		return Tristate.every(constraints.keySet(), constraint-> containsConstraint(constraint, other));
 	}
 
 	private <T extends Value,U extends AbstractSet<T,U>> Boolean containsItem(String dimension, Value.MapValue item) {
@@ -226,7 +221,7 @@ public interface Cube extends AbstractSet<Value.MapValue, Cube> {
 		for (String dimension : other.getConstraints()) {
 			AbstractSet<? extends Value, ?> intersection = intersect(dimension, other);
 			if (intersection.isEmpty()) return EMPTY;
-			result.put(dimension, intersection);
+				result.put(dimension, intersection);
 		}
 
 		return new Impl(result);

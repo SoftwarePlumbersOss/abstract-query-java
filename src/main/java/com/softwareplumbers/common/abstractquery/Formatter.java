@@ -100,6 +100,8 @@ public interface Formatter<T> {
     	public Formatter<String> in(String dimension) {
     		return new DefaultFormat(this, dimension);
     	}
+    	
+    	
 	};
 
 	/** Get the default query formatter
@@ -175,53 +177,91 @@ public interface Formatter<T> {
     	}
 	};
 	
+
+
+	
 	public interface Node extends List<Node>, CanFormat {
+		default String getDimension() { return ""; }
 	}
 	
 	public class Operator extends AbstractList<Node> implements Node {
+		
+		protected static boolean eq(Object a, Object b) { return a == b || (a != null && b!= null && a.equals(b)); }	
+		public final String dimension;
 		@Override public Node get(int index) { return null; }
 		@Override public int size() { return 0; };
 		public final String operator;
 		public final Value value;
-		public Operator(String operator, Value value) { this.operator = operator; this.value = value; }
+		public Operator(String dimension, String operator, Value value) { this.dimension = dimension; this.operator = operator; this.value = value; }
 		@Override
-		public <T> T toExpression(Formatter<T> format) { return format.operExpr(operator, value); }
+		public <T> T toExpression(Formatter<T> format) { return format.in(dimension).operExpr(operator, value); }
+		public String toString() { return toExpression(DEFAULT); }
+		public boolean equals(Operator other) { return eq(dimension,other.dimension) && eq(operator, other.operator) && eq(value, other.value); }
+		public boolean equals(Object other) { return other instanceof Operator && equals((Operator)other); }
+		public String getDimension() { return dimension; }
 	}
 	
 	public class And extends ArrayList<Node> implements Node { 
+		public final String dimension;
 		public final Value.Type type;
-		public And(Value.Type type, Node... items) { super(Arrays.asList(items)); this.type = type; }
-		public And(Value.Type type) { this.type = type; }
-		public <T> T toExpression(Formatter<T> format) { return format.andExpr(type, stream().map(item->item.toExpression(format))); }
+		public And(Value.Type type, String dimension, Node... items) { super(Arrays.asList(items)); this.type = type; this.dimension = dimension;  }
+		public And(Value.Type type, String dimension) { this.type = type; this.dimension = dimension; }
+		public <T> T toExpression(Formatter<T> format) { return format.andExpr(type, stream().map(item->item.toExpression(format.in(dimension)))); }
+		public String toString() { return toExpression(DEFAULT); }
 	}
 	
+	public class Between extends ArrayList<Node> implements Node { 
+		public final String dimension;
+		public final Value.Type type;
+		public Between(Value.Type type, String dimension, Node lower, Node upper) { super(Arrays.asList(lower,upper)); this.type = type; this.dimension = dimension;  }
+		public Between(Value.Type type, String dimension) { this.type = type; this.dimension = dimension; }
+		public <T> T toExpression(Formatter<T> format) { return format.betweenExpr(type, get(0).toExpression(format), get(1).toExpression(format)); }
+		public String toString() { return toExpression(DEFAULT); }
+	}
+	
+		
 	public class Or extends ArrayList<Node> implements Node { 
 		public final Value.Type type;
 		public Or(Value.Type type, List<? extends Node> items) { super(items); this.type = type; }
 		public Or(Value.Type type) { this.type = type; }		
 		public <T> T toExpression(Formatter<T> format) { return format.orExpr(type, stream().map(item->item.toExpression(format))); }
+		public String toString() { return toExpression(DEFAULT); }
 	}
 	
 	public class Sub extends AbstractList<Node> implements Node {
+		protected static boolean eq(Object a, Object b) { return a == b || (a != null && b!= null && a.equals(b)); }	
+		public final String dimension;
 		@Override public Node get(int index) { return subexpression; }
 		@Override public int size() { return 1; }
 		public final String operator;
 		public final Node subexpression;
-		public Sub(String operator, Node subexpression) { this.operator = operator; this.subexpression = subexpression; }
-		public <T> T toExpression(Formatter<T> format) { return format.subExpr(operator, subexpression.toExpression(format)); }		
+		public Sub(String dimension, String operator, Node subexpression) { this.dimension = dimension; this.operator = operator; this.subexpression = subexpression; }
+		public <T> T toExpression(Formatter<T> format) { return format.in(dimension).subExpr(operator, subexpression.toExpression(format)); }		
+		public String toString() { return toExpression(DEFAULT); }
+		public boolean equals(Sub other) { return eq(dimension,other.dimension) && eq(operator, other.operator) && eq(subexpression, other.subexpression); }
+		public boolean equals(Object other) { return other instanceof Sub && equals((Sub)other); }
+		public String getDimension() { return dimension; }
 	}
 	
 
+	
+
 	public class TreeFormatter implements Formatter<Node> {
+		
+		public final String in;
+		
+		public TreeFormatter(String in) {
+			this.in = in;
+		}
 
 		@Override
 		public Node operExpr(String operator, Value value) { 
-			return new Operator(operator, value);
+			return new Operator(in, operator, value);
 		}
 
 		@Override
 		public Node andExpr(Value.Type type, Stream<Node> expressions) {
-			return expressions.collect(()->new And(type), And::add, And::addAll);
+			return expressions.collect(()->new And(type, in), And::add, And::addAll);
 		}
 
 		@Override
@@ -231,22 +271,30 @@ public interface Formatter<T> {
 
 		@Override
 		public Node subExpr(String operator, Node sub) {
-			return new Sub(operator, sub);
+			return new Sub(in, operator, sub);
+		}
+		
+		public Node betweenExpr(Value.Type type, Node lower, Node upper) {
+			return new Between(type, in, lower, upper);
 		}
 
 		@Override
 		public Formatter<Node> in(String dimension) {
-			return this;
+			return new TreeFormatter(dimension);
 		}	
 	}
 	
 	public class Factorizer extends TreeFormatter {
 		
+		public Factorizer(String in) {
+			super(in);
+		}
+		
 		private static void triage(List<And> ands, Or atomics, Node node) {
 			if (node instanceof And) 		ands.add((And)node);
 			else if (node instanceof Or)	((Or)node).stream().forEach(inner->triage(ands, atomics, inner));
 			else 							atomics.add(node);			
-		}
+		}	
 		
 		public Optional<Node> getCommonestFactor(List<And> ands) {
 			return ands
@@ -256,6 +304,7 @@ public interface Formatter<T> {
 					.entrySet()
 					.stream()
 					.filter(entry -> entry.getValue() > 1) // Ignore any factor that appears only once
+					.sorted(Comparator.comparing(entry->entry.getKey().getDimension())) // sort so we factorize in a stable way
 					.collect(
 						Collectors.maxBy(
 							Comparator.comparingLong(entry -> entry.getValue()) // Find the factor that appears the most times
@@ -272,7 +321,7 @@ public interface Formatter<T> {
 				List<And> factorized = new ArrayList<And>();
 				Or result = new Or(type);
 				for (And and : ands) {
-					if (and.remove(factor)) 
+					if (and.remove(factor.get())) 
 						factorized.add(and); 
 					else result.add(and);
 				}
@@ -284,10 +333,10 @@ public interface Formatter<T> {
 						factored = (And)inner.get();
 						factored.add(factor.get());
 					} else {
-						factored = new And(type, factor.get(), inner.get());
+						factored = new And(type, in, factor.get(), inner.get());
 					}
 				} else {
-					factored = new And(type, factor.get(), new Or(type, factorized));
+					factored = new And(type, in, factor.get(), new Or(type, factorized));
 				}
 				if (result.isEmpty()) 
 					return Optional.of(factored);
@@ -317,10 +366,14 @@ public interface Formatter<T> {
 			};
 			return atomics;
 		}
+		
+		public Formatter<Node> in(String dimension) {
+			return new Factorizer(dimension);
+		}
 	}
 	
-	public Formatter<Node> SIMPLIFY = new Factorizer();	
-	public Formatter<Node> TREE = new TreeFormatter();
+	public Formatter<Node> SIMPLIFY = new Factorizer(null);	
+	public Formatter<Node> TREE = new TreeFormatter(null);
 	/** Default formatter creates a compact string expression */
 	public Formatter<String> DEFAULT = new DefaultFormat(null, null);
 	/** Default JSON creates a JSON representation */
