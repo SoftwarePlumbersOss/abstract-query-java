@@ -189,7 +189,8 @@ public interface Formatter<T> {
     	}
     	
     	public JsonValue subExpr(Context context, String operator, JsonValue sub) {
-    		return Json.createObjectBuilder().add(operator, sub).build();
+    		JsonObjectBuilder hasExpr = Json.createObjectBuilder().add(operator, sub);
+    		return Json.createObjectBuilder().add(context.dimension,hasExpr).build();
     	}
 	};
 	

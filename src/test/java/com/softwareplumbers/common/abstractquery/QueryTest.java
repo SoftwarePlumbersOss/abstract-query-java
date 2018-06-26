@@ -117,6 +117,18 @@ public class QueryTest {
 
         assertEquals("a<2 and has (nuts='brazil')", expression);
     }
+	
+	@Test
+    public void createsExpressionWithHasOnObjects() {
+        Cube query = Cube
+            .fromJson("{'a': [null,2], 'nuts': { '$has': { 'type': 'brazil' }}}");
+
+        String expression = query.toString();
+        String json = query.toJSON().toString();
+
+        assertEquals("a<2 and has (nuts.type='brazil')", expression);
+        assertEquals("{\"a\":{\"<\":2},\"nuts\":{\"has\":{\"type\":\"brazil\"}}}", json);
+    }
 
 	@Test
 	public void createsExpressionWithHasAndParameters() {

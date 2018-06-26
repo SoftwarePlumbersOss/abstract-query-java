@@ -265,10 +265,7 @@ public interface Cube extends AbstractSet<Value.MapValue, Cube> {
 	 * @return A JSON object representing this Cube.
 	 */
 	public JsonValue toJSON() {
-		JsonObjectBuilder builder = Json.createObjectBuilder();
-		for (Map.Entry<String, AbstractSet<? extends Value,?>> entry : constraints.entrySet())
-			builder.add(entry.getKey(), entry.getValue().toJSON());
-		return builder.build();
+		return toExpression(Formatter.JSON);
 	}
 
 	/** Convert a Cube to an expression using the given formatter and context
