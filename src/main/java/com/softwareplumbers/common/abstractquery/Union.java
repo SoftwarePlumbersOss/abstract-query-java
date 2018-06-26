@@ -74,8 +74,8 @@ public class Union<T extends Value, U extends AbstractSet<T,U>> implements Abstr
 	}
 
 	@Override
-	public <V> V toExpression(Formatter<V> formatter) {
-		return formatter.orExpr(type, data.stream().map(item -> item.toExpression(formatter)));
+	public <V> V toExpression(Formatter<V> formatter, Formatter.Context context) {
+		return formatter.orExpr(context, type, data.stream().map(item -> item.toExpression(formatter, context)));
 	}
 
 	@Override

@@ -335,8 +335,8 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 			return Boolean.TRUE;
 		}
 		
-		public <U> U toExpression(Formatter<U> formatter)	{ 
-			return formatter.operExpr("=", Value.from("*")); 
+		public <U> U toExpression(Formatter<U> formatter, Formatter.Context context)	{ 
+			return formatter.operExpr(context, "=", Value.from("*")); 
 		}
 
 		public Boolean maybeEquals(Range range)	{ return range instanceof Unbounded; }
@@ -397,8 +397,8 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 			return Boolean.FALSE;
 		}
 		
-		public <U> U toExpression(Formatter<U> formatter)	{ 
-			return formatter.operExpr("=", Value.from("[]")); 
+		public <U> U toExpression(Formatter<U> formatter, Formatter.Context context)	{ 
+			return formatter.operExpr(context, "=", Value.from("[]")); 
 		}
 
 		public Boolean maybeEquals(Range range)	{ return range instanceof Empty; }
@@ -448,8 +448,8 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 			this.operator = operator;
 		}
 
-		public <U> U toExpression(Formatter<U> formatter)	{ 
-			return formatter.operExpr(this.operator, this.value); 
+		public <U> U toExpression(Formatter<U> formatter, Formatter.Context context)	{ 
+			return formatter.operExpr(context, this.operator, this.value); 
 		}
 
 		public Boolean maybeEquals(Range range)	{ 
@@ -565,8 +565,8 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 			return null;			
 		}
 
-		public <U> U toExpression(Formatter<U> formatter)	{ 
-			return formatter.betweenExpr(getType(), lower_bound.toExpression(formatter), upper_bound.toExpression(formatter));
+		public <U> U toExpression(Formatter<U> formatter, Formatter.Context context)	{ 
+			return formatter.betweenExpr(context, getType(), lower_bound.toExpression(formatter, context), upper_bound.toExpression(formatter, context));
 		}
 
 		public Boolean maybeEquals(Range range) { 
@@ -690,8 +690,8 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 			return null;
 		}
 
-		public <U> U toExpression(Formatter<U> formatter)	{ 
-			return formatter.operExpr(OPERATOR, this.value); 
+		public <U> U toExpression(Formatter<U> formatter, Formatter.Context context)	{ 
+			return formatter.operExpr(context, OPERATOR, this.value); 
 		}
 
 		public Boolean maybeEquals(Range range) {

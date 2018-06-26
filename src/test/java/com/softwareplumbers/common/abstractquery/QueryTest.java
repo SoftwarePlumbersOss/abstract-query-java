@@ -107,6 +107,16 @@ public class QueryTest {
 
         assertEquals("x<2 and y.alpha>=2 and y.alpha<6 and has (y.nuts='brazil')", expression);
     }
+	
+	@Test
+    public void createsExpressionWithHasInTopLevel() {
+        Cube query = Cube
+            .fromJson("{'a': [null,2], 'nuts': { '$has': 'brazil' }}");
+
+        String expression = query.toString();
+
+        assertEquals("a<2 and has (nuts='brazil')", expression);
+    }
 
 	@Test
 	public void createsExpressionWithHasAndParameters() {

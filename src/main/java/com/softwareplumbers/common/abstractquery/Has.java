@@ -56,8 +56,9 @@ public interface Has<V extends Value, S extends AbstractSet<V,S>> extends Abstra
 		return Has.intersect(this, other);
 	}
 
-	public <U> U toExpression(Formatter<U> formatter) { 
-		return formatter.subExpr(OPERATOR, match.toExpression(formatter));
+	public <U> U toExpression(Formatter<U> formatter, Formatter.Context context) { 
+		Formatter.Context array = context.setType(Formatter.Context.Type.ARRAY);
+		return formatter.subExpr(array, OPERATOR, match.toExpression(formatter, array));
 	}
 
 	public boolean equals(Object other) { 

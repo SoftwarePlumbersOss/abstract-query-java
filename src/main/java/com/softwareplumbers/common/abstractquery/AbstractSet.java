@@ -39,7 +39,8 @@ public interface AbstractSet<T extends Value, U extends AbstractSet<T,U>> {
 	Boolean contains(U set);
 	Boolean maybeEquals(U other);
 	
-	<X> X toExpression(Formatter<X> formatter);
+	<X> X toExpression(Formatter<X> formatter, Formatter.Context context);
+	default <X> X toExpression(Formatter<X> formatter) { return toExpression(formatter, Formatter.Context.ROOT); }
 	
 	JsonValue toJSON();
 	

@@ -280,11 +280,12 @@ public interface Cube extends AbstractSet<Value.MapValue, Cube> {
 	 * @param formatter Object used to format an expression from this Cube
 	 * @return A formatted expression
 	 */
-	public <T> T toExpression(Formatter<T> formatter) {
-		return formatter.andExpr(
+	public <T> T toExpression(Formatter<T> formatter, Formatter.Context context) {
+		final Formatter.Context obj = context.setType(Formatter.Context.Type.OBJECT);
+		return formatter.andExpr(obj,
 				Value.Type.MAP,
 			constraints.entrySet().stream().map(
-				entry -> entry.getValue().toExpression(formatter.in(entry.getKey()))
+				entry -> entry.getValue().toExpression(formatter, obj.in(entry.getKey()))
 			)
 		);
 	}
@@ -383,7 +384,7 @@ public interface Cube extends AbstractSet<Value.MapValue, Cube> {
 		@Override	public Boolean containsItem(MapValue item) { return Boolean.TRUE; }
 		@Override	public Boolean contains(Cube set) { return Boolean.TRUE; }
 		@Override	public Boolean maybeEquals(Cube other) { return other == UNBOUNDED; }
-		@Override	public <X> X toExpression(Formatter<X> formatter) { return formatter.operExpr("=", Value.from("*")); }
+		@Override	public <X> X toExpression(Formatter<X> formatter, Formatter.Context context) { return formatter.operExpr(context, "=", Value.from("*")); }
 		@Override	public JsonValue toJSON() { return toExpression(Formatter.JSON); }
 		@Override	public Cube bind(MapValue values) { return this; }
 		@Override	public boolean isEmpty() { return false; }
@@ -400,7 +401,7 @@ public interface Cube extends AbstractSet<Value.MapValue, Cube> {
 		@Override	public Boolean containsItem(MapValue item) { return Boolean.FALSE; }
 		@Override	public Boolean contains(Cube set) { return Boolean.FALSE; }
 		@Override	public Boolean maybeEquals(Cube other) { return other == EMPTY; }
-		@Override	public <X> X toExpression(Formatter<X> formatter) { return formatter.operExpr("=", Value.from("[]")); }
+		@Override	public <X> X toExpression(Formatter<X> formatter, Formatter.Context context) { return formatter.operExpr(context, "=", Value.from("[]")); }
 		@Override	public JsonValue toJSON() { return toExpression(Formatter.JSON); }
 		@Override	public Cube bind(MapValue values) { return this; }
 		@Override	public boolean isEmpty() { return true; }
