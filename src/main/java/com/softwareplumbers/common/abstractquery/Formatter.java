@@ -34,7 +34,7 @@ public interface Formatter<T> {
 	
 	public class Context {
 		
-		enum Type {
+		public enum Type {
 			FIELD,
 			OBJECT,
 			ARRAY,
