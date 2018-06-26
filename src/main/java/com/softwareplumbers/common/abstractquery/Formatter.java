@@ -56,7 +56,7 @@ public interface Formatter<T> {
 		}
 
 		public Context setType(Type type) {
-			return new Context(parent, type, dimension);
+			return new Context(this, type, dimension);
 		}
 		
 		protected static boolean eq(Object a, Object b) { return a == b || (a != null && b!= null && a.equals(b)); }	
@@ -96,8 +96,15 @@ public interface Formatter<T> {
 	public static class DefaultFormat implements Formatter<String> {
 		
 		static String printDimension(Context context) {
-			if (context.parent == null) return "$self";
-			if (context.parent.dimension == null) return context.dimension;
+			if (context.type == Context.Type.ROOT) return "";
+			if (context.type == Context.Type.ARRAY) return "$self";
+			if (context.type == Context.Type.OBJECT) return printDimension(context.parent);
+			// else context.type == field
+			if (context.parent.type == Context.Type.OBJECT && (
+					context.parent.parent.type == Context.Type.ARRAY || context.parent.parent.type == Context.Type.ROOT))
+				return context.dimension;
+			if (context.parent.type == Context.Type.ROOT) 
+				return context.dimension; 
 			return printDimension(context.parent) + "." + context.dimension;
 		}
 		
@@ -126,7 +133,7 @@ public interface Formatter<T> {
     	}
     	
     	public String subExpr(Context context, String operator, String sub) {
-    		return "has (" +  sub + ")";
+    		return printDimension(context) + " has (" +  sub + ")";
     	}
 	};
 

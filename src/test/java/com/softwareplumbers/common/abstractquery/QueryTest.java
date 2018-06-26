@@ -105,7 +105,7 @@ public class QueryTest {
 
         String expression = query.toString();
 
-        assertEquals("x<2 and y.alpha>=2 and y.alpha<6 and has (y.nuts='brazil')", expression);
+        assertEquals("x<2 and y.alpha>=2 and y.alpha<6 and y.nuts has ($self='brazil')", expression);
     }
 	
 	@Test
@@ -115,7 +115,7 @@ public class QueryTest {
 
         String expression = query.toString();
 
-        assertEquals("a<2 and has (nuts='brazil')", expression);
+        assertEquals("a<2 and nuts has ($self='brazil')", expression);
     }
 	
 	@Test
@@ -126,7 +126,7 @@ public class QueryTest {
         String expression = query.toString();
         String json = query.toJSON().toString();
 
-        assertEquals("a<2 and has (nuts.type='brazil')", expression);
+        assertEquals("a<2 and nuts has (type='brazil')", expression);
         assertEquals("{\"a\":{\"<\":2},\"nuts\":{\"has\":{\"type\":\"brazil\"}}}", json);
     }
 
@@ -138,7 +138,7 @@ public class QueryTest {
 
         String expression = query.toString();
 
-        assertEquals("x<2 and y.alpha>=2 and y.alpha<6 and has (y.nuts=$param1) and has (y.nuts=$param2)", expression);
+        assertEquals("x<2 and y.alpha>=2 and y.alpha<6 and y.nuts has ($self=$param1) and y.nuts has ($self=$param2)", expression);
     }
 
 	@Test

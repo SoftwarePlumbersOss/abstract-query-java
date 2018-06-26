@@ -109,6 +109,6 @@ public class CubeTest {
     	Cube query = Cube.fromJson("{ 'a': '23', 'b': { '$has' : { 'drumkit': 'bongo' } } }");
     	
 
-    	assertEquals("a='23' and has (b.drumkit='bongo')", query.toExpression(Formatter.DEFAULT)); 
+    	assertEquals("a='23' and b has (drumkit='bongo')", query.toExpression(Formatter.DEFAULT)); 
     }
 }
