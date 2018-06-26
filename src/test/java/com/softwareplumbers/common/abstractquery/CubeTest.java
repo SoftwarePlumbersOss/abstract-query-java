@@ -104,4 +104,11 @@ public class CubeTest {
         //expect(cube5).to.deep.equal(new Cube( { x: [22, 44], y: [11, 66], z: { type: 'idiocy' } }));
     }
 
+    @Test public void canCreateaAQueryOnAnArrayOfObjects() { 
+
+    	Cube query = Cube.fromJson("{ 'a': '23', 'b': { '$has' : { 'drumkit': 'bongo' } } }");
+    	
+
+    	assertEquals("a='23' and has (b.drumkit='bongo')", query.toExpression(Formatter.DEFAULT)); 
+    }
 }

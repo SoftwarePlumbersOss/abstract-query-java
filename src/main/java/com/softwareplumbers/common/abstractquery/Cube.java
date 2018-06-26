@@ -338,7 +338,7 @@ public interface Cube extends AbstractSet<Value.MapValue, Cube> {
 			JsonObject asObj = (JsonObject)value;
 			if (asObj.containsKey("$has")) {
 				JsonArray arraydata = asObj.getJsonArray("$has");
-				results.put(dimension, Has.matchRanges(arraydata));
+				results.put(dimension, Has.match(arraydata));
 			} else {
 				results.put(dimension, Cube.from(asObj));
 			}
@@ -518,7 +518,7 @@ public interface Cube extends AbstractSet<Value.MapValue, Cube> {
 				JsonObject asObj = (JsonObject)value;
 				if (asObj.containsKey("$has")) {
 					JsonValue matchdata = asObj.get("$has");
-					results.put(dimension, Has.matchRanges(matchdata));	
+					results.put(dimension, Has.match(matchdata));	
 				} else {
 					if (Range.isRange(asObj))
 						results.put(entry.getKey(), Range.from(asObj));

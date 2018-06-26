@@ -138,6 +138,40 @@ public interface Has<V extends Value, S extends AbstractSet<V,S>> extends Abstra
 		return match(constraint);
 	}
 	
+	public static Has<Value.MapValue, Cube> matchCubes(JsonValue matches) {
+		Cube constraint;
+		if (matches instanceof JsonArray) {
+			constraint = Cube.union(((JsonArray) matches).stream().map(value -> Cube.from((JsonObject)value)).collect(Collectors.toList()));
+		} else {
+			constraint = Cube.from((JsonObject)matches);
+		}
+		return match(constraint);
+	}
+	
+	public static Has<?,?> match(JsonValue matches) {
+		if (matches instanceof JsonArray) {
+			JsonArray array = (JsonArray) matches;
+			if (array.size() > 0) {
+				if (Range.isRange(array.get(0))) {
+					Range constraint = Range.union(array.stream().map(value -> Range.from(value)).collect(Collectors.toList()));
+					return match(constraint);
+				} else {
+					Cube constraint = Cube.union(array.stream().map(value -> Cube.from((JsonObject)value)).collect(Collectors.toList()));
+					return match(constraint);
+				}
+			} else {
+				throw new RuntimeException("match cannot be a zero-sized array");
+			}
+		} else {
+			if (Range.isRange(matches)) {
+				return match(Range.from(matches));
+			} else {
+				return match(Cube.from((JsonObject)matches));
+			}
+		}
+
+	}
+	
 	public static  <V extends Value, S extends AbstractSet<V,S>> Has<V,S> intersect(List<Has<V,S>> items) {
 		return new HasIntersection<V,S>(items, Has::union, Has::intersect);
 	}
