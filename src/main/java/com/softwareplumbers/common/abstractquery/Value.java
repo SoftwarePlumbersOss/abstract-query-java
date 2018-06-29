@@ -229,7 +229,7 @@ public abstract class Value {
 		}
 		
 		public static MapValue from(JsonObject o) {
-			return new MapValue(o, (JsonValue item) -> from(item));
+			return new MapValue(o, (JsonValue item) -> Value.from(item));
 		}
 		
 		public static MapValue fromJson(String json) {
