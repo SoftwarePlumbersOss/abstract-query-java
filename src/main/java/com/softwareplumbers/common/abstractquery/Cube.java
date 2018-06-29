@@ -166,7 +166,7 @@ public interface Cube extends AbstractSet<Value.MapValue, Cube> {
 	private <T extends Value,U extends AbstractSet<T,U>> Boolean containsItem(String dimension, Value.MapValue item) {
 		// TODO: We should do some type checking here. Notionally that element.type equals constraint.type
 		U constraint = (U)getConstraint(dimension);
-		T element = (T)item.getProperty(dimension);
+		T element = (T)(item.hasProperty(dimension) ? item.getProperty(dimension) : null);
 		return constraint.containsItem(element);
 	}
 	
