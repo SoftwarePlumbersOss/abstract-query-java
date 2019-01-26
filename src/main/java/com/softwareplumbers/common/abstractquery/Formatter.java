@@ -28,7 +28,6 @@ import com.softwareplumbers.common.abstractquery.Value;
  * @author Jonathan Essex
  *
  * @param <T> Type of formatted representation (typically, but not always, a String)
- * @param <U> Type of context information required
  */
 public interface Formatter<T> {
 	
@@ -74,9 +73,11 @@ public interface Formatter<T> {
 	
 	public interface CanFormat {
 		<T> T toExpression(Formatter<T> format, Context ctx);
-		default <T> T toExpression(Formatter<T> format) { return toExpression(format, Context.ROOT); }
+		default <T> T toExpression(Formatter<T> format) { return format.build(toExpression(format, Context.ROOT)); }
 	}
 	
+	/** End the expression */
+	T build(T expr);
 	/** Create a representation of a constraint on a dimension */
 	T operExpr(Context context, String operator, Value value);
 	/** Create a representation of an intersection of constraints */
@@ -106,6 +107,10 @@ public interface Formatter<T> {
 			if (context.parent.type == Context.Type.ROOT) 
 				return context.dimension; 
 			return printDimension(context.parent) + "." + context.dimension;
+		}
+		
+		public String build(String result) {
+			return result;
 		}
 		
 		String printValue(Value value) {
@@ -140,7 +145,11 @@ public interface Formatter<T> {
 	/** Get the default query formatter
 	*/
 	public static class JsonFormat implements Formatter<JsonValue> {
-				
+		
+		public JsonValue build(JsonValue value) {
+			return value; 
+		}
+		
     	public JsonValue andExpr(Context context, Value.Type type, Stream<JsonValue> ands) {
     		if (type == Value.Type.MAP) {
     			JsonObjectBuilder object = Json.createObjectBuilder();
@@ -275,6 +284,11 @@ public interface Formatter<T> {
 	
 
 	public class TreeFormatter implements Formatter<Node> {
+		
+		@Override
+		public Node build(Node node) {
+			return node;
+		}
 		
 		@Override
 		public Node operExpr(Context context, String operator, Value value) { 
