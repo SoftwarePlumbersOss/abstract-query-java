@@ -279,7 +279,7 @@ public interface Cube extends AbstractSet<Value.MapValue, Cube> {
 	 * @param formatter Object used to format an expression from this Cube
 	 * @return A formatted expression
 	 */
-	public <T> T toExpression(Formatter<T> formatter, Context context) {
+	public <T,U> T toExpression(Formatter<T,U> formatter, Context context) {
 		final Context obj = context.setType(Context.Type.OBJECT);
 		return formatter.andExpr(obj,
 				Value.Type.MAP,
@@ -383,7 +383,7 @@ public interface Cube extends AbstractSet<Value.MapValue, Cube> {
 		@Override	public Boolean containsItem(MapValue item) { return Boolean.TRUE; }
 		@Override	public Boolean contains(Cube set) { return Boolean.TRUE; }
 		@Override	public Boolean maybeEquals(Cube other) { return other == UNBOUNDED; }
-		@Override	public <X> X toExpression(Formatter<X> formatter, Context context) { return formatter.operExpr(context, "=", Value.from("*")); }
+		@Override	public <X,V> X toExpression(Formatter<X,V> formatter, Context context) { return formatter.operExpr(context, "=", Value.from("*")); }
 		@Override	public JsonValue toJSON() { return toExpression(Formatter.JSON); }
 		@Override	public Cube bind(MapValue values) { return this; }
 		@Override	public boolean isEmpty() { return false; }
@@ -400,7 +400,7 @@ public interface Cube extends AbstractSet<Value.MapValue, Cube> {
 		@Override	public Boolean containsItem(MapValue item) { return Boolean.FALSE; }
 		@Override	public Boolean contains(Cube set) { return Boolean.FALSE; }
 		@Override	public Boolean maybeEquals(Cube other) { return other == EMPTY; }
-		@Override	public <X> X toExpression(Formatter<X> formatter, Context context) { return formatter.operExpr(context, "=", Value.from("[]")); }
+		@Override	public <X,V> X toExpression(Formatter<X,V> formatter, Context context) { return formatter.operExpr(context, "=", Value.from("[]")); }
 		@Override	public JsonValue toJSON() { return toExpression(Formatter.JSON); }
 		@Override	public Cube bind(MapValue values) { return this; }
 		@Override	public boolean isEmpty() { return true; }

@@ -66,7 +66,7 @@ public class Intersection<T extends Value, U extends AbstractSet<T,U>> implement
 	}
 
 	@Override
-	public <V> V toExpression(Formatter<V> formatter, Context context) {
+	public <V,W> V toExpression(Formatter<V,W> formatter, Context context) {
 		return formatter.andExpr(context, type, data.stream().map(item -> item.toExpression(formatter, context)));
 	}
 	

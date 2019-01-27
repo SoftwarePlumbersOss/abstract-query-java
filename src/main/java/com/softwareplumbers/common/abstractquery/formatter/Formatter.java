@@ -28,10 +28,10 @@ import com.softwareplumbers.common.abstractquery.Value;
  *
  * @param <T> Type of formatted representation (typically, but not always, a String)
  */
-public interface Formatter<T> {
+public interface Formatter<T,U> {
 	
 	/** End the expression */
-	T build(T expr);
+	U build(T expr);
 	/** Create a representation of a constraint on a dimension */
 	T operExpr(Context context, String operator, Value value);
 	/** Create a representation of an intersection of constraints */
@@ -48,7 +48,7 @@ public interface Formatter<T> {
 	
 	/** Get the default query formatter
 	*/
-	public static class DefaultFormat implements Formatter<String> {
+	public static class DefaultFormat implements Formatter<String,String> {
 		
 		static String printDimension(Context context) {
 			if (context.type == Context.Type.ROOT) return "";
@@ -98,7 +98,7 @@ public interface Formatter<T> {
 
 	/** Get the default query formatter
 	*/
-	public static class JsonFormat implements Formatter<JsonValue> {
+	public static class JsonFormat implements Formatter<JsonValue,JsonValue> {
 		
 		public JsonValue build(JsonValue value) {
 			return value; 
@@ -181,7 +181,7 @@ public interface Formatter<T> {
 		public final Value value;
 		public Operator(Context context, String operator, Value value) { this.context = context; this.operator = operator; this.value = value; }
 		@Override
-		public <T> T toExpression(Formatter<T> format, Context ctx) { return format.operExpr(context, operator, value); }
+		public <T,U> T toExpression(Formatter<T,U> format, Context ctx) { return format.operExpr(context, operator, value); }
 		public String toString() { return toExpression(DEFAULT, context); }
 		public boolean equals(Operator other) { return eq(context,other.context) && eq(operator, other.operator) && eq(value, other.value); }
 		public boolean equals(Object other) { return other instanceof Operator && equals((Operator)other); }
@@ -193,7 +193,7 @@ public interface Formatter<T> {
 		public final Value.Type type;
 		public And(Value.Type type, Context context, Node... items) { super(Arrays.asList(items)); this.type = type; this.context = context;  }
 		public And(Value.Type type, Context context) { this.type = type; this.context = context; }
-		public <T> T toExpression(Formatter<T> format, Context ctx) { return format.andExpr(context, type, stream().map(item->item.toExpression(format,context))); }
+		public <T,U> T toExpression(Formatter<T,U> format, Context ctx) { return format.andExpr(context, type, stream().map(item->item.toExpression(format,context))); }
 		public String toString() { return toExpression(DEFAULT, context); }
 		public Context getContext() { return context; }
 	}
@@ -203,7 +203,7 @@ public interface Formatter<T> {
 		public final Value.Type type;
 		public Between(Value.Type type, Context context, Node lower, Node upper) { super(Arrays.asList(lower,upper)); this.type = type; this.context = context;  }
 		public Between(Value.Type type, Context context) { this.type = type; this.context = context; }
-		public <T> T toExpression(Formatter<T> format, Context ctx) { return format.betweenExpr(context, type, get(0).toExpression(format,context), get(1).toExpression(format,context)); }
+		public <T,U> T toExpression(Formatter<T,U> format, Context ctx) { return format.betweenExpr(context, type, get(0).toExpression(format,context), get(1).toExpression(format,context)); }
 		public String toString() { return toExpression(DEFAULT, context); }
 		public Context getContext() { return context; }
 	}
@@ -214,7 +214,7 @@ public interface Formatter<T> {
 		public final Value.Type type;
 		public Or(Value.Type type, Context context, List<? extends Node> items) { super(items); this.context = context; this.type = type; }
 		public Or(Value.Type type, Context context) { this.type = type; this.context = context; }		
-		public <T> T toExpression(Formatter<T> format, Context ctx) { return format.orExpr(context, type, stream().map(item->item.toExpression(format, context))); }
+		public <T,U> T toExpression(Formatter<T,U> format, Context ctx) { return format.orExpr(context, type, stream().map(item->item.toExpression(format, context))); }
 		public String toString() { return toExpression(DEFAULT, context); }
 		public Context getContext() { return context; }
 	}
@@ -227,7 +227,7 @@ public interface Formatter<T> {
 		public final String operator;
 		public final Node subexpression;
 		public Sub(Context context, String operator, Node subexpression) { this.context = context; this.operator = operator; this.subexpression = subexpression; }
-		public <T> T toExpression(Formatter<T> format, Context ctx) { return format.subExpr(context, operator, subexpression.toExpression(format, context)); }		
+		public <T,U> T toExpression(Formatter<T,U> format, Context ctx) { return format.subExpr(context, operator, subexpression.toExpression(format, context)); }		
 		public String toString() { return toExpression(DEFAULT, context); }
 		public boolean equals(Sub other) { return eq(context,other.context) && eq(operator, other.operator) && eq(subexpression, other.subexpression); }
 		public boolean equals(Object other) { return other instanceof Sub && equals((Sub)other); }
@@ -237,7 +237,7 @@ public interface Formatter<T> {
 
 	
 
-	public class TreeFormatter implements Formatter<Node> {
+	public class TreeFormatter implements Formatter<Node,Node> {
 		
 		@Override
 		public Node build(Node node) {
@@ -349,10 +349,10 @@ public interface Formatter<T> {
 		}
 	}
 	
-	public Formatter<Node> SIMPLIFY = new Factorizer();	
-	public Formatter<Node> TREE = new TreeFormatter();
+	public Formatter<Node,Node> SIMPLIFY = new Factorizer();	
+	public Formatter<Node,Node> TREE = new TreeFormatter();
 	/** Default formatter creates a compact string expression */
-	public Formatter<String> DEFAULT = new DefaultFormat();
+	public Formatter<String,String> DEFAULT = new DefaultFormat();
 	/** Default JSON creates a JSON representation */
-	public Formatter<JsonValue> JSON = new JsonFormat();
+	public Formatter<JsonValue,JsonValue> JSON = new JsonFormat();
 }
