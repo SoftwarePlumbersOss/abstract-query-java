@@ -1,6 +1,9 @@
 package com.softwareplumbers.common.abstractquery;
 
 import org.junit.runner.RunWith;
+
+import com.softwareplumbers.common.abstractquery.formatter.Formatter;
+
 import org.junit.Test;
 
 import static org.junit.Assert.*;

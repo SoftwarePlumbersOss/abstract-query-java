@@ -2,7 +2,11 @@ package com.softwareplumbers.common.abstractquery;
 
 import javax.json.JsonValue;
 
-public interface AbstractSet<T extends Value, U extends AbstractSet<T,U>> {
+import com.softwareplumbers.common.abstractquery.formatter.CanFormat;
+import com.softwareplumbers.common.abstractquery.formatter.Context;
+import com.softwareplumbers.common.abstractquery.formatter.Formatter;
+
+public interface AbstractSet<T extends Value, U extends AbstractSet<T,U>> extends CanFormat {
 	
 	/** Create a new range that contains only those values contained by both ranges.
 	 * 
@@ -39,8 +43,7 @@ public interface AbstractSet<T extends Value, U extends AbstractSet<T,U>> {
 	Boolean contains(U set);
 	Boolean maybeEquals(U other);
 	
-	<X> X toExpression(Formatter<X> formatter, Formatter.Context context);
-	default <X> X toExpression(Formatter<X> formatter) { return toExpression(formatter, Formatter.Context.ROOT); }
+	<X> X toExpression(Formatter<X> formatter, Context context);
 	
 	JsonValue toJSON();
 	

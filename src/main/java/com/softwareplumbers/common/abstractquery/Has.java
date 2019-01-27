@@ -11,6 +11,8 @@ import javax.json.JsonObject;
 import javax.json.JsonValue;
 
 import com.softwareplumbers.common.abstractquery.Value.Type;
+import com.softwareplumbers.common.abstractquery.formatter.Context;
+import com.softwareplumbers.common.abstractquery.formatter.Formatter;
 
 /** Range has element within some bound.
 *
@@ -56,8 +58,8 @@ public interface Has<V extends Value, S extends AbstractSet<V,S>> extends Abstra
 		return Has.intersect(this, other);
 	}
 
-	public <U> U toExpression(Formatter<U> formatter, Formatter.Context context) { 
-		Formatter.Context array = context.setType(Formatter.Context.Type.ARRAY);
+	public <U> U toExpression(Formatter<U> formatter, Context context) { 
+		Context array = context.setType(Context.Type.ARRAY);
 		return formatter.subExpr(context, OPERATOR, match.toExpression(formatter, array));
 	}
 

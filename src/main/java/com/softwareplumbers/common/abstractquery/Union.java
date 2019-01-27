@@ -7,6 +7,9 @@ import java.util.function.Function;
 
 import javax.json.JsonValue;
 
+import com.softwareplumbers.common.abstractquery.formatter.Context;
+import com.softwareplumbers.common.abstractquery.formatter.Formatter;
+
 public class Union<T extends Value, U extends AbstractSet<T,U>> implements AbstractSet<T,U>   {
 	
 	protected List<U> data;
@@ -74,7 +77,7 @@ public class Union<T extends Value, U extends AbstractSet<T,U>> implements Abstr
 	}
 
 	@Override
-	public <V> V toExpression(Formatter<V> formatter, Formatter.Context context) {
+	public <V> V toExpression(Formatter<V> formatter, Context context) {
 		return formatter.orExpr(context, type, data.stream().map(item -> item.toExpression(formatter, context)));
 	}
 

@@ -17,6 +17,8 @@ import javax.json.JsonObjectBuilder;
 import javax.json.JsonValue;
 
 import com.softwareplumbers.common.abstractquery.Value.Atomic;
+import com.softwareplumbers.common.abstractquery.formatter.Context;
+import com.softwareplumbers.common.abstractquery.formatter.Formatter;
 
 /** Range is an abstract class representing a range of values.
  *
@@ -335,7 +337,7 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 			return Boolean.TRUE;
 		}
 		
-		public <U> U toExpression(Formatter<U> formatter, Formatter.Context context)	{ 
+		public <U> U toExpression(Formatter<U> formatter, Context context)	{ 
 			return formatter.operExpr(context, "=", Value.from("*")); 
 		}
 
@@ -397,7 +399,7 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 			return Boolean.FALSE;
 		}
 		
-		public <U> U toExpression(Formatter<U> formatter, Formatter.Context context)	{ 
+		public <U> U toExpression(Formatter<U> formatter, Context context)	{ 
 			return formatter.operExpr(context, "=", Value.from("[]")); 
 		}
 
@@ -448,7 +450,7 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 			this.operator = operator;
 		}
 
-		public <U> U toExpression(Formatter<U> formatter, Formatter.Context context)	{ 
+		public <U> U toExpression(Formatter<U> formatter, Context context)	{ 
 			return formatter.operExpr(context, this.operator, this.value); 
 		}
 
@@ -565,7 +567,7 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 			return null;			
 		}
 
-		public <U> U toExpression(Formatter<U> formatter, Formatter.Context context)	{ 
+		public <U> U toExpression(Formatter<U> formatter, Context context)	{ 
 			return formatter.betweenExpr(context, getType(), lower_bound.toExpression(formatter, context), upper_bound.toExpression(formatter, context));
 		}
 
@@ -690,7 +692,7 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 			return null;
 		}
 
-		public <U> U toExpression(Formatter<U> formatter, Formatter.Context context)	{ 
+		public <U> U toExpression(Formatter<U> formatter, Context context)	{ 
 			return formatter.operExpr(context, OPERATOR, this.value); 
 		}
 

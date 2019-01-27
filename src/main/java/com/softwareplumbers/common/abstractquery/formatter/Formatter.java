@@ -1,13 +1,11 @@
-package com.softwareplumbers.common.abstractquery;
+package com.softwareplumbers.common.abstractquery.formatter;
 
 import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -17,6 +15,7 @@ import javax.json.JsonObject;
 import javax.json.JsonObjectBuilder;
 import javax.json.JsonValue;
 
+import com.softwareplumbers.common.abstractquery.Range;
 import com.softwareplumbers.common.abstractquery.Value;
 
 
@@ -30,51 +29,6 @@ import com.softwareplumbers.common.abstractquery.Value;
  * @param <T> Type of formatted representation (typically, but not always, a String)
  */
 public interface Formatter<T> {
-	
-	public class Context {
-		
-		public enum Type {
-			FIELD,
-			OBJECT,
-			ARRAY,
-			ROOT
-		}
-		
-		public final Context parent;
-		public final String dimension;
-		public final Type type;
-		
-		public Context(Context parent, Type type, String dimension) {
-			this.type = type;
-			this.dimension = dimension;
-			this.parent = parent;
-		}
-		
-		public Context in(String dimension) {
-			return new Context(this, Type.FIELD, dimension);
-		}
-
-		public Context setType(Type type) {
-			return new Context(this, type, dimension);
-		}
-		
-		protected static boolean eq(Object a, Object b) { return a == b || (a != null && b!= null && a.equals(b)); }	
-		
-		public boolean equals(Context other) {
-			return eq(type, other.type) && eq(dimension, other.dimension) && eq(parent, other.parent);
-		}
-		
-		public boolean equals(Object other) {
-			return other instanceof Context && equals((Context)other);
-		}
-
-		public static final Context ROOT = new Context(null, Type.ROOT, null);
-	}
-	
-	public interface CanFormat {
-		<T> T toExpression(Formatter<T> format, Context ctx);
-		default <T> T toExpression(Formatter<T> format) { return format.build(toExpression(format, Context.ROOT)); }
-	}
 	
 	/** End the expression */
 	T build(T expr);
