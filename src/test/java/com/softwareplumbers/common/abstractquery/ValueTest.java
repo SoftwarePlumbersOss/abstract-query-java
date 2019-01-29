@@ -27,4 +27,13 @@ public class ValueTest {
 		assertEquals(Value.from("g"), tags.toArray().getElement(1));
 	}
 	
+	@Test
+	public void handleTrueFalseValuesFromJson() {
+		Value.MapValue value1 = MapValue.fromJson("{ 'true': true, 'false': false }");
+		Value trueValue = value1.getProperty("true");
+		Value falseValue = value1.getProperty("false");
+		assertEquals(Value.from(true), trueValue);
+		assertEquals(Value.from(false), falseValue);
+	}
+	
 }

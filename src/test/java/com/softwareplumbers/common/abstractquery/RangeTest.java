@@ -26,6 +26,15 @@ public class RangeTest {
     	Range range2 = Range.from("37");
     	assertEquals(range1, range2);
     }
+	
+	@Test
+    public void canCreateEqualsBoolean() {
+    	Range range1 = Range.equals(Value.from(false));
+    	assertTrue(range1.containsItem(Value.from(false)));
+    	assertFalse(range1.containsItem(Value.from(true)));
+    	Range range2 = Range.from("false");
+    	assertEquals(range1, range2);
+    }
 
 	@Test
     public void canCreateLessThan() {
@@ -38,6 +47,13 @@ public class RangeTest {
     }
 
 	@Test
+    public void canCreateLessThanBoolean() {
+    	Range range1 = Range.lessThan(Value.from(false));
+    	assertFalse(range1.containsItem(Value.from(false)));
+    	assertFalse(range1.containsItem(Value.from(true)));
+    }
+
+	@Test
     public void canCreateGreaterThan() {
     	Range range1 = Range.greaterThan(Value.from(37));
     	assertFalse(range1.containsItem(Value.from(37)));
@@ -45,6 +61,13 @@ public class RangeTest {
     	assertFalse(range1.containsItem(Value.from(36)));
     	Range range2 = Range.from("{ '>' : 37 }");
     	assertEquals(range1, range2);
+    }
+
+	@Test
+    public void canGreaterThanBoolean() {
+    	Range range1 = Range.greaterThan(Value.from(false));
+    	assertFalse(range1.containsItem(Value.from(false)));
+    	assertTrue(range1.containsItem(Value.from(true)));
     }
 
 	@Test

@@ -31,7 +31,7 @@ import org.apache.commons.beanutils.BeanMap;
 public abstract class Value {
 	
 	/** Different types of value that are supported */
-	public enum Type { NUMBER, STRING, PARAM, ARRAY, MAP };
+	public enum Type { NUMBER, STRING, PARAM, ARRAY, BOOLEAN,  MAP };
 	
 	/** Type of data */
 	public final Type type;
@@ -121,6 +121,7 @@ public abstract class Value {
 			case STRING: 	return "'" + value + "'";
 			case NUMBER: 	return value.toString();
 			case PARAM:		return "$" + value;
+			case BOOLEAN:	return (Boolean)value ? "true" : "false";
 			default:		throw new IllegalArgumentException("Unhandled type: " + type);
 			}	
 		}
@@ -130,6 +131,7 @@ public abstract class Value {
 			switch (type) {
 			case STRING: 	return new BigDecimal((String)value);
 			case NUMBER: 	return (BigDecimal)value;
+			case BOOLEAN:	return (Boolean)value ? BigDecimal.ONE : BigDecimal.ZERO;
 			default:		throw new IllegalArgumentException("Unhandled type: " + type);
 			}	
 		}
@@ -139,11 +141,14 @@ public abstract class Value {
 			case STRING: 	return Json.createValue((String)value);
 			case NUMBER: 	return Json.createValue((BigDecimal)value);
 			case PARAM: 	return Json.createObjectBuilder().add("$", value.toString()).build();
+			case BOOLEAN:	return (Boolean)value ? JsonValue.TRUE : JsonValue.FALSE;
 			default:		throw new IllegalArgumentException("Unhandled type: " + type);
 			}
 		}
 		
 		public static Atomic from(JsonValue obj) {
+			if (obj == JsonValue.TRUE) return TRUE;
+			if (obj == JsonValue.FALSE) return FALSE;
 			if (obj instanceof JsonNumber) {
 				return from((JsonNumber)obj);
 			} else if (obj instanceof JsonString) {
@@ -300,6 +305,9 @@ public abstract class Value {
 		}
 	}
 	
+	public static Atomic TRUE = new Atomic(Type.BOOLEAN, true);
+	public static Atomic FALSE = new Atomic(Type.BOOLEAN, false);
+	
 	public static Atomic from(JsonNumber value) {
 		return new Atomic(Type.NUMBER, value.bigDecimalValue());
 		
@@ -324,7 +332,12 @@ public abstract class Value {
 		return new Atomic(Type.NUMBER, BigDecimal.valueOf(value));
 	}
 
+	/** Convert from a double value */
+	public static Atomic from(boolean value) {
+		return new Atomic(Type.BOOLEAN, value);
+	}
 
+	
 	/** Convert from a JSON value 
 	 * 
 	 * JsonNumber, JsonString, and JsonArray objects map to values of type NUMBER, STRING, and ARRAY.
@@ -332,6 +345,8 @@ public abstract class Value {
 	 * related property of the JSON object.
 	 */
 	public static Value from(JsonValue obj) {
+		if (obj == JsonValue.TRUE) return TRUE;
+		if (obj == JsonValue.FALSE) return FALSE;
 		if (obj instanceof JsonNumber) {
 			return from((JsonNumber)obj);
 		} else if (obj instanceof JsonString) {
@@ -385,6 +400,7 @@ public abstract class Value {
 	 * MAP will be created such that Value.getProperty returns the appropriate property of the bean.
 	 */
 	public static Value from(Object value) {
+		if (value instanceof Boolean) return from((Boolean)value);
 		if (value instanceof List) return from((List<?>)value);
 		if (value instanceof Double) return from((Double)value);
 		if (value instanceof Long) return from((Long)value);
@@ -400,7 +416,9 @@ public abstract class Value {
 	}
 	
 	public static boolean isAtomicValue(JsonValue obj) {
-		return 		(obj instanceof JsonNumber) 
+		return 		obj == JsonValue.TRUE
+				||  obj == JsonValue.FALSE
+				||  (obj instanceof JsonNumber) 
 				|| 	(obj instanceof JsonString)
 				||  (obj instanceof JsonObject && ((JsonObject)obj).containsKey("$"));
 	}
