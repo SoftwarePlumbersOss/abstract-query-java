@@ -4,6 +4,11 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.stream.Stream;
 
+/** Implementation of yes/no/maybe logic, using a Boolean value where 'null' is maybe.
+ * 
+ * @author SWPNET\jonessex
+ *
+ */
 public class Tristate {
 	
 	@FunctionalInterface

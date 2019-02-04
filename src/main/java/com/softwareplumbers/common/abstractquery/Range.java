@@ -105,7 +105,7 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 	/** Create a range containing a single value 
 	 *
 	 * @param value - value to search for
-	 * @returns a Range object
+	 * @return a Range object
 	 */
 	public static Range equals(Value.Atomic value) 				
 	{ return new Equals(value); }
@@ -113,28 +113,28 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 	/** Create a range containing values less than a given value 
 	 *
 	 * @param value - value to search for
-	 * @returns a Range object
+	 * @return a Range object
 	 */
 	public static  Range lessThan(Value.Atomic value) 		
 	{ return new LessThan(value); }
 
 	/** Create a range containing values less than or equal to a given value 
 	 * @param value - value to search for
-	 * @returns a Range object
+	 * @return a Range object
 	 */
 	public static  Range lessThanOrEqual(Value.Atomic value) 		
 	{ return new LessThanOrEqual(value); }
 
 	/** Create a range containing values greater than a given value 
 	 * @param value - value to search for
-	 * @returns a Range object
+	 * @return a Range object
 	 */		
 	public static  Range greaterThan(Value.Atomic value) 	
 	{ return new GreaterThan(value); }
 
 	/** Create a range containing values greater than or equal to a given value 
 	 * @param value - value to search for
-	 * @returns a Range object
+	 * @return a Range object
 	 */		
 	public static  Range greaterThanOrEqual(Value.Atomic value)  	
 	{ return new GreaterThanOrEqual(value); }
@@ -143,7 +143,7 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 	 *
 	 * @param lower - lower range boundary (inclusive by default)
 	 * @param upper - upper range boundary (exclusive by default)
-	 * @returns a Range object
+	 * @return a Range object
 	 */
 	public static  Range between(Value.Atomic lower, Value.Atomic upper)	{ 
 
@@ -266,7 +266,7 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 	 * Specified bounds may be an array
 	 *
 	 * @param bounds bounding values for range
-	 * @returns a range, or undefined if paramters are not compatible.
+	 * @return a range, or undefined if paramters are not compatible.
 	 */
 	static  Range fromClosedRange(JsonValue bounds) 	{ 
 
@@ -297,7 +297,7 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 	 * varies according to the type of obj, and whether an explicit order function is provided.
 	 *
 	 * @param jsonValue - value
-	 * @returns a range
+	 * @return a range
 	 */
 	static  Range  from(JsonValue jsonValue) {
 		if (jsonValue == null) return null;

@@ -6,7 +6,14 @@ import com.softwareplumbers.common.abstractquery.formatter.CanFormat;
 import com.softwareplumbers.common.abstractquery.formatter.Context;
 import com.softwareplumbers.common.abstractquery.formatter.Formatter;
 
-public interface AbstractSet<T extends Value, U extends AbstractSet<T,U>> extends CanFormat {
+/** Interface representing an object on which fundamental set operations can be performed.
+ * 
+ * @author SWPNET\jonessex
+ *
+ * @param <T> The value type of the set
+ * @param <U> The implementing class on which operations are performed.
+ */
+public interface AbstractSet<T, U extends AbstractSet<T,U>> extends CanFormat {
 	
 	/** Create a new range that contains only those values contained by both ranges.
 	 * 

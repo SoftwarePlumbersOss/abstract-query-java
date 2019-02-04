@@ -36,7 +36,7 @@ public class Param implements Comparable<Param> {
 	/** Check in an object is a parameter
 	*
 	* @param obj - object to check
-	* @returns true of obj is a Param
+	* @return true of obj is a Param
 	*/
 	public static boolean isParam(JsonObject obj) {
 		return obj.containsKey("$");
