@@ -10,15 +10,13 @@ import javax.json.JsonValue;
 import com.softwareplumbers.common.abstractquery.formatter.Context;
 import com.softwareplumbers.common.abstractquery.formatter.Formatter;
 
-public class Union<T extends Value, U extends AbstractSet<T,U>> implements AbstractSet<T,U>   {
+public abstract class Union<T extends Value, U extends AbstractSet<T,U>> implements AbstractSet<T,U>   {
 	
 	protected List<U> data;
-	protected Function<List<U>,U> from;
 	protected Value.Type type;
 	
-	public Union(Value.Type type, List<U> data, Function<List<U>,U> from) {
+	public Union(Value.Type type, List<U> data) {
 		this.data = data;
-		this.from = from;
 		this.type = type;
 	}
 	
@@ -34,18 +32,14 @@ public class Union<T extends Value, U extends AbstractSet<T,U>> implements Abstr
 			U intersection = cube.intersect(other);
 			if (intersection != null) result.add(intersection);
 		}
-		return from.apply(result);
+		return getFactory().union(result);
 	}
 
 	@Override
 	public U union(U other) {
-		List<U> result = new ArrayList<U>();
-		for (U item : this.data) {
-			result.add(item);
-		}
+		List<U> result = new ArrayList<U>(this.data);
 		result.add(other);
-
-		return from.apply(result);
+		return getFactory().union(result);
 	}
 
 	@Override
@@ -96,7 +90,7 @@ public class Union<T extends Value, U extends AbstractSet<T,U>> implements Abstr
 			if (item != null) result.add(item);
 		}
 		
-		return from.apply(result);
+		return getFactory().union(result);
 	}
 
 	public Value.Type getType() {

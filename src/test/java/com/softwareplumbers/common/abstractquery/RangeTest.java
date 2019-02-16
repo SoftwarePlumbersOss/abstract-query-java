@@ -81,7 +81,7 @@ public class RangeTest {
     }
 
     public void canCreateHas() {
-        Has<Value.Atomic,Range> range1 = Has.match(Range.equals(Value.from("mytag")));
+        ArrayConstraint<Value.Atomic,Range> range1 = ArrayConstraint.match(Range.equals(Value.from("mytag")));
         
         Value.ArrayValue val1 = Value.from("one","two", "mytag","arkensaw");
         Value.ArrayValue val2 = Value.from("one","two", "arkensaw");

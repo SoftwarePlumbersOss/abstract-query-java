@@ -1,27 +1,21 @@
 package com.softwareplumbers.common.abstractquery;
 
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.function.Function;
 
 import javax.json.JsonValue;
 
 import com.softwareplumbers.common.abstractquery.formatter.Context;
 import com.softwareplumbers.common.abstractquery.formatter.Formatter;
 
-public class Intersection<T extends Value, U extends AbstractSet<T,U>> implements AbstractSet<T,U> {
+public abstract class Intersection<T extends Value, U extends AbstractSet<T,U>> implements AbstractSet<T,U> {
 
 	protected List<U> data;
-	protected Function<List<U>,U> intersection;
-	protected Function<List<U>,U> union;
 	protected Value.Type type;
 	
-	public Intersection(Value.Type type, List<U> data, Function<List<U>,U> union, Function<List<U>,U> intersection) {
+	public Intersection(Value.Type type, List<U> data) {
 		this.data = data;
-		this.intersection = intersection;
-		this.union = union;
 		this.type = type;
 	}
 	
@@ -37,12 +31,13 @@ public class Intersection<T extends Value, U extends AbstractSet<T,U>> implement
 			result.add(item);
 		}
 		result.add(other);
-		return intersection.apply(result);
+		return getFactory().intersect(result);
 	}
 
+	@SuppressWarnings("unchecked") // Because every instance of Intersection<T,U> is a U
 	@Override
 	public U union(U other) {
-		return union.apply(Arrays.asList((U)this, other));
+		return getFactory().union(Arrays.asList((U)this, other));
 	}
 
 	@Override
@@ -60,7 +55,8 @@ public class Intersection<T extends Value, U extends AbstractSet<T,U>> implement
 		if (!(other instanceof Intersection)) return false;
 		return Tristate.every(data, constraint->Tristate.any(((Intersection<T,U>)other).data, oconstraint->constraint.maybeEquals(oconstraint)));
 	}
-	
+
+	@SuppressWarnings("unchecked") // Because every instance of Intersection<T,U> is a U
 	public boolean equals(Object other) {
 		return other instanceof Intersection && Boolean.TRUE == maybeEquals((U)other);
 	}
@@ -89,7 +85,7 @@ public class Intersection<T extends Value, U extends AbstractSet<T,U>> implement
 			if (item != null) result.add(item);
 		}
 		
-		return intersection.apply(result);
+		return getFactory().intersect(result);
 	}
 	
 	public U merge(U other) {

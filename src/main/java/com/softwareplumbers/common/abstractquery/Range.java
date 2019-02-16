@@ -34,6 +34,8 @@ import com.softwareplumbers.common.abstractquery.formatter.Formatter;
  */
 public interface Range extends AbstractSet<Value.Atomic, Range> {
 	
+	public static final RangeFactory FACTORY = new RangeFactory();
+	
 	public Range maybeUnion(Range other);
 	public Range maybeIntersect(Range other);
 	public Value.Type getType();
@@ -67,6 +69,10 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 		return this.bind(Value.MapValue.fromJson(params));
 	}
 	
+	public default Factory<Value.Atomic, Range> getFactory() {
+		return FACTORY;
+	}
+	
 	/** Object mapping of range operators to constructor functions
 	 *
 	 * | Operator String | Constructor Function 	|
@@ -76,9 +82,6 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 	 * | ">="			 | Range.greaterThanOrEqual 	|
 	 * | "<="			 | Range.lessThanOrEqual 	|
 	 * | "="			 | Range.equal 				|
-	 * | "$and"			 | Range.and 				|
-	 * | "$has"			 | Range.has 				|
-	 * | "$hasAll"		 | Range.hasAll 				|
 	 */
 	static Range getRange(String operator, Value.Atomic value) {
 		switch(operator) {
@@ -1151,39 +1154,7 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 			return null;
 		}
 	}
-
-	public static List<Range> simplifyUnion(List<Range> list) {
-		List<Range> result = new ArrayList<Range>();
-		result.add(list.get(0));
-		for (int i = 1; i < list.size(); i++) {
-			// TODO: need a loop in here to account for case where list.get(i) is a union
-			Range merged = null;
-			for (int j = 0; j < result.size() && merged == null; j++) {
-				merged = list.get(i).maybeUnion(result.get(j));
-				if (merged != null) result.set(j, merged);
-			}
-			if (merged == null) 
-				result.add(list.get(i));
-		}
-		return result;
-	}
 		
-	
-	public static List<Range> simplifyIntersection(List<Range> list) {
-		List<Range> result = new ArrayList<Range>();
-		result.add(list.get(0));
-		for (int i = 1; i < list.size(); i++) {
-			// TODO: need a loop in here to account for case where list.get(i) is an intersection
-			Range merged = null;
-			for (int j = 0; j < result.size() && merged == null; j++) {
-				merged = list.get(i).maybeIntersect(result.get(j));
-				if (merged != null) result.set(j, merged);
-			}
-			if (merged == null) 
-				result.add(list.get(i));
-		}
-		return result;
-	}
 	
 	public static Value.Type getType(Collection<Range> range) {
 		Predicate<Value.Type> useful_type = type -> (type != Value.Type.PARAM && type != null);
@@ -1191,8 +1162,8 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 	}
 		
 	public static class RangeUnion extends Union<Value.Atomic, Range> implements Range   {
-		public RangeUnion(List<Range> range, Function<List<Range>, Range> from) {
-			super(Range.getType(range), range, from);
+		public RangeUnion(List<Range> range) {
+			super(Range.getType(range), range);
 		}
 		
 		public Range maybeUnion(Range other) {
@@ -1211,19 +1182,17 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 	public static class RangeIntersection extends Intersection<Value.Atomic, Range> implements Range {
 
 		
-		public RangeIntersection(List<Range> range, Function<List<Range>, Range> union, Function<List<Range>, Range> intersection) {
-			super(Range.getType(range), range, Range::union, Range::intersect);
+		public RangeIntersection(List<Range> range) {
+			super(Range.getType(range), range);
 		}
 		
 		@Override
 		public Range maybeUnion(Range other) {
-			// TODO Auto-generated method stub
 			return null;
 		}
 
 		@Override
 		public Range maybeIntersect(Range other) {
-			// TODO Auto-generated method stub
 			return null;
 		}
 		
@@ -1233,26 +1202,19 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 	}
 	
 	public static Range union(List<Range> list) {
-		list = simplifyUnion(list);
-		if (list.size() == 0) return null;
-		if (list.size() == 1) return list.get(0);
-		return new RangeUnion(list, Range::union);
+		return FACTORY.union(list);
 	}
 	
-	
 	public static Range union(Range... list) {
-		return union(Arrays.asList(list));
+		return FACTORY.union(list);
 	}
 	
 	public static Range intersect(Range... list) {
-		return intersect(Arrays.asList(list));
+		return FACTORY.intersect(list);
 	}
 	
 	public static Range intersect(List<Range> list) {
-		list = simplifyIntersection(list);
-		if (list.size() == 0) return null;
-		if (list.size() == 1) return list.get(0);
-		return new RangeIntersection(list, Range::union, Range::intersect);
+		return FACTORY.intersect(list);
 	}
 }
 

@@ -16,7 +16,7 @@ public class QueryTest {
 
 	@Test
     public void canCreateCube() {
-    	Cube query = Cube.fromJson("{ 'x':2, 'y':4}");
+    	ObjectConstraint query = ObjectConstraint.fromJson("{ 'x':2, 'y':4}");
     	assertTrue(query.containsItem(Value.MapValue.fromJson("{ 'x':2, 'y':4}")));
     	assertFalse(query.containsItem(Value.MapValue.fromJson("{ 'x':3, 'y':4}")));
     	assertFalse(query.containsItem(Value.MapValue.fromJson("{ 'x':2, 'y':5}")));
@@ -24,16 +24,16 @@ public class QueryTest {
 
 	@Test
     public void canUseAndToAddConstraints() {
-    	Cube query = Cube
+    	ObjectConstraint query = ObjectConstraint
     		.fromJson("{'x': 2, 'y': 4}")
     		.intersect("{'z': 5}");
 
-    	assertEquals(Cube.fromJson("{'x': 2, 'y': 4, 'z': 5}"),query);
+    	assertEquals(ObjectConstraint.fromJson("{'x': 2, 'y': 4, 'z': 5}"),query);
     }
 
 	@Test
     public void canUseOrToAddConstraints() {
-    	Cube query = Cube
+    	ObjectConstraint query = ObjectConstraint
     		.fromJson("{'x': 2, 'y': 4}")
     		.union("{'z': 5}");
 
@@ -43,49 +43,49 @@ public class QueryTest {
 
 	@Test
     public void canCreateSubqueries() {
-    	Cube query = Cube.fromJson("{ 'currency': 'GBP', 'branch': { 'country': 'UK', 'type': 'accounting'}}");
+    	ObjectConstraint query = ObjectConstraint.fromJson("{ 'currency': 'GBP', 'branch': { 'country': 'UK', 'type': 'accounting'}}");
     	assertEquals("branch.country='UK' and branch.type='accounting' and currency='GBP'", query.toString());
     };
 
 	@Test
     public void redundantConstraintsAreSuppressed() {
-    	Cube query = Cube
+    	ObjectConstraint query = ObjectConstraint
     		.fromJson("{'x': 2, 'y': 4}")
-    		.union(Cube.fromJson("{ 'x': 2}"));
+    		.union(ObjectConstraint.fromJson("{ 'x': 2}"));
     	
-    	assertEquals(Cube.fromJson("{'x': 2}"), query);
+    	assertEquals(ObjectConstraint.fromJson("{'x': 2}"), query);
     } 
 
 	@Test
     public void redundantParametrizedConstraintsAreSuppressed() {
-        Cube query = Cube
+        ObjectConstraint query = ObjectConstraint
             .fromJson("{'x': { '$': 'param1'}, 'y':4}")
-            .union(Cube.fromJson("{'x': { '$': 'param1'}}"));
+            .union(ObjectConstraint.fromJson("{'x': { '$': 'param1'}}"));
 
-        assertEquals(Cube.fromJson("{'x':{'$':'param1'}}"), query);
+        assertEquals(ObjectConstraint.fromJson("{'x':{'$':'param1'}}"), query);
 
-        query = Cube
+        query = ObjectConstraint
                 .fromJson("{'x': { '$': 'param1'}, 'y':4}")
-                .intersect(Cube.fromJson("{'x': { '$': 'param1'}}"));
+                .intersect(ObjectConstraint.fromJson("{'x': { '$': 'param1'}}"));
 
-        assertEquals(Cube.fromJson("{'x': { '$': 'param1'}, 'y':4}"), query);
+        assertEquals(ObjectConstraint.fromJson("{'x': { '$': 'param1'}, 'y':4}"), query);
     } 
 
 	@Test
     public void createsExpression() {
-    	Cube query = Cube
+    	ObjectConstraint query = ObjectConstraint
     		.fromJson("{'x': [null,2], 'y': 4}")
-    		.intersect(Cube.fromJson("{ 'z': 5}"))
-    		.union(Cube.fromJson("{'x':[6,8], 'y':3, 'z':99}"));
+    		.intersect(ObjectConstraint.fromJson("{ 'z': 5}"))
+    		.union(ObjectConstraint.fromJson("{'x':[6,8], 'y':3, 'z':99}"));
 
     	assertEquals("(x<2 and y=4 and z=5 or x>=6 and x<8 and y=3 and z=99)",query.toString());
     }    
 
 	@Test
     public void createsExpressionWithOr() {
-    	Cube query = Cube
+    	ObjectConstraint query = ObjectConstraint
     		.fromJson("{'x': [null,2], 'y': 4}")
-    		.intersect(Cube.fromJson("{ 'z': 5}").union(Cube.fromJson("{'z' : 8}")));
+    		.intersect(ObjectConstraint.fromJson("{ 'z': 5}").union(ObjectConstraint.fromJson("{'z' : 8}")));
 
 
     	assertEquals("x<2 and y=4 and (z=5 or z=8)", query.toString());
@@ -93,7 +93,7 @@ public class QueryTest {
 
 	@Test
     public void createsExpressionWithSubquery() {
-    	Cube query = Cube
+    	ObjectConstraint query = ObjectConstraint
     		.fromJson("{'x': [null,2], 'y': { 'alpha': [2,6], 'beta': { 'nuts': 'brazil' }}}");
 
     	String expression = query.toString();
@@ -103,7 +103,7 @@ public class QueryTest {
 
 	@Test
     public void createsExpressionWithHas() {
-        Cube query = Cube
+        ObjectConstraint query = ObjectConstraint
             .fromJson("{'x': [null,2], 'y': { 'alpha': [2,6], 'nuts': { '$has': 'brazil' }}}");
 
         String expression = query.toString();
@@ -113,7 +113,7 @@ public class QueryTest {
 	
 	@Test
     public void createsExpressionWithHasInTopLevel() {
-        Cube query = Cube
+        ObjectConstraint query = ObjectConstraint
             .fromJson("{'a': [null,2], 'nuts': { '$has': 'brazil' }}");
 
         String expression = query.toString();
@@ -123,7 +123,7 @@ public class QueryTest {
 	
 	@Test
     public void createsExpressionWithHasOnObjects() {
-        Cube query = Cube
+        ObjectConstraint query = ObjectConstraint
             .fromJson("{'a': [null,2], 'nuts': { '$has': { 'type': 'brazil' }}}");
 
         String expression = query.toString();
@@ -135,7 +135,7 @@ public class QueryTest {
 
 	@Test
 	public void createsExpressionWithHasAndParameters() {
-        Cube query = Cube
+        ObjectConstraint query = ObjectConstraint
             .fromJson("{'x': [null,2], 'y': { 'alpha': [2,6], 'nuts': { '$has': { '$' : 'param1' } }}}")
             .intersect("{ 'y' : {'nuts': { '$has': { '$' : 'param2' } }}}");
 
@@ -146,7 +146,7 @@ public class QueryTest {
 
 	@Test
 	public void createExpressionWithParamters() {
-        Cube query = Cube
+        ObjectConstraint query = ObjectConstraint
             .fromJson("{'x': [{'$':'param1'},2], 'y': {'$':'param2'}}");
 
         String expression = query.toString();
@@ -156,13 +156,13 @@ public class QueryTest {
 
 	@Test
     public void hasWorkingEqualsOperation() {
-    	Cube query1 = Cube
+    	ObjectConstraint query1 = ObjectConstraint
     		.fromJson("{'x': [null,2], 'y': { 'alpha': [2,6], 'beta': { 'nuts': 'brazil' }}}");
-    	Cube query2 = Cube
+    	ObjectConstraint query2 = ObjectConstraint
     		.fromJson("{'y': { 'beta': { 'nuts': 'brazil' }, 'alpha': [2,6]}, 'x': [null,2]}");
-    	Cube query3 = Cube
+    	ObjectConstraint query3 = ObjectConstraint
     		.fromJson("{'x': [null,2], 'y': { 'alpha': [2,8], 'beta': { 'nuts': 'walnut' }}}");
-    	Cube query4 = Cube
+    	ObjectConstraint query4 = ObjectConstraint
     		.fromJson("{'x': [1,9], 'y': { 'alpha': [2,8], 'beta': { 'nuts': 'walnut' }}}");
     	assertTrue(query1.equals(query2));
     	assertFalse(query1.equals(query3));
@@ -173,11 +173,11 @@ public class QueryTest {
 
 	@Test
     public void hasWorkingEqualsOperationWithParameters(){
-        Cube query1 = Cube
+        ObjectConstraint query1 = ObjectConstraint
             .fromJson("{'x': [null,{'$':'param1'}], 'y': { 'alpha': [2,6], 'beta': { 'nuts': {'$':'param2'} }}}");
-        Cube query2 = Cube
+        ObjectConstraint query2 = ObjectConstraint
             .fromJson("{'y': { 'beta': { 'nuts': {'$':'param2'} }, 'alpha': [2,6]}, 'x': [null,{'$':'param1'}]}");
-        Cube query3 = Cube
+        ObjectConstraint query3 = ObjectConstraint
             .fromJson("{'x': [null,{'$':'param1'}], 'y': { 'alpha': [2,6], 'beta': { 'nuts': {'$':'param3'} }}}");
         assertTrue(query1.equals(query2));
         assertFalse(query1.equals(query3));
@@ -185,13 +185,13 @@ public class QueryTest {
 
 	@Test
     public void hasWorkingContainsOperator() {
-    	Cube query1 = Cube
+    	ObjectConstraint query1 = ObjectConstraint
     		.fromJson("{'x': [null,2], 'y': { 'alpha': [2,6], 'beta': { 'nuts': 'brazil' }}}");
-    	Cube query2 = Cube
+    	ObjectConstraint query2 = ObjectConstraint
     		.fromJson("{'y': { 'beta': { 'nuts': 'brazil' }, 'alpha': [2,6]}, 'x': [null,2]}");
-    	Cube query3 = Cube
+    	ObjectConstraint query3 = ObjectConstraint
     		.fromJson("{'x': [1,2], 'y': { 'alpha': [2,8], 'beta': { 'nuts': 'walnut' }}}");
-    	Cube query4 = Cube
+    	ObjectConstraint query4 = ObjectConstraint
     		.fromJson("{'x': [1,9], 'y': { 'alpha': [2,8], 'beta': { 'nuts': 'walnut' }}}");
     	assertTrue(query1.contains(query2)); // because equal
     	assertFalse(query1.contains(query3)); // walnut != brazil
@@ -204,11 +204,11 @@ public class QueryTest {
 
 	@Test
     public void hasWorkingContainsOperatorWithParameters() {
-        Cube query2 = Cube
+        ObjectConstraint query2 = ObjectConstraint
             .fromJson("{'x': [{'$':'param1'},2], 'y': { 'alpha': [2,{'$':'param3'}], 'beta': { 'nuts': {'$':'param2'} }}}");
-        Cube query3 = Cube
+        ObjectConstraint query3 = ObjectConstraint
             .fromJson("{'x': [{'$':'param1'},2], 'y': { 'alpha': [2,8], 'beta': { 'nuts': {'$':'param2'} }}}");
-        Cube query4 = Cube
+        ObjectConstraint query4 = ObjectConstraint
             .fromJson("{'x': [{'$':'param1'},9], 'y': { 'alpha': [2,8], 'beta': { 'nuts': {'$':'param2'} }}}");
         assertTrue(query4.contains(query3)); 
         assertFalse(query3.contains(query4)); 
@@ -218,7 +218,7 @@ public class QueryTest {
 
 	@Test
     public void factorizes() {
-    	Cube query = Cube
+    	ObjectConstraint query = ObjectConstraint
     		.fromJson("{'x': 2, 'y' : [3,4], 'z' : 8}")
     		.union("{'x':2, 'y': [null,4], 'z': 7}")
     		.union("{'x':3, 'y': [3,null], 'z': 7}");
@@ -229,7 +229,7 @@ public class QueryTest {
 
 	@Test
     public void hasSaneJSONRepresentation() {
-    	Cube query = Cube
+    	ObjectConstraint query = ObjectConstraint
     		.fromJson("{'x': 2, 'y' : [3,4], 'z' : 8}")
     		.union("{'x':2, 'y': [null,4], 'z': 7}")
     		.union("{'x':3, 'y': [3,null], 'z': {'$':'param1'}}");
@@ -239,7 +239,7 @@ public class QueryTest {
 
     @Test
     public void sampleCodeForReadmeTestsOK() {
-    	Cube query = Cube
+    	ObjectConstraint query = ObjectConstraint
     		.fromJson("{ 'course': 'javascript 101', 'student': { 'age' : [21, null] }, 'grade': [null,'C']}")
     		.union("{ 'course': 'medieval French poetry', 'student': { 'age': [40,65]}, 'grade': [null,'C']}");
 
@@ -373,43 +373,43 @@ public class QueryTest {
 
 	@Test
 	public void canCreateCubeWithAnd() {
-		Cube query = Cube.fromJson("{ '$and': [ {'x':[2,5]}, {'x':[4,7]} ]}");
+		ObjectConstraint query = ObjectConstraint.fromJson("{ '$and': [ {'x':[2,5]}, {'x':[4,7]} ]}");
 		assertEquals("x>=4 and x<5", query.toString());
 	}
 	
 	@Test
 	public void canCreateJsonOutput() {
-		Cube cube1 = Cube.fromJson("{'x': [null,2], 'y': 4}");
+		ObjectConstraint cube1 = ObjectConstraint.fromJson("{'x': [null,2], 'y': 4}");
 		JsonValue json1 = cube1.toJSON();
-		Cube cube2 = Cube.fromJson("{ 'z': 5}");
+		ObjectConstraint cube2 = ObjectConstraint.fromJson("{ 'z': 5}");
 		JsonValue json2 = cube2.toJSON();
-		Cube cube3 = Cube.fromJson("{'x':[6,8], 'y':3, 'z':99}");
+		ObjectConstraint cube3 = ObjectConstraint.fromJson("{'x':[6,8], 'y':3, 'z':99}");
 		JsonValue json3 = cube3.toJSON();
 		
-    	Cube query = cube1.intersect(cube2).union(cube3);
+    	ObjectConstraint query = cube1.intersect(cube2).union(cube3);
     	JsonValue json = query.toJSON();
     	assertEquals("{\"$or\":[{\"x\":{\"<\":2},\"y\":4,\"z\":5},{\"x\":[6,8],\"y\":3,\"z\":99}]}", json.toString());
 	}
 	
 	@Test
 	public void canRoundtripJsonOutput() {
-    	Cube query = Cube
+    	ObjectConstraint query = ObjectConstraint
         		.fromJson("{'x': [null,2], 'y': 4}")
-        		.intersect(Cube.fromJson("{ 'z': 5}"))
-        		.union(Cube.fromJson("{'x':[6,8], 'y':3, 'z':99}"));
+        		.intersect(ObjectConstraint.fromJson("{ 'z': 5}"))
+        		.union(ObjectConstraint.fromJson("{'x':[6,8], 'y':3, 'z':99}"));
     	JsonValue json = query.toJSON();
-    	Cube query2 = Cube.from((JsonObject)json);
+    	ObjectConstraint query2 = ObjectConstraint.from((JsonObject)json);
     	assertEquals(query, query2);
  	}
 
 	@Test
 	public void canRoundtripUrlEncodedOutput() {
-    	Cube query = Cube
+    	ObjectConstraint query = ObjectConstraint
         		.fromJson("{'x': [null,2], 'y': 4}")
-        		.intersect(Cube.fromJson("{ 'z': 5}"))
-        		.union(Cube.fromJson("{'x':[6,8], 'y':3, 'z':99}"));
+        		.intersect(ObjectConstraint.fromJson("{ 'z': 5}"))
+        		.union(ObjectConstraint.fromJson("{'x':[6,8], 'y':3, 'z':99}"));
     	String encoded = query.urlEncode();
-    	Cube query2 = Cube.urlDecode(encoded);
+    	ObjectConstraint query2 = ObjectConstraint.urlDecode(encoded);
     	assertEquals(query, query2);
  	}
 

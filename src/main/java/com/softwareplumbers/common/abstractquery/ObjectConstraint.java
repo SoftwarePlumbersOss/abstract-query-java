@@ -28,42 +28,47 @@ import com.softwareplumbers.common.abstractquery.formatter.Formatter;
 
 import javax.json.JsonObject;
 
-/** A cube maps each dimension in an abstract space to a range.
+/** A constraint maps each dimension in an abstract space to a range.
  *
  */
-public interface Cube extends AbstractSet<Value.MapValue, Cube> {
+public interface ObjectConstraint extends AbstractSet<Value.MapValue, ObjectConstraint> {
 	
-	public static final Cube UNBOUNDED = new Unbounded();
-	public static final Cube EMPTY = new Empty();
+	public static final ObjectConstraint UNBOUNDED = new Unbounded();
+	public static final ObjectConstraint EMPTY = new Empty();
+	public static final ObjectConstraintFactory FACTORY = new ObjectConstraintFactory();
 	
 	public AbstractSet<? extends Value, ?> getConstraint(String dimension);
 	public Set<String> getConstraints();
 	
-	default Cube bind(String json) {
+	default ObjectConstraint bind(String json) {
 		return bind(MapValue.fromJson(json));
 	}
 	
-	default Cube intersect(String json) {
-		return intersect(Cube.fromJson(json));
+	default ObjectConstraint intersect(String json) {
+		return intersect(ObjectConstraint.fromJson(json));
 	}
 
-	default Cube union(String json) {
-		return union(Cube.fromJson(json));
+	default ObjectConstraint union(String json) {
+		return union(ObjectConstraint.fromJson(json));
 	}
 	
-	Cube maybeUnion(Cube other);
+	default Factory<Value.MapValue, ObjectConstraint> getFactory() {
+		return FACTORY;
+	}
+	
+	ObjectConstraint maybeUnion(ObjectConstraint other);
 
-	public static class Impl implements Cube {
+	public static class Impl implements ObjectConstraint {
 
 	private Map<String, AbstractSet<? extends Value, ?>> constraints;
 	
-	public Cube maybeUnion(Cube other) {
+	public ObjectConstraint maybeUnion(ObjectConstraint other) {
 		if (this.contains(other)) return this;
 		if (other.contains(this)) return other;
 		return null;
 	}
 
-	/** Create a new cube
+	/** Create a new constraint
 	 * 
 	 * @param constraints A map from dimension name to a range of values.
 	 */
@@ -71,15 +76,15 @@ public interface Cube extends AbstractSet<Value.MapValue, Cube> {
 		this.constraints = constraints;
 	}
 	
-	/** Create a new cube as a copy of an old cube.
+	/** Create a new constraint as a copy of an old constraint.
 	 * 
-	 * @param to_copy A cube to copy
+	 * @param to_copy A constraint to copy
 	 */
 	public Impl(Impl to_copy) {
 		this.constraints = new TreeMap<String, AbstractSet<? extends Value,?>>(to_copy.constraints);
 	}
 	
-	/** Create a 'one dimensional' cube
+	/** Create a 'one dimensional' constraint
 	 * 
 	 * @param dimension name of a dimension
 	 * @param range permitted range for that dimension
@@ -96,7 +101,7 @@ public interface Cube extends AbstractSet<Value.MapValue, Cube> {
 	/** Get the constraint for a given dimension
 	 * 
 	 * A constraint requires that values for a given dimension reside within
-	 * a given range for this cube.
+	 * a given range for this constraint.
 	 * 
 	 * @param dimension the name of the dimension
 	 * @return the range of values permitted for the given dimension
@@ -109,9 +114,9 @@ public interface Cube extends AbstractSet<Value.MapValue, Cube> {
 		return constraints.keySet();
 	}
 	
-	/** Get the set of dimension names for this cube.
+	/** Get the set of dimension names for this constraint.
 	 * 
-	 * @return the set of dimension names valid for this cube
+	 * @return the set of dimension names valid for this constraint
 	 */
 	public Set<String> getDimensions() {
 		return constraints.keySet();
@@ -120,48 +125,48 @@ public interface Cube extends AbstractSet<Value.MapValue, Cube> {
 	/** Check that two Cubes are equal
 	 * 
 	 * Cubes are considered equal if there is no possible value which meets the
-	 * constraints of one cube ('is contained by the cube') and does not meet the
+	 * constraints of one constraint ('is contained by the constraint') and does not meet the
 	 * constraints of the other.
 	 * 
-	 * @param other Other cube to check
-	 * @return true if cubes are equal
+	 * @param other Other constraint to check
+	 * @return true if constraints are equal
 	 */
-	public boolean equals(Cube other) {
+	public boolean equals(ObjectConstraint other) {
 		return this.maybeEquals(other) ==  Boolean.TRUE;
 	}
 	
-	/** Check whether this cube is equal to some other object
+	/** Check whether this constraint is equal to some other object
 	 * 
 	 * If the other object is not a Cube, returns false. Otherwise
 	 * equivalent to equals(Cube) above.
 	 * 
-	 * @param other Other cube to check
-	 * @return true if other is Cube and equal to this cube
+	 * @param other Other constraint to check
+	 * @return true if other is Cube and equal to this constraint
 	 */
 	public boolean equals(Object other) {
-		return other instanceof Cube && equals((Cube)other);
+		return other instanceof ObjectConstraint && equals((ObjectConstraint)other);
 	}
 	
-	private <T extends Value,U extends AbstractSet<T,U>> Boolean containsConstraint(String dimension, Cube other) {
+	private <T extends Value,U extends AbstractSet<T,U>> Boolean containsConstraint(String dimension, ObjectConstraint other) {
 		// We should do some type checking here.
 		U thisConstraint = (U)getConstraint(dimension);
 		U otherConstraint = (U)other.getConstraint(dimension);
 		return thisConstraint.contains(otherConstraint);
 	}
 	
-	/** Check whether this cube contains some other cube
+	/** Check whether this constraint contains some other constraint
 	 * 
-	 * A cube contains another cube if there is no possible value which
-	 * meets the constraints of the contained cube which does not also meet
-	 * the constraints of the containing cube.
+	 * A constraint contains another constraint if there is no possible value which
+	 * meets the constraints of the contained constraint which does not also meet
+	 * the constraints of the containing constraint.
 	 * 
-	 * Constraints on cubes may be parameterized; in which case it may not be possible
-	 * to determine if one cube is contained by another. In this case, null is returned.
+	 * Ranges which define constraints may be parameterized; in which case it may not be possible
+	 * to determine if one constraint is contained by another. In this case, null is returned.
 	 * 
 	 * @param other Cube to compare
-	 * @return true if this cube contains the other cube, false if not, null if we cannot tell.
+	 * @return true if this constraint contains the other constraint, false if not, null if we cannot tell.
 	 */
-	public Boolean contains(Cube other) {
+	public Boolean contains(ObjectConstraint other) {
 		return Tristate.every(constraints.keySet(), constraint-> containsConstraint(constraint, other));
 	}
 
@@ -172,34 +177,34 @@ public interface Cube extends AbstractSet<Value.MapValue, Cube> {
 		return constraint.containsItem(element);
 	}
 	
-	/** Check whether this cube contains some value
+	/** Check whether this constraint contains some value
 	 * 
-	 * A cube contains a value if the value meets constraints on every dimension of
-	 * this cube.
+	 * A constraint contains a value if the value meets constraints on every dimension of
+	 * this constraint.
 	 * 
-	 * Constraints on cubes may be parameterized; in which case it may not be possible
-	 * to determine if an item is contained by a cube. In this case, null is returned.
+	 * Ranges which define constraints may be parameterized; in which case it may not be possible
+	 * to determine if an item is contained by a constraint. In this case, null is returned.
 	 * 
 	 * @param item Item to compare
-	 * @return true if this cube contains the item, false if not, null if we cannot tell.
+	 * @return true if this constraint contains the item, false if not, null if we cannot tell.
 	 */
 	public Boolean containsItem(Value.MapValue item) {
 		return Tristate.every(constraints.keySet(),
 				entry -> containsItem(entry, item));		
 	}
 	
-	public <T extends Value,U extends AbstractSet<T,U>> Boolean intersects(String dimension, Cube other) {
+	public <T extends Value,U extends AbstractSet<T,U>> Boolean intersects(String dimension, ObjectConstraint other) {
 		U constraint1 = (U)getConstraint(dimension);
 		U constraint2 = (U)other.getConstraint(dimension);
 		if (constraint1 == null || constraint2 == null) return Boolean.TRUE;
 		return constraint1.intersects(constraint2);
 	}
 	
-	public Boolean intersects(Cube other) {
+	public Boolean intersects(ObjectConstraint other) {
 		return Tristate.every(constraints.keySet(), dimension->intersects(dimension, other));
 	}
 	
-	private <T extends Value,U extends AbstractSet<T,U>> U intersect(String dimension, Cube other) {
+	private <T extends Value,U extends AbstractSet<T,U>> U intersect(String dimension, ObjectConstraint other) {
 		// TODO: We should do some type checking here. Notionally that constraint1.type equals constraint2.type
 		U constraint1 = (U)getConstraint(dimension);
 		U constraint2 = (U)other.getConstraint(dimension);
@@ -208,14 +213,14 @@ public interface Cube extends AbstractSet<Value.MapValue, Cube> {
 		return constraint1.intersect(constraint2);
 	}
 
-	/** Intersect this cube with some other
+	/** Intersect this constraint with some other
 	 * 
-	 * Create a new cube which contains all items which are contained by both cubes.
+	 * Create a new constraint which contains all items which are contained by both constraints.
 	 * 
-	 * @param other other cube
-	 * @return A new cube which is the logical intersection of this cube and some other.
+	 * @param other other constraint
+	 * @return A new constraint which is the logical intersection of this constraint and some other.
 	 */
-	public Cube intersect(Cube other) {
+	public ObjectConstraint intersect(ObjectConstraint other) {
 
 		Map<String, AbstractSet<? extends Value, ?>> result = new TreeMap<String, AbstractSet<? extends Value, ?>>();
 		result.putAll(constraints);
@@ -239,12 +244,12 @@ public interface Cube extends AbstractSet<Value.MapValue, Cube> {
 		}
 	}
 
-	/** Remove constraints from a cube.
+	/** Remove constraints from a constraint.
 	 * 
 	 * Used for factoring query expressions. At this point, rather experimental.
 	 * 
 	 */
-	public Cube removeConstraints(Cube to_remove) {
+	public ObjectConstraint removeConstraints(ObjectConstraint to_remove) {
 		Impl result = new Impl(this);
 		for (String constraint : to_remove.getConstraints()) 
 			result.removeConstraint(constraint, to_remove.getConstraint(constraint));
@@ -294,9 +299,9 @@ public interface Cube extends AbstractSet<Value.MapValue, Cube> {
 	 * Equivalent to calling bind(key, value) on each entry in the map.
 	 * 
 	 * @param parameters A map of parameter names to parameter values.
-	 * @return A cube with any matching parameters substituted with the given values.
+	 * @return A constraint with any matching parameters substituted with the given values.
 	 */
-	public Cube bind(Value.MapValue parameters) {
+	public ObjectConstraint bind(Value.MapValue parameters) {
 		Map<String,AbstractSet<? extends Value,?>> new_constraints = new TreeMap<String,AbstractSet<? extends Value,?>>();
 		for (Map.Entry<String,AbstractSet<? extends Value,?>> entry : constraints.entrySet()) {
 			AbstractSet<? extends Value,?> new_constraint = entry.getValue().bind(parameters);
@@ -314,9 +319,9 @@ public interface Cube extends AbstractSet<Value.MapValue, Cube> {
 	 * given JSON object.
 	 * 
 	 * @param parameters A json object containing parameter values.
-	 * @return A cube with any matching parameters substituted with the given values.
+	 * @return A constraint with any matching parameters substituted with the given values.
 	 */
-	public Cube bind(JsonObject parameters) {
+	public ObjectConstraint bind(JsonObject parameters) {
 		return bind(MapValue.from(parameters));
 	}
 	
@@ -326,9 +331,9 @@ public interface Cube extends AbstractSet<Value.MapValue, Cube> {
 	 * JSON object constructed from the given string.
 	 * 
 	 * @param parameters A string representation of a JSON object containing parameter values.
-	 * @return A cube with any matching parameters substituted with the given values.
+	 * @return A constraint with any matching parameters substituted with the given values.
 	 */
-	public Cube bind(String parameters) {
+	public ObjectConstraint bind(String parameters) {
 		return bind(JsonUtil.parseObject(parameters));
 	}
 	
@@ -337,9 +342,9 @@ public interface Cube extends AbstractSet<Value.MapValue, Cube> {
 			JsonObject asObj = (JsonObject)value;
 			if (asObj.containsKey("$has")) {
 				JsonArray arraydata = asObj.getJsonArray("$has");
-				results.put(dimension, Has.match(arraydata));
+				results.put(dimension, ArrayConstraint.match(arraydata));
 			} else {
-				results.put(dimension, Cube.from(asObj));
+				results.put(dimension, ObjectConstraint.from(asObj));
 			}
 		} else {
 			results.put(dimension, Range.from(value));
@@ -350,11 +355,11 @@ public interface Cube extends AbstractSet<Value.MapValue, Cube> {
 	
 
 	@Override
-	public Cube union(Cube other) {
-		return Cube.union(this, other);
+	public ObjectConstraint union(ObjectConstraint other) {
+		return ObjectConstraint.union(this, other);
 	}
 
-	private <T extends Value,U extends AbstractSet<T,U>> Boolean maybeEquals(String dimension, Cube other) {
+	private <T extends Value,U extends AbstractSet<T,U>> Boolean maybeEquals(String dimension, ObjectConstraint other) {
 		U constraint1 = (U)constraints.get(dimension);
 		U constraint2 = (U)other.getConstraint(dimension);
 		if (constraint1 == null || constraint2 == null) return Boolean.FALSE;
@@ -362,7 +367,7 @@ public interface Cube extends AbstractSet<Value.MapValue, Cube> {
 	}
 	
 	@Override
-	public Boolean maybeEquals(Cube other) {
+	public Boolean maybeEquals(ObjectConstraint other) {
 		if (constraints.size() != other.getConstraints().size()) return Boolean.FALSE;
 		return Tristate.every(constraints.keySet(), dimension->maybeEquals(dimension, other));
 	}
@@ -376,51 +381,51 @@ public interface Cube extends AbstractSet<Value.MapValue, Cube> {
 	}
 	}
 	
-	public class Unbounded implements Cube {
-		@Override	public Cube intersect(Cube other)  { return other; }
-		@Override	public Boolean intersects(Cube other) { return Boolean.TRUE; }
-		@Override	public Cube union(Cube other) { return this; }
+	public class Unbounded implements ObjectConstraint {
+		@Override	public ObjectConstraint intersect(ObjectConstraint other)  { return other; }
+		@Override	public Boolean intersects(ObjectConstraint other) { return Boolean.TRUE; }
+		@Override	public ObjectConstraint union(ObjectConstraint other) { return this; }
 		@Override	public Boolean containsItem(MapValue item) { return Boolean.TRUE; }
-		@Override	public Boolean contains(Cube set) { return Boolean.TRUE; }
-		@Override	public Boolean maybeEquals(Cube other) { return other == UNBOUNDED; }
+		@Override	public Boolean contains(ObjectConstraint set) { return Boolean.TRUE; }
+		@Override	public Boolean maybeEquals(ObjectConstraint other) { return other == UNBOUNDED; }
 		@Override	public <X,V> X toExpression(Formatter<X,V> formatter, Context context) { return formatter.operExpr(context, "=", Value.from("*")); }
 		@Override	public JsonValue toJSON() { return toExpression(Formatter.JSON); }
-		@Override	public Cube bind(MapValue values) { return this; }
+		@Override	public ObjectConstraint bind(MapValue values) { return this; }
 		@Override	public boolean isEmpty() { return false; }
 		@Override	public boolean isUnconstrained() { return true; }
 		@Override	public AbstractSet<? extends Value, ?> getConstraint(String dimension) { return null; }
 		@Override	public Set<String> getConstraints() { return Collections.emptySet(); }		
-		@Override  	public Cube maybeUnion(Cube other) { return this; }
+		@Override  	public ObjectConstraint maybeUnion(ObjectConstraint other) { return this; }
 	}
 	
-	public class Empty implements Cube {
-		@Override	public Cube intersect(Cube other)  { return this; }
-		@Override	public Boolean intersects(Cube other) { return Boolean.FALSE; }
-		@Override	public Cube union(Cube other) { return other; }
+	public class Empty implements ObjectConstraint {
+		@Override	public ObjectConstraint intersect(ObjectConstraint other)  { return this; }
+		@Override	public Boolean intersects(ObjectConstraint other) { return Boolean.FALSE; }
+		@Override	public ObjectConstraint union(ObjectConstraint other) { return other; }
 		@Override	public Boolean containsItem(MapValue item) { return Boolean.FALSE; }
-		@Override	public Boolean contains(Cube set) { return Boolean.FALSE; }
-		@Override	public Boolean maybeEquals(Cube other) { return other == EMPTY; }
+		@Override	public Boolean contains(ObjectConstraint set) { return Boolean.FALSE; }
+		@Override	public Boolean maybeEquals(ObjectConstraint other) { return other == EMPTY; }
 		@Override	public <X,V> X toExpression(Formatter<X,V> formatter, Context context) { return formatter.operExpr(context, "=", Value.from("[]")); }
 		@Override	public JsonValue toJSON() { return toExpression(Formatter.JSON); }
-		@Override	public Cube bind(MapValue values) { return this; }
+		@Override	public ObjectConstraint bind(MapValue values) { return this; }
 		@Override	public boolean isEmpty() { return true; }
 		@Override	public boolean isUnconstrained() { return false; }
 		@Override	public AbstractSet<? extends Value, ?> getConstraint(String dimension) { return null; }
 		@Override	public Set<String> getConstraints() { return Collections.emptySet(); }		
-		@Override  	public Cube maybeUnion(Cube other) { return other; }
+		@Override  	public ObjectConstraint maybeUnion(ObjectConstraint other) { return other; }
 	}
 	
-	public class UnionCube extends Union<MapValue,Cube> implements Cube {
+	public class UnionCube extends Union<MapValue,ObjectConstraint> implements ObjectConstraint {
 
-		public UnionCube(List<Cube> data, Function<List<Cube>, Cube> from) {
-			super(Value.Type.MAP, data, from);
+		public UnionCube(List<ObjectConstraint> data) {
+			super(Value.Type.MAP, data);
 		}
 
 		@SuppressWarnings("rawtypes")
 		@Override
 		public AbstractSet<? extends Value, ?> getConstraint(String dimension) {
 			AbstractSet results = null;
-			for (Cube elem : data) {
+			for (ObjectConstraint elem : data) {
 				AbstractSet result = elem.getConstraint(dimension);
 				if (result != null) {
 					results = results == null ? result : results.union(result);
@@ -432,73 +437,56 @@ public interface Cube extends AbstractSet<Value.MapValue, Cube> {
 		@Override
 		public Set<String> getConstraints() {
 			Set<String> results = new HashSet<String>();
-			for (Cube elem : data) {
+			for (ObjectConstraint elem : data) {
 				results.addAll(elem.getConstraints());
 			}
 			return results;
 		}
 		
-		public Cube maybeUnion(Cube other) {
+		public ObjectConstraint maybeUnion(ObjectConstraint other) {
 			return null;
 		}
 	}
 	
-	public static List<Cube> simplifyUnion(List<Cube> list) {
-		List<Cube> result = new ArrayList<Cube>();
-		result.add(list.get(0));
-		for (int i = 1; i < list.size(); i++) {
-			// TODO: need a loop in here to account for case where list.get(i) is a union
-			Cube merged = null;
-			for (int j = 0; j < result.size() && merged == null; j++) {
-				merged = list.get(i).maybeUnion(result.get(j));
-				if (merged != null) result.set(j, merged);
-			}
-			if (merged == null) 
-				result.add(list.get(i));
-		}
-		return result;
-	}
 		
 	
-	public static Cube union(JsonArray cubes) {
+	public static ObjectConstraint union(JsonArray constraints) {
 		// TODO: sensible error message for cast below
-		List<Cube> ors = cubes.stream().map((JsonValue value)->from((JsonObject)value)).collect(Collectors.toList());					
+		List<ObjectConstraint> ors = constraints.stream().map((JsonValue value)->from((JsonObject)value)).collect(Collectors.toList());					
 		return union(ors);
 	}
 	
-	public static Cube union(List<Cube> cubes) {
-		cubes = simplifyUnion(cubes);
-		if (cubes.size() == 1) return cubes.get(0);
-		return new UnionCube(cubes, Cube::union);
+	public static ObjectConstraint union(List<ObjectConstraint> constraints) {
+		return FACTORY.union(constraints);
 	}
 
-	public static Cube union(Cube... cubes) {
-		return union(Arrays.asList(cubes));
+	public static ObjectConstraint union(ObjectConstraint... constraints) {
+		return FACTORY.union(constraints);
 	}
 	
-	public static Cube intersect(JsonArray cubes) {
+	public static ObjectConstraint intersect(JsonArray constraints) {
 		// TODO: sensible error message for cast below
-		List<Cube> ands = cubes.stream().map((JsonValue value)->from((JsonObject)value)).collect(Collectors.toList());					
+		List<ObjectConstraint> ands = constraints.stream().map((JsonValue value)->from((JsonObject)value)).collect(Collectors.toList());					
 		return intersect(ands);
 	}
 	
-	public static Cube intersect(List<Cube> cubes) {
-		return cubes.stream().reduce(new Impl(), (cube1,cube2)->cube1.intersect(cube2));
+	public static ObjectConstraint intersect(List<ObjectConstraint> constraints) {
+		return FACTORY.intersect(constraints);
 	}
 
-	public static Cube intersect(Cube... cubes) {
-		return intersect(Arrays.asList(cubes));
+	public static ObjectConstraint intersect(ObjectConstraint... constraints) {
+		return FACTORY.intersect(constraints);
 	}
 		
-	public static Cube fromJson(String object) {
-		return Cube.from(JsonUtil.parseObject(object));
+	public static ObjectConstraint fromJson(String object) {
+		return ObjectConstraint.from(JsonUtil.parseObject(object));
 	}
 	
-	public static Cube from(String dimension, AbstractSet<? extends Value, ?> constraint) {
+	public static ObjectConstraint from(String dimension, AbstractSet<? extends Value, ?> constraint) {
 		return new Impl(dimension, constraint);
 	}
 	
-	public static Cube from(JsonObject object)  {
+	public static ObjectConstraint from(JsonObject object)  {
 		
 		if (object.containsKey("$and")) {
 			return intersect((object.getJsonArray("$and")));
@@ -517,12 +505,12 @@ public interface Cube extends AbstractSet<Value.MapValue, Cube> {
 				JsonObject asObj = (JsonObject)value;
 				if (asObj.containsKey("$has")) {
 					JsonValue matchdata = asObj.get("$has");
-					results.put(dimension, Has.match(matchdata));	
+					results.put(dimension, ArrayConstraint.match(matchdata));	
 				} else {
 					if (Range.isRange(asObj))
 						results.put(entry.getKey(), Range.from(asObj));
 					else 
-						results.put(entry.getKey(), Cube.from(asObj));
+						results.put(entry.getKey(), ObjectConstraint.from(asObj));
 				}
 			} else {
 				results.put(dimension, Range.from(value));
@@ -545,9 +533,9 @@ public interface Cube extends AbstractSet<Value.MapValue, Cube> {
 	 * @param query An url-safe representation, as originally returned by urlEncode()
 	 * @return A query
 	 */
-	public static Cube urlDecode(String query) {
+	public static ObjectConstraint urlDecode(String query) {
 		// TODO: maybe do this better, like use JSURL. Or alternatively add compression?
-		return Cube.fromJson(new String(Base64.getUrlDecoder().decode(query)));
+		return ObjectConstraint.fromJson(new String(Base64.getUrlDecoder().decode(query)));
 	}
 
 }
