@@ -4,9 +4,12 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import javax.json.Json;
@@ -15,8 +18,11 @@ import javax.json.JsonArrayBuilder;
 import javax.json.JsonObject;
 import javax.json.JsonObjectBuilder;
 import javax.json.JsonValue;
+import javax.json.JsonValue.ValueType;
 
 import com.softwareplumbers.common.abstractquery.Value.Atomic;
+import com.softwareplumbers.common.abstractquery.Value.MapValue;
+import com.softwareplumbers.common.abstractquery.Value.Type;
 import com.softwareplumbers.common.abstractquery.formatter.Context;
 import com.softwareplumbers.common.abstractquery.formatter.Formatter;
 
@@ -76,12 +82,13 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 	/** Object mapping of range operators to constructor functions
 	 *
 	 * | Operator String | Constructor Function 	|
-	 * |-----------------|---------------------------|
+	 * |-----------------|--------------------------|
 	 * | ">"			 | Range.greaterThan 		|
 	 * | "<"			 | Range.LessThan 			|
-	 * | ">="			 | Range.greaterThanOrEqual 	|
+	 * | ">="			 | Range.greaterThanOrEqual |
 	 * | "<="			 | Range.lessThanOrEqual 	|
 	 * | "="			 | Range.equal 				|
+	 * | "$like"         | Range.like               |
 	 */
 	static Range getRange(String operator, Value.Atomic value) {
 		switch(operator) {
@@ -90,6 +97,7 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 			case ">=" : return Range.greaterThanOrEqual(value);
 			case "<=" : return Range.lessThanOrEqual(value);
 			case "=" : return Range.equals(value);
+			case "$like" : return Range.like((String)value.value);
 		}
 		throw new IllegalArgumentException("Invalid operator" +  operator);
 	}
@@ -101,6 +109,7 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 		case ">=" : return true;
 		case "<=" : return true;
 		case "=" : return true;
+		case "$like" : return true;
 		default: return false;
 		}
 	}		
@@ -154,6 +163,17 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 		Range upperr = lessThan(upper);
 
 		return lowerr.intersect(upperr);
+	}
+	
+	/** Create a range matching a wildcard template.
+	 * 
+	 * The characters * and ? represent multi-character and single character wildcards.
+	 * 
+	 * @param template
+	 * @return a Range object
+	 */
+	public static Range like(String template) {
+		return new Like(template);
 	}
 	
 	/**
@@ -544,6 +564,11 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 				Range new_lower_bound = range.maybeIntersect(lower_bound);
 				return (new_lower_bound == null) ? null : new Between((OpenRange)new_lower_bound, upper_bound);
 			}
+			if (range instanceof Like) {
+				Like like = (Like)range;
+				if (intersects(like.bounds) == Boolean.FALSE) return EMPTY; 
+				if (contains(like.bounds) == Boolean.TRUE) return like;
+			}
 			return null;
 		}
 		
@@ -566,8 +591,9 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 				return upper_bound.intersects(range);
 			if (range instanceof GreaterThan || range instanceof GreaterThanOrEqual)
 				return lower_bound.intersects(range);
-
-			return null;			
+			if (range instanceof Like)
+				return range.intersects(this);
+			return null;
 		}
 
 		public <U,V> U toExpression(Formatter<U,V> formatter, Context context)	{ 
@@ -641,6 +667,9 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 				Range new_lower_bound = this.lower_bound.maybeUnion(range);
 				if (new_lower_bound == null) return null;
 				return new_lower_bound.maybeIntersect(this.upper_bound);
+			} 
+			if (range instanceof Like) {
+				if (contains(range) == Boolean.TRUE) return this;
 			}
 			return null;
 
@@ -755,6 +784,9 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 				return ((RangeIntersection)range).containedBy(this);
 			if (range instanceof RangeUnion) 
 				return ((RangeUnion)range).containedBy(this);
+			if (range instanceof Like)
+				return ((Like)range).containedBy(this);
+				
 			return false; 
 		}
 
@@ -773,6 +805,8 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 				return ((OpenRange)range).value.lessThan(value);
 			if (range instanceof Equals) 
 				return ((Equals)range).value.lessThan(value);
+			if (range instanceof Like)
+				return range.intersects(this);
 
 			throw new IllegalArgumentException("Uknown range type: " + range);
 		}
@@ -807,6 +841,10 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 				return result ? range : Range.EMPTY;
 			}
 			
+			if (range instanceof Like) {
+				return range.maybeIntersect(this);
+			}
+			
 			return null;
 		}
 		
@@ -824,6 +862,8 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 				if (result == null) return null;
 				return result ? this : range;
 			}
+			if (range instanceof Like)
+				return range.maybeUnion(this);
 			return null;
 		}
 			
@@ -855,6 +895,8 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 				return ((RangeIntersection)range).containedBy(this);
 			if (range instanceof RangeUnion) 
 				return ((RangeUnion)range).containedBy(this);
+			if (range instanceof Like)
+				return ((Like)range).containedBy(this);
 
 			return false;
 		}
@@ -873,6 +915,8 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 			if (range instanceof GreaterThan || range instanceof GreaterThanOrEqual) 
 				return ((OpenRange)range).value.lessThanOrEqual(value);
 			if (range instanceof Between || range instanceof RangeIntersection || range instanceof RangeUnion)
+				return range.intersects(this);
+			if (range instanceof Like)
 				return range.intersects(this);
 
 			throw new IllegalArgumentException("Uknown range type: " + range);
@@ -917,6 +961,11 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 				if (result == null) return null;
 				return result ? range : EMPTY;
 			}
+			
+			if (range instanceof Like) {
+				return range.maybeIntersect(this);
+			}
+
 			return null;
 		}
 		
@@ -935,7 +984,10 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 				if (result == null) return null;
 				return result ? this : range;
 			}
-				
+
+			if (range instanceof Like)
+				return range.maybeUnion(this);
+			
 			return null;
 		}
 	}
@@ -967,6 +1019,9 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 				return ((RangeIntersection)range).containedBy(this);
 			if (range instanceof RangeUnion) 
 				return ((RangeUnion)range).containedBy(this);
+			if (range instanceof Like)
+				return ((Like)range).containedBy(this);
+
 			return false;
 		}
 
@@ -985,6 +1040,8 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 				return ((OpenRange)range).value.greaterThan(value);
 			if (range instanceof Equals) 
 				return ((Equals)range).value.greaterThan(value);
+			if (range instanceof Like)
+				return range.intersects(this);
 
 			throw new IllegalArgumentException("Uknown range type: " + range);
 		}
@@ -1019,6 +1076,10 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 				if (result == null) return null;
 				return result ? range : EMPTY;
 			}
+			
+			if (range instanceof Like) {
+				return range.maybeIntersect(this);
+			}
 
 			return null;
 		}
@@ -1038,7 +1099,9 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 				if (result == null) return null;
 				return result ? this : range;
 			}
-				
+			if (range instanceof Like)
+				return range.maybeUnion(this);
+	
 			return null;
 		}
 
@@ -1070,6 +1133,8 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 				return ((RangeIntersection)range).containedBy(this);
 			if (range instanceof RangeUnion) 
 				return ((RangeUnion)range).containedBy(this);
+			if (range instanceof Like)
+				return ((Like)range).containedBy(this);
 			return false;
 		}
 
@@ -1088,6 +1153,8 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 				return ((OpenRange)range).value.greaterThanOrEqual(value);
 			if (range instanceof Equals) 
 				return ((Equals)range).value.greaterThanOrEqual(value);
+			if (range instanceof Like)
+				return range.intersects(this);
 
 			throw new IllegalArgumentException("Uknown range type: " + range);
 		}
@@ -1133,6 +1200,10 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 				return result ? range : EMPTY;
 			}
 
+			if (range instanceof Like) {
+				return range.maybeIntersect(this);
+			}
+
 			return null;
 		}
 
@@ -1150,7 +1221,9 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 				if (result == null) return null;
 				return result ? this : range;
 			}
-				
+			if (range instanceof Like)
+				return range.maybeUnion(this);
+	
 			return null;
 		}
 	}
@@ -1199,6 +1272,121 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 		public Boolean containedBy(Range other) {
 			return Tristate.any(data, item->other.contains(item));
 		}
+	}
+	
+
+	
+	public static class Like implements Range {
+		
+		private static final String REGEX_MULTI=".*";
+		private static final String REGEX_SINGLE=".";
+		public static final String OPERATOR="like";
+		
+		private static String nextSeq(String string) {
+			int end = string.length() - 1;
+			StringBuffer buf = new StringBuffer(string);
+			buf.setCharAt(end, (char)(string.charAt(end) + 1));
+			return buf.toString();
+		}
+		
+		private Range bounds;
+		private Pattern pattern;
+		private String template;
+		
+		public Like(String template) {
+			this.template = template;
+			int first_star = template.indexOf("*");
+			int first_questionmark = template.indexOf("?");
+			int first_wildcard = -1;
+			
+			if (first_star >= 0 && first_questionmark >= 0) 
+				first_wildcard = Math.min(first_star, first_questionmark);
+			else
+				first_wildcard = Math.max(first_star, first_questionmark);
+			
+			if (first_wildcard == 0) {
+				this.bounds = UNBOUNDED;
+			} else {
+				String lower_bound = template.substring(0, first_wildcard);
+				String upper_bound = nextSeq(lower_bound);
+				this.bounds = between(Value.from(lower_bound),Value.from(upper_bound));
+			} 
+			
+			String regex = template.replace("*", REGEX_MULTI);
+			regex = regex.replace("?", REGEX_SINGLE);
+			this.pattern = Pattern.compile(regex);
+		}
+
+		@Override
+		public Boolean intersects(Range other) {
+			if (other.contains(bounds) == Boolean.TRUE) return Boolean.TRUE;
+			if (other.intersects(bounds) == Boolean.FALSE) return Boolean.FALSE;
+			return null;
+		}
+
+		@Override
+		public Boolean containsItem(Atomic item) {
+			if (item.type == Value.Type.STRING) {
+				Matcher matcher = pattern.matcher((String)item.value);
+				return matcher.matches();
+			}
+			if (item.type == Value.Type.PARAM) {
+				return null;
+			}
+			return Boolean.FALSE;
+		}
+
+		@Override
+		public Boolean contains(Range other) {
+			if (bounds.contains(other) == Boolean.FALSE) return Boolean.FALSE;
+			return null;
+		}
+		
+		public Boolean containedBy(Range other) {
+			if (other.contains(bounds) == Boolean.TRUE) return Boolean.TRUE;
+			if (other.intersects(bounds) == Boolean.FALSE) return Boolean.FALSE;
+			return null;
+		}
+
+		@Override
+		public Boolean maybeEquals(Range other) {
+			return other instanceof Like && template.equals(((Like)other).template);
+		}
+
+		@Override
+		public <X, V> X toExpression(Formatter<X, V> formatter, Context context) {
+			return formatter.operExpr(context, OPERATOR, Value.from(this.template)); 
+		}
+
+		@Override
+		public JsonValue toJSON() {
+			return Json.createObjectBuilder().add("$like", template).build();
+		}
+
+		@Override
+		public Range bind(MapValue values) {
+			return this;
+		}
+
+		@Override
+		public Range maybeUnion(Range other) {
+			if (other.contains(bounds)) return other;
+			if (other.isEmpty()) return this;
+			return null;
+		}
+
+		@Override
+		public Range maybeIntersect(Range other) {
+			if (other.contains(bounds)) return this;
+			if (other.isEmpty()) return other;
+			return null;
+		}
+
+		@Override
+		public Type getType() {
+			return Value.Type.STRING;
+		}
+		
 	}
 	
 	public static Range union(List<Range> list) {

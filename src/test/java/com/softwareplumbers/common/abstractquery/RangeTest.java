@@ -654,4 +654,78 @@ public class RangeTest {
     	Range range6 = Range.equals(Value.from(29));
        	assertEquals(Range.union(range1,range3,range4), Range.union(range1,range2,range3,range4,range5,range6));
     }
+    
+    @Test public void canCreateSimpleWildcards() {
+    	Range range = Range.like("def*jkl");
+    	assertTrue(range instanceof Range.Like);
+    	range = Range.like("def?jkl");
+    	assertTrue(range instanceof Range.Like);
+    }
+    
+    @Test public void canMatchSimpleStringsWithWildcards() {
+    	Range range = Range.like("def*");
+    	assertTrue(range.containsItem(Value.from("defabcjkl")));
+    	assertFalse(range.containsItem(Value.from("decjkl")));
+    	range = Range.like("def*jkl");
+    	assertTrue(range.containsItem(Value.from("defabcjkl")));
+    	assertTrue(range.containsItem(Value.from("defjkl")));
+    	assertFalse(range.containsItem(Value.from("decjkl")));
+    	assertFalse(range.containsItem(Value.from("defaajl")));
+    	range = Range.like("def?");
+    	assertTrue(range.containsItem(Value.from("defa")));
+    	assertFalse(range.containsItem(Value.from("deca")));
+    	assertFalse(range.containsItem(Value.from("defca")));
+    	range = Range.like("def?jkl");
+    	assertTrue(range.containsItem(Value.from("defajkl")));
+    	assertFalse(range.containsItem(Value.from("defacjkl")));
+    	assertFalse(range.containsItem(Value.from("defajl")));
+    	range = Range.like("def*jkl*xyz");
+    	assertTrue(range.containsItem(Value.from("defabcjkl123xyz")));
+    	assertTrue(range.containsItem(Value.from("defjklxyz")));
+    	assertFalse(range.containsItem(Value.from("defjkl123xyw")));
+    }
+    
+    @Test public void canTestContainmentWithWildcards() {
+    	Range range = Range.like("def*");
+    	Range box = Range.between(Value.from("ab"), Value.from("gh"));
+    	assertTrue(box.contains(range));
+    	assertFalse(range.contains(box));
+    	box = Range.between(Value.from("defg"), Value.from("defz"));
+    	assertNull(box.contains(range));
+    	assertNull(range.contains(box));
+    	// Add more cases
+    }
+
+    @Test public void canTestIntersectionWithWildcards() {
+    	Range range = Range.like("def*");
+    	Range box = Range.between(Value.from("ab"), Value.from("gh"));
+    	assertTrue(box.intersects(range));
+    	assertTrue(range.intersects(box));
+    	box = Range.between(Value.from("defg"), Value.from("defz"));
+    	assertNull(box.intersects(range));
+    	assertNull(range.intersects(box));
+    	// Add more cases
+    }
+
+    @Test public void canIntersectWithWildcards() {
+    	Range range = Range.like("def*");
+    	Range box = Range.between(Value.from("ab"), Value.from("gh"));
+    	Range result = box.intersect(range);
+    	assertEquals(range, result);
+    	box = Range.between(Value.from("defg"), Value.from("defz"));
+    	result = box.intersect(range);
+    	assertTrue(result instanceof Intersection);
+    	// Add more cases
+    }
+    
+    @Test public void canUnionWithWildcards() {
+    	Range range = Range.like("def*");
+    	Range box = Range.between(Value.from("ab"), Value.from("gh"));
+    	Range result = box.union(range);
+    	assertEquals(box, result);
+    	box = Range.between(Value.from("defg"), Value.from("defz"));
+    	result = box.intersect(range);
+    	assertTrue(result instanceof Intersection);
+    	// Add more cases
+    }
 }

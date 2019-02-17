@@ -412,5 +412,17 @@ public class QueryTest {
     	ObjectConstraint query2 = ObjectConstraint.urlDecode(encoded);
     	assertEquals(query, query2);
  	}
-
+	
+	@Test
+	public void canCreateObjectConstraintWithLike() {
+		ObjectConstraint queryA = ObjectConstraint.fromJson("{'x': { '$like': 'abc*' }}");
+		ObjectConstraint queryB = ObjectConstraint.from("x", Range.like("abc*"));
+		assertEquals(queryB, queryA);
+	}
+	
+	@Test
+	public void canOutputExpressionWithLike() {
+		ObjectConstraint query = ObjectConstraint.from("x", Range.like("abc*"));
+		System.out.println(query.toExpression(Formatter.DEFAULT));
+	}
 }

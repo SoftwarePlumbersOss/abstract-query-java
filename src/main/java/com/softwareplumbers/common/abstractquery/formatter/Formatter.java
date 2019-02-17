@@ -86,6 +86,8 @@ public interface Formatter<T,U> {
     				return value.toString();
     			if (operator.equals("has"))
     				return printDimension(context) + " has(" + value + ")";
+    			if (operator.equals("like"))
+    				return printDimension(context) + " like(" + value + ")";
     			//if (dimension === null) return '$self' + operator + printValue(value) 
 
     			return printDimension(context) + operator + printValue(value) ;
