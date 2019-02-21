@@ -388,7 +388,7 @@ public interface ObjectConstraint extends AbstractSet<Value.MapValue, ObjectCons
 		@Override	public Boolean containsItem(MapValue item) { return Boolean.TRUE; }
 		@Override	public Boolean contains(ObjectConstraint set) { return Boolean.TRUE; }
 		@Override	public Boolean maybeEquals(ObjectConstraint other) { return other == UNBOUNDED; }
-		@Override	public <X,V> X toExpression(Formatter<X,V> formatter, Context context) { return formatter.operExpr(context, "=", Value.from("*")); }
+		@Override	public <X,V> X toExpression(Formatter<X,V> formatter, Context context) { return formatter.unbounded(context); }
 		@Override	public JsonValue toJSON() { return toExpression(Formatter.JSON); }
 		@Override	public ObjectConstraint bind(MapValue values) { return this; }
 		@Override	public boolean isEmpty() { return false; }

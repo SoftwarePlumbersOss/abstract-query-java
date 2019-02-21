@@ -361,7 +361,7 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 		}
 		
 		public <U,V> U toExpression(Formatter<U,V> formatter, Context context)	{ 
-			return formatter.operExpr(context, "=", Value.from("*")); 
+			return formatter.unbounded(context); 
 		}
 
 		public Boolean maybeEquals(Range range)	{ return range instanceof Unbounded; }

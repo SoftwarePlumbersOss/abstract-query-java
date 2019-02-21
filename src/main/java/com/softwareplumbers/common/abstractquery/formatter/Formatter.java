@@ -44,7 +44,8 @@ public interface Formatter<T,U> {
 	}
 	/** Create a representation of an operation over subexpressions */
 	T subExpr(Context context, String operator, T sub);
-	/** Create a formatter in context of parent */
+	/** Create a representation an an unbounded constraint */
+	T unbounded(Context context);
 	
 	/** Get the default query formatter
 	*/
@@ -96,6 +97,11 @@ public interface Formatter<T,U> {
     	public String subExpr(Context context, String operator, String sub) {
     		return printDimension(context) + " has (" +  sub + ")";
     	}
+
+		@Override
+		public String unbounded(Context context) {
+			return "";
+		}
 	};
 
 	/** Get the default query formatter
@@ -164,6 +170,11 @@ public interface Formatter<T,U> {
     		JsonObjectBuilder hasExpr = Json.createObjectBuilder().add(operator, sub);
     		return Json.createObjectBuilder().add(context.dimension,hasExpr).build();
     	}
+
+		@Override
+		public JsonValue unbounded(Context context) {
+			return Json.createObjectBuilder().build();
+		}
 	};
 	
 
@@ -171,6 +182,16 @@ public interface Formatter<T,U> {
 	
 	public interface Node extends List<Node>, CanFormat {
 		Context getContext();
+	}
+	
+	public class Unbounded extends AbstractList<Node> implements Node {
+
+		private final Context context;
+		@Override public Node get(int index) { throw new IllegalArgumentException(); }
+		@Override public int size() { return 0; }
+		@Override public <T, U> T toExpression(Formatter<T, U> format, Context ctx) { return format.unbounded(context); }
+		@Override public Context getContext() { return context; }
+		public Unbounded(Context context) { this.context = context; }
 	}
 	
 	public class Operator extends AbstractList<Node> implements Node {
@@ -268,6 +289,11 @@ public interface Formatter<T,U> {
 		
 		public Node betweenExpr(Context context, Value.Type type, Node lower, Node upper) {
 			return new Between(type, context, lower, upper);
+		}
+
+		@Override
+		public Node unbounded(Context context) {
+			return new Unbounded(context);
 		}
 	}
 	
