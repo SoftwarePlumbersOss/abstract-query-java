@@ -1,16 +1,12 @@
 package com.softwareplumbers.common.abstractquery;
 
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
-import java.util.Locale;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Stream;
 
 import javax.json.Json;
 import javax.json.JsonArray;
@@ -18,7 +14,6 @@ import javax.json.JsonArrayBuilder;
 import javax.json.JsonObject;
 import javax.json.JsonObjectBuilder;
 import javax.json.JsonValue;
-import javax.json.JsonValue.ValueType;
 
 import com.softwareplumbers.common.abstractquery.Value.Atomic;
 import com.softwareplumbers.common.abstractquery.Value.MapValue;
@@ -173,7 +168,10 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 	 * @return a Range object
 	 */
 	public static Range like(String template) {
-		return new Like(template);
+		if (Like.isTemplate(template))
+			return new Like(template);
+		else
+			return new Equals(Value.from(template));
 	}
 	
 	/**
@@ -239,7 +237,6 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 	 * @param  obj
 	 * @return  a range if obj is a bounds object, null otherwise
 	 */
-	@SuppressWarnings("unchecked")
 	static  Range fromOpenRangeOrValue(JsonValue obj, Function<Value.Atomic,Range> operator) {
 
 		if (obj instanceof JsonObject) {
@@ -269,7 +266,6 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 	 * @param  obj
 	 * @return  a range if obj is a bounds object, null otherwise
 	 */
-	@SuppressWarnings("unchecked")
 	static  Range fromOpenRange(JsonObject obj) {
 
 		Optional<String> propname = obj.keySet().stream()
@@ -277,7 +273,7 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 				.findFirst();
 
 		if (propname.isPresent()) {
-			JsonValue value = obj.get(propname);
+			JsonValue value = obj.get(propname.get());
 			return Value.isAtomicValue(value) ? getRange(propname.get(), (Value.Atomic)Value.Atomic.from(value)) : null;
 		} else {
 			return null;
@@ -502,7 +498,6 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 			return toExpression(Formatter.DEFAULT);
 		}
 		
-		@SuppressWarnings("unchecked")
 		public Range bind(Value.MapValue parameters) {
 			if (value.type == Value.Type.PARAM) {
 				Param param = (Param)((Value.Atomic)this.value).value;
@@ -1281,6 +1276,10 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 		private static final String REGEX_MULTI=".*";
 		private static final String REGEX_SINGLE=".";
 		public static final String OPERATOR="like";
+		
+		public static boolean isTemplate(String template) {
+			return template.contains("*") || template.contains("?");
+		}
 		
 		private static String nextSeq(String string) {
 			int end = string.length() - 1;

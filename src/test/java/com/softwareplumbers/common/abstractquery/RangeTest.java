@@ -728,4 +728,11 @@ public class RangeTest {
     	assertTrue(result instanceof Intersection);
     	// Add more cases
     }
+    
+    @Test public void testLikeWithNoWildcardsIsEquals() {
+    	Range range = Range.like("def");
+    	Range range1 = Range.equals(Value.from("def"));
+    	assertEquals(range, range1);
+    	
+    }
 }
