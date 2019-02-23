@@ -432,4 +432,10 @@ public class QueryTest {
 		ObjectConstraint query2 = ObjectConstraint.from(QualifiedName.of("a","b","c"), Range.equals(Value.from("d")));
 		assertEquals(query1.toString(), query2.toString());
 	}
+	
+	@Test
+	public void testOutputUnbounded() {
+		assertEquals("<unbounded>", ObjectConstraint.UNBOUNDED.toString());
+		assertEquals("<unbounded>", ObjectConstraint.from("test", ArrayConstraint.match(ObjectConstraint.UNBOUNDED)).toString());
+	}
 }

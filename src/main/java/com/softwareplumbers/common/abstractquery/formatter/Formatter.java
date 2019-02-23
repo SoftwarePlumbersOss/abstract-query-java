@@ -100,7 +100,7 @@ public interface Formatter<T,U> {
 
 		@Override
 		public String unbounded(Context context) {
-			return "";
+			return "<unbounded>";
 		}
 	};
 

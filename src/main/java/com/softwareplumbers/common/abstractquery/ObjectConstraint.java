@@ -46,7 +46,7 @@ public interface ObjectConstraint extends AbstractSet<Value.MapValue, ObjectCons
 	default Factory<Value.MapValue, ObjectConstraint> getFactory() {
 		return FACTORY;
 	}
-	
+		
 	ObjectConstraint maybeUnion(ObjectConstraint other);
 
 	public static class Impl implements ObjectConstraint {
@@ -249,7 +249,6 @@ public interface ObjectConstraint extends AbstractSet<Value.MapValue, ObjectCons
 
 	/** Convert to a formatted string 
 	 *
-	 * Equivalent to .toJSON().toString()
 	 * 
 	 */
 	public String toString() {
@@ -387,6 +386,8 @@ public interface ObjectConstraint extends AbstractSet<Value.MapValue, ObjectCons
 		@Override	public AbstractSet<? extends Value, ?> getConstraint(String dimension) { return null; }
 		@Override	public Set<String> getConstraints() { return Collections.emptySet(); }		
 		@Override  	public ObjectConstraint maybeUnion(ObjectConstraint other) { return this; }
+		@Override  	public String toString() { return toExpression(Formatter.DEFAULT); }
+
 	}
 	
 	public class Empty implements ObjectConstraint {
@@ -404,6 +405,7 @@ public interface ObjectConstraint extends AbstractSet<Value.MapValue, ObjectCons
 		@Override	public AbstractSet<? extends Value, ?> getConstraint(String dimension) { return null; }
 		@Override	public Set<String> getConstraints() { return Collections.emptySet(); }		
 		@Override  	public ObjectConstraint maybeUnion(ObjectConstraint other) { return other; }
+		@Override  	public String toString() { return toExpression(Formatter.DEFAULT); }
 	}
 	
 	public class UnionCube extends Union<MapValue,ObjectConstraint> implements ObjectConstraint {
@@ -474,6 +476,9 @@ public interface ObjectConstraint extends AbstractSet<Value.MapValue, ObjectCons
 	}
 	
 	public static ObjectConstraint from(String dimension, AbstractSet<? extends Value, ?> constraint) {
+		if (constraint == null) throw new IllegalArgumentException("Can't create from a null constraint");
+		if (dimension == null) throw new IllegalArgumentException("Can't create from a null dimension");
+		if (constraint.isUnconstrained()) return UNBOUNDED;
 		return new Impl(dimension, constraint);
 	}
 	
@@ -486,6 +491,8 @@ public interface ObjectConstraint extends AbstractSet<Value.MapValue, ObjectCons
 	 * @return an ObjectContraint
 	 */
 	public static ObjectConstraint from(QualifiedName dimension, AbstractSet<? extends Value, ?> constraint) {
+		if (constraint == null) throw new IllegalArgumentException("Can't create from a null constraint");
+		if (dimension == null || dimension.isEmpty()) throw new IllegalArgumentException("Can't create from a null  or empty dimension");
 		ObjectConstraint result =  from(dimension.part, constraint);
 		dimension = dimension.parent;
 		while (!dimension.isEmpty()) {
