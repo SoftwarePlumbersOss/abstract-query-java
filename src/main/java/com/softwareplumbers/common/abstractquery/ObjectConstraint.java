@@ -1,30 +1,21 @@
 package com.softwareplumbers.common.abstractquery;
 
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.function.Function;
-import java.util.stream.Collector;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
-import javax.json.Json;
 import javax.json.JsonArray;
-import javax.json.JsonObjectBuilder;
 import javax.json.JsonValue;
 
 import com.softwareplumbers.common.abstractquery.Value.MapValue;
-import com.softwareplumbers.common.abstractquery.Value.Type;
 import com.softwareplumbers.common.abstractquery.formatter.Context;
 import com.softwareplumbers.common.abstractquery.formatter.Formatter;
+import com.softwareplumbers.common.QualifiedName;
 
 import javax.json.JsonObject;
 
@@ -484,6 +475,24 @@ public interface ObjectConstraint extends AbstractSet<Value.MapValue, ObjectCons
 	
 	public static ObjectConstraint from(String dimension, AbstractSet<? extends Value, ?> constraint) {
 		return new Impl(dimension, constraint);
+	}
+	
+	/** Create a constraint using a qualified name.
+	 * 
+	 * Given qualified name a.b.c; from(qualifiedname, range) == from(a,from(b,from(c, range)))
+	 * 
+	 * @param dimension Qualified name to constrain
+	 * @param constraint constraint to apply
+	 * @return an ObjectContraint
+	 */
+	public static ObjectConstraint from(QualifiedName dimension, AbstractSet<? extends Value, ?> constraint) {
+		ObjectConstraint result =  from(dimension.part, constraint);
+		dimension = dimension.parent;
+		while (!dimension.isEmpty()) {
+			result = from(dimension.part, result);
+			dimension = dimension.parent;
+		}
+		return result;
 	}
 	
 	public static ObjectConstraint from(JsonObject object)  {

@@ -22,6 +22,7 @@ repositories {
     // Use jcenter for resolving your dependencies.
     // You can declare any Maven/Ivy/file repository here.
 	maven { url propValue("proxyMavenCentral", "https://repo.maven.apache.org/maven2/") }
+	maven { url "https://nexus.softwareplumbers.com/repository/maven-oss" }
 }
 
 uploadArchives {
@@ -38,6 +39,8 @@ dependencies {
 
 	compile group: 'javax.json', name: 'javax.json-api', version: '1.1.2'
 	compile group: 'commons-beanutils', name: 'commons-beanutils', version: '1.9.3'
+	compile group: 'com.softwareplumbers.oss', name: 'qualified-name', version: '0.0.12'
+	
 	
     // Use JUnit test framework
     testImplementation 'junit:junit:4.12'

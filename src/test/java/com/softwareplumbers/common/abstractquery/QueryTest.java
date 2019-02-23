@@ -2,6 +2,7 @@ package com.softwareplumbers.common.abstractquery;
 
 import org.junit.runner.RunWith;
 
+import com.softwareplumbers.common.QualifiedName;
 import com.softwareplumbers.common.abstractquery.formatter.Formatter;
 
 import org.junit.Test;
@@ -423,6 +424,12 @@ public class QueryTest {
 	@Test
 	public void canOutputExpressionWithLike() {
 		ObjectConstraint query = ObjectConstraint.from("x", Range.like("abc*"));
-		System.out.println(query.toExpression(Formatter.DEFAULT));
+	}
+	
+	@Test
+	public void testEquivalenceOfQualifedName() {
+		ObjectConstraint query1 = ObjectConstraint.from("a", ObjectConstraint.from("b", ObjectConstraint.from("c", Range.equals(Value.from("d")))));
+		ObjectConstraint query2 = ObjectConstraint.from(QualifiedName.of("a","b","c"), Range.equals(Value.from("d")));
+		assertEquals(query1.toString(), query2.toString());
 	}
 }
