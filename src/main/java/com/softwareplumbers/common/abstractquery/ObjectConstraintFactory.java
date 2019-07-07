@@ -5,8 +5,9 @@ import java.util.List;
 
 import com.softwareplumbers.common.abstractquery.ObjectConstraint.Impl;
 import com.softwareplumbers.common.abstractquery.ObjectConstraint.UnionCube;
+import javax.json.JsonObject;
 
-public class ObjectConstraintFactory extends Factory<Value.MapValue, ObjectConstraint> {
+public class ObjectConstraintFactory extends Factory<JsonObject, ObjectConstraint> {
 
 	@Override
 	public ObjectConstraint intersect(List<ObjectConstraint> cubes) {

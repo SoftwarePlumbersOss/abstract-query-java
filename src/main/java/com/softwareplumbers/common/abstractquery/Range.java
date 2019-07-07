@@ -15,11 +15,10 @@ import javax.json.JsonObject;
 import javax.json.JsonObjectBuilder;
 import javax.json.JsonValue;
 
-import com.softwareplumbers.common.abstractquery.Value.Atomic;
-import com.softwareplumbers.common.abstractquery.Value.MapValue;
-import com.softwareplumbers.common.abstractquery.Value.Type;
 import com.softwareplumbers.common.abstractquery.formatter.Context;
 import com.softwareplumbers.common.abstractquery.formatter.Formatter;
+import javax.json.JsonString;
+import javax.json.JsonValue.ValueType;
 
 /** Range is an abstract class representing a range of values.
  *
@@ -33,13 +32,13 @@ import com.softwareplumbers.common.abstractquery.formatter.Formatter;
  * usually of some subclass of range).
  *
  */
-public interface Range extends AbstractSet<Value.Atomic, Range> {
+public interface Range extends AbstractSet<JsonValue, Range> {
 	
 	public static final RangeFactory FACTORY = new RangeFactory();
 	
 	public Range maybeUnion(Range other);
 	public Range maybeIntersect(Range other);
-	public Value.Type getType();
+	public ValueType getType();
 	
 	public default boolean equals(Range other) {
 		Boolean mightEqual = maybeEquals(other);
@@ -67,10 +66,10 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 	}
 
 	public default Range bind(String params) {
-		return this.bind(Value.MapValue.fromJson(params));
+		return this.bind(JsonUtil.parseObject(params));
 	}
 	
-	public default Factory<Value.Atomic, Range> getFactory() {
+	public default Factory<JsonValue, Range> getFactory() {
 		return FACTORY;
 	}
 	
@@ -85,14 +84,14 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 	 * | "="			 | Range.equal 				|
 	 * | "$like"         | Range.like               |
 	 */
-	static Range getRange(String operator, Value.Atomic value) {
+	static Range getRange(String operator, JsonValue value) {
 		switch(operator) {
 			case ">" : return Range.greaterThan(value);
 			case "<" : return Range.lessThan(value);
 			case ">=" : return Range.greaterThanOrEqual(value);
 			case "<=" : return Range.lessThanOrEqual(value);
 			case "=" : return Range.equals(value);
-			case "$like" : return Range.like((String)value.value);
+			case "$like" : return Range.like(((JsonString)value).getString());
 		}
 		throw new IllegalArgumentException("Invalid operator" +  operator);
 	}
@@ -114,7 +113,7 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 	 * @param value - value to search for
 	 * @return a Range object
 	 */
-	public static Range equals(Value.Atomic value) 				
+	public static Range equals(JsonValue value) 				
 	{ return new Equals(value); }
 
 	/** Create a range containing values less than a given value 
@@ -122,28 +121,28 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 	 * @param value - value to search for
 	 * @return a Range object
 	 */
-	public static  Range lessThan(Value.Atomic value) 		
+	public static  Range lessThan(JsonValue value) 		
 	{ return new LessThan(value); }
 
 	/** Create a range containing values less than or equal to a given value 
 	 * @param value - value to search for
 	 * @return a Range object
 	 */
-	public static  Range lessThanOrEqual(Value.Atomic value) 		
+	public static  Range lessThanOrEqual(JsonValue value) 		
 	{ return new LessThanOrEqual(value); }
 
 	/** Create a range containing values greater than a given value 
 	 * @param value - value to search for
 	 * @return a Range object
 	 */		
-	public static  Range greaterThan(Value.Atomic value) 	
+	public static  Range greaterThan(JsonValue value) 	
 	{ return new GreaterThan(value); }
 
 	/** Create a range containing values greater than or equal to a given value 
 	 * @param value - value to search for
 	 * @return a Range object
 	 */		
-	public static  Range greaterThanOrEqual(Value.Atomic value)  	
+	public static  Range greaterThanOrEqual(JsonValue value)  	
 	{ return new GreaterThanOrEqual(value); }
 
 	/** Create a range containing values between the given values
@@ -152,7 +151,7 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 	 * @param upper - upper range boundary (exclusive by default)
 	 * @return a Range object
 	 */
-	public static  Range between(Value.Atomic lower, Value.Atomic upper)	{ 
+	public static  Range between(JsonValue lower, JsonValue upper)	{ 
 
 		Range lowerr = greaterThanOrEqual(lower);
 		Range upperr = lessThan(upper);
@@ -171,7 +170,7 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 		if (Like.isTemplate(template))
 			return new Like(template);
 		else
-			return new Equals(Value.from(template));
+			return new Equals(Json.createValue(template));
 	}
 	
 	/**
@@ -187,7 +186,8 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 		if (upper instanceof GreaterThan) return null;
 		if (lower instanceof OpenRange 
 			&& upper instanceof OpenRange
-			&& ((OpenRange)lower).value.lessThan(((OpenRange)upper).value) != Boolean.FALSE)
+			//&& ((OpenRange)lower).value.lessThan(((OpenRange)upper).value) != Boolean.FALSE)
+            && Tristate.isLessThan(JsonUtil.maybeCompare(((OpenRange)lower).value, ((OpenRange)upper).value)) != Boolean.FALSE) 
 			return new Between((OpenRange)lower, (OpenRange)upper);
 		return null;
 	}
@@ -203,24 +203,24 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 	 * @return true if obj has operator property.
 	 */
 	static boolean isRange(JsonValue obj)	{ 
-		return isOpenRange(obj) || isClosedRange(obj) || Value.isAtomicValue(obj);
+		return isOpenRange(obj) || isClosedRange(obj) || JsonUtil.isAtomicValue(obj);
 	}
 
 	static boolean isOpenRange(JsonValue obj)	{ 
 		if (obj instanceof JsonObject) {
 			JsonObject asObj = (JsonObject)obj;
 			return asObj.keySet().stream()
-					.anyMatch(key -> validOperator(key) && Value.isAtomicValue(asObj.get(key)));
+					.anyMatch(key -> validOperator(key) && JsonUtil.isAtomicValue(asObj.get(key)));
 		}
 		return false;
 	}
 
 	static boolean isOpenRangeOrValue(JsonValue obj)	{ 
-		return Value.isAtomicValue(obj) || isOpenRange(obj);
+		return JsonUtil.isAtomicValue(obj) || isOpenRange(obj);
 	}
 
 	static boolean isOpenRangeValueOrNull(JsonValue obj)	{ 
-		return obj == JsonValue.NULL || Value.isAtomicValue(obj) || isOpenRange(obj);
+		return obj == JsonValue.NULL || JsonUtil.isAtomicValue(obj) || isOpenRange(obj);
 	}
 	static boolean isClosedRange(JsonValue obj) {
 		if (obj instanceof JsonArray) {
@@ -237,7 +237,7 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 	 * @param  obj
 	 * @return  a range if obj is a bounds object, null otherwise
 	 */
-	static  Range fromOpenRangeOrValue(JsonValue obj, Function<Value.Atomic,Range> operator) {
+	static  Range fromOpenRangeOrValue(JsonValue obj, Function<JsonValue,Range> operator) {
 
 		if (obj instanceof JsonObject) {
 
@@ -248,16 +248,16 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 
 			if (propname.isPresent()) {
 				JsonValue value = asObj.get(propname.get());
-				return Value.isAtomicValue(value) ? getRange(propname.get(), (Value.Atomic)Value.Atomic.from(value)) : null;
+				return JsonUtil.isAtomicValue(value) ? getRange(propname.get(), value) : null;
 			} else if (asObj.containsKey("$")) {
-				return operator.apply((Value.Atomic)Value.Atomic.from(asObj));
+				return operator.apply(obj);
 			} else {
 				return null;
 			}
 		} else if (obj == JsonValue.NULL) {
 			return UNBOUNDED;
 		} else {
-			return operator.apply((Atomic)Value.Atomic.from(obj));
+			return operator.apply(obj);
 		}
 	}
 
@@ -274,7 +274,7 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 
 		if (propname.isPresent()) {
 			JsonValue value = obj.get(propname.get());
-			return Value.isAtomicValue(value) ? getRange(propname.get(), (Value.Atomic)Value.Atomic.from(value)) : null;
+			return JsonUtil.isAtomicValue(value) ? getRange(propname.get(), value) : null;
 		} else {
 			return null;
 		}
@@ -348,7 +348,7 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 			return true;
 		}
 
-		public Boolean containsItem(Value.Atomic item) {
+		public Boolean containsItem(JsonValue item) {
 			return true;
 		}
 
@@ -370,10 +370,6 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 			// TODO: fixme
 			return null;
 		}
-
-		public Range bind(Value.MapValue parameters) {
-			return this;
-		}
 		
 		public Range maybeUnion(Range other) {
 			return this;
@@ -387,8 +383,12 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 			return toExpression(Formatter.DEFAULT);
 		}
 		
-		public Value.Type getType() {
+		public ValueType getType() {
 			return null;
+		}
+        
+        public Range bind(JsonObject parameters) {
+			return this;
 		}
 	}
 	
@@ -410,7 +410,7 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 			return Boolean.FALSE;
 		}
 
-		public Boolean containsItem(Value.Atomic item) {
+		public Boolean containsItem(JsonValue item) {
 			return Boolean.FALSE;
 		}
 
@@ -419,7 +419,7 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 		}
 		
 		public <U,V> U toExpression(Formatter<U,V> formatter, Context context)	{ 
-			return formatter.operExpr(context, "=", Value.from("[]")); 
+			return formatter.operExpr(context, "=", Json.createValue("[]")); 
 		}
 
 		public Boolean maybeEquals(Range range)	{ return range instanceof Empty; }
@@ -433,7 +433,7 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 			return null;
 		}
 
-		public Range bind(Value.MapValue parameters) {
+		public Range bind(JsonObject parameters) {
 			return this;
 		}
 		
@@ -449,7 +449,7 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 			return toExpression(Formatter.DEFAULT);
 		}
 		
-		public Value.Type getType() {
+		public ValueType getType() {
 			return null;
 		}
 	}
@@ -461,9 +461,9 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 	public static abstract class OpenRange implements Range {
 
 		protected String operator;
-		protected Value.Atomic value;
+		protected JsonValue value;
 
-		public OpenRange(String operator, Value.Atomic value) {
+		public OpenRange(String operator, JsonValue value) {
 			super();
 			this.value = value;
 			this.operator = operator;
@@ -476,7 +476,7 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 		public Boolean maybeEquals(Range range)	{ 
 			if (range instanceof OpenRange) {
 				if (this.operator.equals(((OpenRange)range).operator)) 
-					return value.maybeEquals(((OpenRange)range).value);
+					return JsonUtil.maybeEquals(value, ((OpenRange)range).value);
 				else
 					return false;
 			}
@@ -490,7 +490,7 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 
 		public JsonValue toJSON() {
 			JsonObjectBuilder builder = Json.createObjectBuilder();
-			builder.add(this.operator, this.value.toJSON());
+			builder.add(this.operator, this.value);
 			return builder.build();
 		}
 		
@@ -498,20 +498,19 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 			return toExpression(Formatter.DEFAULT);
 		}
 		
-		public Range bind(Value.MapValue parameters) {
-			if (value.type == Value.Type.PARAM) {
-				Param param = (Param)((Value.Atomic)this.value).value;
-				//TODO: Ranges should have a type?
-				if (parameters.hasProperty(param.name)) {
-					Value.Atomic value = (Atomic) parameters.getProperty(param.name);
+		public Range bind(JsonObject parameters) {
+			if (Param.isParam(value)) {
+                String key = Param.getKey(value);
+				if (parameters.containsKey(key)) {
+					JsonValue value = parameters.get(key);
 					return getRange(operator, value);
 				}
 			}
 			return this;
 		}
 		
-		public Value.Type getType() {
-			return value.type;
+		public ValueType getType() {
+			return value.getValueType();
 		}
 	}
 
@@ -535,7 +534,7 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 			return Tristate.and(this.lower_bound.contains(range), this.upper_bound.contains(range));
 		}
 
-		public Boolean containsItem(Value.Atomic item) {
+		public Boolean containsItem(JsonValue item) {
 			return this.lower_bound.containsItem(item) && this.upper_bound.containsItem(item);
 		}
 
@@ -615,12 +614,12 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 			JsonArrayBuilder builder = Json.createArrayBuilder();
 
 			if (this.lower_bound instanceof GreaterThanOrEqual)
-				builder.add(((GreaterThanOrEqual)lower_bound).value.toJSON());
+				builder.add(((GreaterThanOrEqual)lower_bound).value);
 			else  
 				builder.add(lower_bound.toJSON());
 
 			if (this.upper_bound instanceof LessThan)
-				builder.add(((LessThan)upper_bound).value.toJSON());
+				builder.add(((LessThan)upper_bound).value);
 			else  
 				builder.add(upper_bound.toJSON());
 
@@ -631,7 +630,7 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 			return toExpression(Formatter.DEFAULT);
 		}
 
-		public Range bind(Value.MapValue parameters) {
+		public Range bind(JsonObject parameters) {
 			Range new_lower_bound = lower_bound.bind(parameters);
 			Range new_upper_bound = upper_bound.bind(parameters);
 			if (lower_bound == new_lower_bound && upper_bound == new_upper_bound) return this;
@@ -670,8 +669,8 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 
 		}
 		
-		public Value.Type getType() {
-			if (lower_bound.getType() != null && lower_bound.getType() != Value.Type.PARAM) return lower_bound.getType();
+		public ValueType getType() {
+			if (lower_bound.getType() != null) return lower_bound.getType();
 			return upper_bound.getType();
 		}
 	}
@@ -683,9 +682,9 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 		
 		public static final String OPERATOR = "=";
 
-		Value.Atomic value;
+		JsonValue value;
 
-		public Equals(Value.Atomic value) {
+		public Equals(JsonValue value) {
 			this.value = value;
 		}
 
@@ -696,8 +695,8 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 		}
 
 
-		public Boolean containsItem(Value.Atomic item) {
-			return value.maybeEquals(item);
+		public Boolean containsItem(JsonValue item) {
+			return JsonUtil.maybeEquals(value, item);
 		}
 
 		public Range maybeIntersect(Range range) {
@@ -725,7 +724,7 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 
 		public Boolean maybeEquals(Range range) {
 			if (range instanceof Equals) {
-				Boolean result = value.maybeEquals(((Equals)range).value);
+				Boolean result = JsonUtil.maybeEquals(value, ((Equals)range).value);
 				return result;
 			} else
 				return Boolean.FALSE;
@@ -737,19 +736,19 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 
 
 		public JsonValue toJSON() {
-			return value.toJSON();
+			return value;
 		}
 
-		public Range bind(Value.MapValue parameters) {
-			if (value.type == Value.Type.PARAM) {
-				Param param = (Param)((Value.Atomic)value).value;
-				Value.Atomic new_value = (Value.Atomic)parameters.getProperty(param.name);
+		public Range bind(JsonObject parameters) {
+			if (Param.isParam(value)) {
+                String key = Param.getKey(value);
+				JsonValue new_value = parameters.get(key);
 				if (new_value != null) return new Equals(new_value);
 			}
 			return this;	
 		}
 		
-		public Value.Type getType() { return value.type; }
+		public ValueType getType() { return Param.isParam(value) ? null : value.getValueType(); }
 	}
 
 	/** Range less than some bound.
@@ -760,7 +759,7 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 
 		public static final String OPERATOR = "<";
 
-		public LessThan(Value.Atomic value) {
+		public LessThan(JsonValue value) {
 			super(OPERATOR, value);
 		}
 
@@ -768,11 +767,13 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 			if (range == UNBOUNDED) return Boolean.FALSE;
 			if (range == EMPTY) return Boolean.FALSE;
 			if (range instanceof Equals)
-				return ((Equals)range).value.lessThan(value);
+				return Tristate.isLessThan(JsonUtil.maybeCompare(((Equals)range).value, value));
 			if (range instanceof LessThanOrEqual) 
-				return ((LessThanOrEqual)range).value.lessThan(value);
+//				return ((LessThanOrEqual)range).value.lessThan(value);
+				return Tristate.isLessThan(JsonUtil.maybeCompare(((LessThanOrEqual)range).value, value));
 			if (range instanceof LessThan) 
-				return ((LessThan)range).value.lessThanOrEqual(value);
+//				return ((LessThan)range).value.lessThanOrEqual(value);
+				return Tristate.isLessThanOrEqual(JsonUtil.maybeCompare(((LessThan)range).value, value));
 			if (range instanceof Between) 
 				return contains(((Between)range).upper_bound);
 			if (range instanceof RangeIntersection) 
@@ -785,8 +786,8 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 			return false; 
 		}
 
-		public Boolean containsItem(Value.Atomic item) {
-			return item.lessThan(this.value);
+		public Boolean containsItem(JsonValue item) {
+			return Tristate.isLessThan(JsonUtil.maybeCompare(item,this.value));
 		}
 		
 		public Boolean intersects(Range range) {
@@ -797,9 +798,11 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 			if (range instanceof LessThan || range instanceof LessThanOrEqual) 
 				return Boolean.TRUE;
 			if (range instanceof GreaterThan || range instanceof GreaterThanOrEqual) 
-				return ((OpenRange)range).value.lessThan(value);
+//				return ((OpenRange)range).value.lessThan(value);
+				return Tristate.isLessThan(JsonUtil.maybeCompare(((OpenRange)range).value, value));
 			if (range instanceof Equals) 
-				return ((Equals)range).value.lessThan(value);
+//				return ((Equals)range).value.lessThan(value);
+				return Tristate.isLessThan(JsonUtil.maybeCompare(((Equals)range).value, value));
 			if (range instanceof Like)
 				return range.intersects(this);
 
@@ -816,7 +819,8 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 			// a < x && a < y  -> a < x if x <= y, a < y otherwise
 			// a < x && a <= y -> a < x if x <= y, a <= y otherwise 
 			if (range instanceof LessThan || range instanceof LessThanOrEqual) {			
-				Boolean result = value.lessThanOrEqual(((OpenRange)range).value);
+//				Boolean result = value.lessThanOrEqual(((OpenRange)range).value);
+                Boolean result = Tristate.isLessThanOrEqual(JsonUtil.maybeCompare(value, ((OpenRange)range).value));
 				if (result == null) return null;
 				return result ? this : range;
 			}
@@ -824,14 +828,16 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 			// a < x && a > y -> y<a<x if y < x, null otherwise	
 			// a < x && a >= y -> y<=a<x if y < x, null otherwise	
 			if (range instanceof GreaterThan || range instanceof GreaterThanOrEqual) {
-				Boolean result = ((OpenRange)range).value.lessThan(value);
+				// Boolean result = ((OpenRange)range).value.lessThan(value);
+                Boolean result = Tristate.isLessThan(JsonUtil.maybeCompare(((OpenRange)range).value, value));
 				if (result == Boolean.FALSE) return Range.EMPTY;
 				return new Between((OpenRange)range, this);
 			}
 
 			// a < x && a = y -> a = y if y < x; null otherwise
 			if (range instanceof Equals) {
-				Boolean result = ((Equals)range).value.lessThan(value);
+				//Boolean result = ((Equals)range).value.lessThan(value);
+                Boolean result = Tristate.isLessThan(JsonUtil.maybeCompare(((Equals)range).value, value));
 				if (result == null) return null;
 				return result ? range : Range.EMPTY;
 			}
@@ -853,7 +859,8 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 			if (range instanceof Between) 
 				return (range.intersects(this) == Boolean.TRUE) ? maybeUnion(((Between)range).upper_bound) : null;
 			if (range instanceof LessThan || range instanceof LessThanOrEqual) {
-				Boolean result = value.greaterThan(((OpenRange)range).value);
+				//Boolean result = value.greaterThan(((OpenRange)range).value);
+                Boolean result = Tristate.isGreaterThan(JsonUtil.maybeCompare(value, ((OpenRange)range).value));
 				if (result == null) return null;
 				return result ? this : range;
 			}
@@ -873,7 +880,7 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 
 		public static final String OPERATOR = "<=";
 
-		public LessThanOrEqual(Value.Atomic value) {
+		public LessThanOrEqual(JsonValue value) {
 			super(OPERATOR, value);
 		}
 
@@ -881,9 +888,11 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 			if (range == UNBOUNDED) return Boolean.FALSE;
 			if (range == EMPTY) return Boolean.FALSE;
 			if (range instanceof Equals)
-				return ((Equals)range).value.lessThanOrEqual(this.value);
+				//return ((Equals)range).value.lessThanOrEqual(this.value);
+                return Tristate.isLessThanOrEqual(JsonUtil.maybeCompare(((Equals)range).value, this.value));
 			if (range instanceof LessThan || range instanceof LessThanOrEqual) 
-				return ((OpenRange)range).value.lessThanOrEqual(this.value);
+				//return ((OpenRange)range).value.lessThanOrEqual(this.value);
+                return Tristate.isLessThanOrEqual(JsonUtil.maybeCompare(((OpenRange)range).value, this.value));
 			if (range instanceof Between) 
 				return contains(((Between)range).upper_bound);
 			if (range instanceof RangeIntersection) 
@@ -896,19 +905,22 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 			return false;
 		}
 
-		public Boolean containsItem(Value.Atomic item) {
-			return item.lessThanOrEqual(this.value);
+		public Boolean containsItem(JsonValue item) {
+			//return item.lessThanOrEqual(this.value);
+            return Tristate.isLessThanOrEqual(JsonUtil.maybeCompare(item, this.value));
 		}
 
 		public Boolean intersects(Range range) {
 			if (range == UNBOUNDED) return Boolean.TRUE;
 			if (range == EMPTY) return Boolean.FALSE;
 			if (range instanceof Equals) 
-				return ((Equals)range).value.lessThanOrEqual(value);
+//				return ((Equals)range).value.lessThanOrEqual(value);
+                return Tristate.isLessThanOrEqual(JsonUtil.maybeCompare(((Equals)range).value, this.value));
 			if (range instanceof LessThan || range instanceof LessThanOrEqual) 
 				return Boolean.TRUE;
 			if (range instanceof GreaterThan || range instanceof GreaterThanOrEqual) 
-				return ((OpenRange)range).value.lessThanOrEqual(value);
+//				return ((OpenRange)range).value.lessThanOrEqual(value);
+                return Tristate.isLessThanOrEqual(JsonUtil.maybeCompare(((OpenRange)range).value, this.value));
 			if (range instanceof Between || range instanceof RangeIntersection || range instanceof RangeUnion)
 				return range.intersects(this);
 			if (range instanceof Like)
@@ -929,30 +941,35 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 			// a <= x && a < y  -> a <= x if x < y, a < y otherwise
 			// a <= x && a <= y -> a <= x if x < y, a <= y otherwise 
 			if (range instanceof LessThan || range instanceof LessThanOrEqual) {
-				Boolean result = value.lessThanOrEqual(((OpenRange)range).value);
+//				Boolean result = value.lessThanOrEqual(((OpenRange)range).value);
+                Boolean result = Tristate.isLessThanOrEqual(JsonUtil.maybeCompare(value, ((OpenRange)range).value));
 				if (result == null) return null;
 				return result ? range : EMPTY;
 			}
 
 			// a <= x && a > y -> y<a<=x if y < x, null otherwise	
 			if (range instanceof GreaterThan) {
-				Boolean result = ((OpenRange)range).value.lessThan(value);
+//				Boolean result = ((OpenRange)range).value.lessThan(value);
+                Boolean result = Tristate.isLessThan(JsonUtil.maybeCompare(((OpenRange)range).value, value));
 				if (result == null) return null;
 				return result ? new Between((OpenRange)range, this) : EMPTY;
 			}
 
 			// a <= x && a >= y -> y<=a<=x if y < x, a = x if y = x, null otherwise	
 			if (range instanceof GreaterThanOrEqual) {
-				if (((OpenRange)range).value.maybeEquals(value) == Boolean.TRUE)
+//				if (((OpenRange)range).value.maybeEquals(value) == Boolean.TRUE)
+                if (Tristate.isEqual(JsonUtil.maybeCompare(((OpenRange)range).value, value)) == Boolean.TRUE)
 					return new Equals(value);
-				Boolean result = ((OpenRange)range).value.lessThan(this.value);
+//				Boolean result = ((OpenRange)range).value.lessThan(this.value);
+                Boolean result = Tristate.isLessThan(JsonUtil.maybeCompare(((OpenRange)range).value, value));
 				if (result == Boolean.FALSE) return Range.EMPTY;
 				return new Between((OpenRange)range, this);
 			}
 
 			// a <= x && a = y -> a = y if y <= x; null otherwise
 			if (range instanceof Equals) {
-				Boolean result = ((Equals)range).value.lessThanOrEqual(this.value);
+				//Boolean result = ((Equals)range).value.lessThanOrEqual(this.value);
+                Boolean result = Tristate.isLessThanOrEqual(JsonUtil.maybeCompare(((Equals)range).value, value));
 				if (result == null) return null;
 				return result ? range : EMPTY;
 			}
@@ -975,7 +992,8 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 			if (range instanceof Between)
 				return (range.intersects(this) == Boolean.TRUE) ? maybeUnion(((Between)range).upper_bound) : null;
 			if (range instanceof LessThan || range instanceof LessThanOrEqual) {
-				Boolean result = value.greaterThanOrEqual(((OpenRange)range).value);
+				//Boolean result = value.greaterThanOrEqual(((OpenRange)range).value);
+                Boolean result = Tristate.isGreaterThanOrEqual(JsonUtil.maybeCompare(value, ((OpenRange)range).value));
 				if (result == null) return null;
 				return result ? this : range;
 			}
@@ -995,7 +1013,7 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 
 		public static final String OPERATOR = ">";
 
-		public GreaterThan(Value.Atomic value) {
+		public GreaterThan(JsonValue value) {
 			super(GreaterThan.OPERATOR, value);
 		}
 
@@ -1003,11 +1021,14 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 			if (range == UNBOUNDED) return Boolean.FALSE;
 			if (range == EMPTY) return Boolean.FALSE;
 			if (range instanceof Equals)
-				return ((Equals)range).value.greaterThan(this.value);
+				//return ((Equals)range).value.greaterThan(this.value);
+                return Tristate.isGreaterThan(JsonUtil.maybeCompare(((Equals)range).value, this.value));
 			if (range instanceof GreaterThanOrEqual) 
-				return ((OpenRange)range).value.greaterThan(this.value);
+//				return ((OpenRange)range).value.greaterThan(this.value);
+                return Tristate.isGreaterThan(JsonUtil.maybeCompare(((OpenRange)range).value, this.value));
 			if (range instanceof GreaterThan) 
-				return ((OpenRange)range).value.greaterThanOrEqual(this.value);
+//				return ((OpenRange)range).value.greaterThanOrEqual(this.value);
+                return Tristate.isGreaterThanOrEqual(JsonUtil.maybeCompare(((OpenRange)range).value, this.value));
 			if (range instanceof Between) 
 				return this.contains(((Between)range).lower_bound);
 			if (range instanceof RangeIntersection) 
@@ -1020,8 +1041,9 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 			return false;
 		}
 
-		public Boolean containsItem(Value.Atomic item) {
-			return item.greaterThan(this.value);
+		public Boolean containsItem(JsonValue item) {
+			//return item.greaterThan(this.value);
+            return Tristate.isGreaterThan(JsonUtil.maybeCompare(item, this.value));
 		}
 		
 		public Boolean intersects(Range range) {
@@ -1032,9 +1054,11 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 			if (range instanceof GreaterThan || range instanceof GreaterThanOrEqual) 
 				return Boolean.TRUE;
 			if (range instanceof LessThan || range instanceof LessThanOrEqual) 
-				return ((OpenRange)range).value.greaterThan(value);
+				//return ((OpenRange)range).value.greaterThan(value);
+                return Tristate.isGreaterThan(JsonUtil.maybeCompare(((OpenRange)range).value, this.value));
 			if (range instanceof Equals) 
-				return ((Equals)range).value.greaterThan(value);
+				//return ((Equals)range).value.greaterThan(value);
+                return Tristate.isGreaterThan(JsonUtil.maybeCompare(((Equals)range).value, this.value));
 			if (range instanceof Like)
 				return range.intersects(this);
 
@@ -1052,7 +1076,8 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 			// a > x && a > y  -> a > x if x >= y, a > y otherwise
 			// a > x && a >= y -> a < x if x >= y, a >= y otherwise 
 			if (range instanceof GreaterThan || range instanceof GreaterThanOrEqual) {
-				Boolean result = (this.value.greaterThanOrEqual(((OpenRange)range).value));
+				//Boolean result = (this.value.greaterThanOrEqual(((OpenRange)range).value));
+                Boolean result = Tristate.isGreaterThanOrEqual(JsonUtil.maybeCompare(this.value, ((OpenRange)range).value));
 				if (result == null) return null;
 				return result ? this : range;
 			}
@@ -1060,14 +1085,16 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 			// a > x && a < y -> x<a<y if x < y, null otherwise	
 			// a > x && a <= y -> x<a<=y if x < y, null otherwise	
 			if (range instanceof LessThan || range instanceof LessThanOrEqual) {
-				Boolean result = (this.value.lessThan(((OpenRange)range).value));
+				//Boolean result = (this.value.lessThan(((OpenRange)range).value));
+                Boolean result = Tristate.isLessThan(JsonUtil.maybeCompare(this.value, ((OpenRange)range).value));
 				if (result == Boolean.FALSE) return Range.EMPTY;
 				return new Between(this, (OpenRange)range);
 			}
 
 			// a > x && a = y -> a = y if y > x; null otherwise
 			if (range instanceof Equals) {
-				Boolean result = (((Equals)range).value.greaterThan(value));
+				//Boolean result = (((Equals)range).value.greaterThan(value));
+                Boolean result = Tristate.isGreaterThan(JsonUtil.maybeCompare(((Equals)range).value, this.value));
 				if (result == null) return null;
 				return result ? range : EMPTY;
 			}
@@ -1090,7 +1117,8 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 			if (range instanceof Between)
 				return (range.intersects(this) == Boolean.TRUE) ? maybeUnion(((Between)range).upper_bound) : null;
 			if (range instanceof GreaterThan || range instanceof GreaterThanOrEqual) {
-				Boolean result = value.lessThan(((OpenRange)range).value);
+				//Boolean result = value.lessThan(((OpenRange)range).value);
+                Boolean result = Tristate.isLessThan(JsonUtil.maybeCompare(this.value, ((OpenRange)range).value));
 				if (result == null) return null;
 				return result ? this : range;
 			}
@@ -1110,7 +1138,7 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 
 		public static String OPERATOR = ">=";
 
-		public GreaterThanOrEqual(Value.Atomic value) {
+		public GreaterThanOrEqual(JsonValue value) {
 			super(GreaterThanOrEqual.OPERATOR, value);
 		}
 
@@ -1119,9 +1147,11 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 			if (range == UNBOUNDED) return Boolean.FALSE;
 			if (range == EMPTY) return Boolean.FALSE;
 			if (range instanceof Equals)
-				return ((Equals)range).value.greaterThanOrEqual(this.value);
+				//return ((Equals)range).value.greaterThanOrEqual(this.value);
+                return Tristate.isGreaterThanOrEqual(JsonUtil.maybeCompare(((Equals)range).value, this.value));
 			if (range instanceof GreaterThan  || range instanceof GreaterThanOrEqual) 
-				return ((OpenRange)range).value.greaterThanOrEqual(this.value);
+				//return ((OpenRange)range).value.greaterThanOrEqual(this.value);
+                return Tristate.isGreaterThanOrEqual(JsonUtil.maybeCompare(((OpenRange)range).value, this.value));
 			if (range instanceof Between) 
 				return this.contains(((Between)range).lower_bound);
 			if (range instanceof RangeIntersection) 
@@ -1133,8 +1163,9 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 			return false;
 		}
 
-		public Boolean containsItem(Value.Atomic item) {
-			return item.greaterThanOrEqual(this.value);
+		public Boolean containsItem(JsonValue item) {
+			//return item.greaterThanOrEqual(this.value);
+            return Tristate.isGreaterThanOrEqual(JsonUtil.maybeCompare(item, this.value));
 		}
 
 		public Boolean intersects(Range range) {
@@ -1145,9 +1176,11 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 			if (range instanceof GreaterThan || range instanceof GreaterThanOrEqual) 
 				return Boolean.TRUE;
 			if (range instanceof LessThan || range instanceof LessThanOrEqual) 
-				return ((OpenRange)range).value.greaterThanOrEqual(value);
+				//return ((OpenRange)range).value.greaterThanOrEqual(value);
+                return Tristate.isGreaterThanOrEqual(JsonUtil.maybeCompare(((OpenRange)range).value, this.value));
 			if (range instanceof Equals) 
-				return ((Equals)range).value.greaterThanOrEqual(value);
+				//return ((Equals)range).value.greaterThanOrEqual(value);
+                return Tristate.isGreaterThanOrEqual(JsonUtil.maybeCompare(((Equals)range).value, this.value));
 			if (range instanceof Like)
 				return range.intersects(this);
 
@@ -1166,23 +1199,27 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 			// a >= x && a > y  -> a >= x if x > y, a > y otherwise
 			// a >= x && a >= y -> a >= x if x > y, a >= y otherwise 
 			if (range instanceof GreaterThan || range instanceof GreaterThanOrEqual) {
-				Boolean result = this.value.greaterThanOrEqual(((OpenRange)range).value);
+				//Boolean result = this.value.greaterThanOrEqual(((OpenRange)range).value);
+                Boolean result = Tristate.isGreaterThanOrEqual(JsonUtil.maybeCompare(this.value, ((OpenRange)range).value));
 				if (result == null) return null;
 				return result ?this:range;
 			}
 
 			// a >= x && a < y -> x<=a<y if y > x, null otherwise	
 			if (range instanceof LessThan) {
-				Boolean result = (((OpenRange)range).value.greaterThan(this.value));
+				//Boolean result = (((OpenRange)range).value.greaterThan(this.value));
+                Boolean result = Tristate.isGreaterThan(JsonUtil.maybeCompare(((OpenRange)range).value, this.value));
 				if (result == null) return null;
 				return result ? new Between(this,(OpenRange)range) : EMPTY;
 			}
 
 			// a >= x && a <= y -> x<=a<=y if y > x, a = x if y = x, null otherwise	
 			if (range instanceof LessThanOrEqual) {
-				if (((OpenRange)range).value.maybeEquals(this.value) == Boolean.TRUE)
+				//if (((OpenRange)range).value.maybeEquals(this.value) == Boolean.TRUE)
+                if (Tristate.isEqual(JsonUtil.maybeCompare(((OpenRange)range).value, this.value)) == Boolean.TRUE)
 					return new Equals(value);
-				Boolean result = ((OpenRange)range).value.greaterThan(this.value);
+				//Boolean result = ((OpenRange)range).value.greaterThan(this.value);
+                Boolean result = Tristate.isGreaterThan(JsonUtil.maybeCompare(((OpenRange)range).value, this.value));
 				if (result == Boolean.FALSE) return Range.EMPTY;
 				return new Between(this, (OpenRange)range);
 
@@ -1190,7 +1227,8 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 
 			// a >= x && a = y -> a = y if y >= x; null otherwise
 			if (range instanceof Equals) {
-				Boolean result = (((Equals)range).value.greaterThanOrEqual(this.value)); 
+				//Boolean result = (((Equals)range).value.greaterThanOrEqual(this.value)); 
+                Boolean result = Tristate.isGreaterThanOrEqual(JsonUtil.maybeCompare(((Equals)range).value, this.value));
 				if (result == null) return null;
 				return result ? range : EMPTY;
 			}
@@ -1212,7 +1250,8 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 			if (range instanceof Between)
 				return (range.intersects(this) == Boolean.TRUE) ? maybeUnion(((Between)range).upper_bound) : null;
 			if (range instanceof GreaterThan || range instanceof GreaterThanOrEqual) {
-				Boolean result = value.lessThanOrEqual(((OpenRange)range).value);
+				//Boolean result = value.lessThanOrEqual(((OpenRange)range).value);
+                Boolean result = Tristate.isLessThanOrEqual(JsonUtil.maybeCompare(this.value, ((OpenRange)range).value));
 				if (result == null) return null;
 				return result ? this : range;
 			}
@@ -1224,13 +1263,14 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 	}
 		
 	
-	public static Value.Type getType(Collection<Range> range) {
-		Predicate<Value.Type> useful_type = type -> (type != Value.Type.PARAM && type != null);
+	public static ValueType getType(Collection<Range> range) {
+		Predicate<ValueType> useful_type = type -> (type != null);
 		return range.stream().map(Range::getType).filter(useful_type).findAny().orElse(null);
 	}
 		
-	public static class RangeUnion extends Union<Value.Atomic, Range> implements Range   {
-		public RangeUnion(List<Range> range) {
+	public static class RangeUnion extends Union<JsonValue, Range> implements Range   {
+		
+        public RangeUnion(List<Range> range) {
 			super(Range.getType(range), range);
 		}
 		
@@ -1247,7 +1287,7 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 		}
 	}
 	
-	public static class RangeIntersection extends Intersection<Value.Atomic, Range> implements Range {
+	public static class RangeIntersection extends Intersection<JsonValue, Range> implements Range {
 
 		
 		public RangeIntersection(List<Range> range) {
@@ -1308,7 +1348,7 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 			} else {
 				String lower_bound = template.substring(0, first_wildcard);
 				String upper_bound = nextSeq(lower_bound);
-				this.bounds = between(Value.from(lower_bound),Value.from(upper_bound));
+				this.bounds = between(Json.createValue(lower_bound), Json.createValue(upper_bound));
 			} 
 			
 			String regex = template.replace("*", REGEX_MULTI);
@@ -1324,13 +1364,13 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 		}
 
 		@Override
-		public Boolean containsItem(Atomic item) {
-			if (item.type == Value.Type.STRING) {
-				Matcher matcher = pattern.matcher((String)item.value);
+		public Boolean containsItem(JsonValue item) {
+            if (Param.isParam(item))
+                return null;
+            
+			if (item.getValueType() == ValueType.STRING) {
+				Matcher matcher = pattern.matcher(((JsonString)item).getString());
 				return matcher.matches();
-			}
-			if (item.type == Value.Type.PARAM) {
-				return null;
 			}
 			return Boolean.FALSE;
 		}
@@ -1354,7 +1394,7 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 
 		@Override
 		public <X, V> X toExpression(Formatter<X, V> formatter, Context context) {
-			return formatter.operExpr(context, OPERATOR, Value.from(this.template)); 
+			return formatter.operExpr(context, OPERATOR, Json.createValue(this.template)); 
 		}
 
 		@Override
@@ -1363,7 +1403,7 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 		}
 
 		@Override
-		public Range bind(MapValue values) {
+		public Range bind(JsonObject values) {
 			return this;
 		}
 
@@ -1382,8 +1422,8 @@ public interface Range extends AbstractSet<Value.Atomic, Range> {
 		}
 
 		@Override
-		public Type getType() {
-			return Value.Type.STRING;
+		public ValueType getType() {
+			return ValueType.STRING;
 		}
 		
 	}

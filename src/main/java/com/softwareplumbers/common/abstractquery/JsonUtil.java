@@ -1,13 +1,17 @@
 package com.softwareplumbers.common.abstractquery;
 
+import com.softwareplumbers.common.abstractquery.Tristate.CompareResult;
 import java.io.StringReader;
 import java.io.IOException;
 import java.io.Reader;
 
 import javax.json.Json;
+import javax.json.JsonNumber;
 import javax.json.JsonObject;
 import javax.json.JsonReader;
+import javax.json.JsonString;
 import javax.json.JsonValue;
+import javax.json.JsonValue.ValueType;
 
 public class JsonUtil {
 	
@@ -55,4 +59,80 @@ public class JsonUtil {
 			throw new RuntimeException(e);
 		}
 	}
-}
+    
+    public static boolean isAtomicValue(JsonValue obj) {
+        switch (obj.getValueType()) {
+            case ARRAY:
+                return false;
+            case OBJECT:
+                return Param.isParam(obj);
+            default:
+                return true;
+        }
+	}
+    
+    
+    public static Boolean maybeEquals(JsonValue a, JsonValue b) {
+        return Tristate.isEqual(maybeCompare(a,b));
+    }
+    
+    public static int compare(JsonString a, JsonString b) {
+        return a.getString().compareTo(b.getString());
+    }
+    
+    public static int compare(JsonNumber a, JsonNumber b) {
+        if (a.isIntegral() && b.isIntegral()) {
+            return a.bigIntegerValue().compareTo(b.bigIntegerValue());
+        } else {
+            return a.bigDecimalValue().compareTo(b.bigDecimalValue());
+        }
+    }
+    
+    public static CompareResult maybeCompare(JsonValue a, JsonValue b) {
+        boolean isParamA = Param.isParam(a);
+        boolean isParamB = Param.isParam(b);
+        if (isParamA || isParamB) {
+            if (isParamA && isParamB && Param.getKey(a).equals(Param.getKey(b))) 
+                return CompareResult.EQUAL;
+            else
+                return CompareResult.UNKNOWN;
+        } 
+        ValueType type = a.getValueType();
+
+        if (type == b.getValueType()) {
+            switch (type) {
+                case STRING: 
+                    return CompareResult.valueOf(compare((JsonString)a, (JsonString)b));
+                case NUMBER: 
+                    return CompareResult.valueOf(compare((JsonNumber)a, (JsonNumber)b));
+                case TRUE:
+                case FALSE:
+                case NULL:
+                    return CompareResult.EQUAL;
+                case OBJECT:
+                case ARRAY:
+                    throw new IllegalArgumentException("Can't compare arrays or objects");
+            }
+        }
+        
+        switch (type) {
+            case NULL: 
+                return CompareResult.LESS; // Null deemed less than any value
+            case TRUE:
+                if (b.getValueType() == ValueType.FALSE)
+                    return CompareResult.GREATER; // True deemed greater than false
+                break;
+            case FALSE:
+                if (b.getValueType() == ValueType.TRUE) // False deemed less than true
+                    return CompareResult.LESS;
+            default:
+                if (b.getValueType() == ValueType.NULL)
+                    return CompareResult.GREATER; // Any value deemed greater than null
+        }
+        
+        throw new IllegalArgumentException(String.format("Can't compare %s with %s", type, b.getValueType()));
+    }
+
+
+
+ }

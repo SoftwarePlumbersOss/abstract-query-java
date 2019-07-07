@@ -73,4 +73,85 @@ public class Tristate {
 			return false;
 		}
 	}
+    
+    public static enum CompareResult {
+        LESS, GREATER, EQUAL, UNKNOWN;
+        
+        public static CompareResult valueOf(int value) {
+            if (value < 0) return LESS;
+            if (value > 0) return GREATER;
+            return EQUAL;
+        }
+    }
+    
+    public static Boolean isGreaterThan(CompareResult result) {
+        switch (result) {
+            case GREATER: 
+                return Boolean.TRUE;
+            case EQUAL:
+            case LESS: 
+                return Boolean.FALSE;
+            case UNKNOWN:
+                return null;
+            default:
+                throw new RuntimeException("Unknown comparison result");
+        }
+    }
+    
+        public static Boolean isGreaterThanOrEqual(CompareResult result) {
+        switch (result) {
+            case GREATER: 
+            case EQUAL:
+                return Boolean.TRUE;
+            case LESS: 
+                return Boolean.FALSE;
+            case UNKNOWN:
+                return null;
+            default:
+                throw new RuntimeException("Unknown comparison result");
+        }
+    }
+    
+    
+    public static Boolean isLessThan(CompareResult result) {
+        switch (result) {
+            case LESS: 
+                return Boolean.TRUE;
+            case EQUAL:
+            case GREATER: 
+                return Boolean.FALSE;
+            case UNKNOWN:
+                return null;
+            default:
+                throw new RuntimeException("Unknown comparison result");
+        }
+    }
+
+    public static Boolean isLessThanOrEqual(CompareResult result) {
+        switch (result) {
+            case LESS: 
+            case EQUAL:
+                return Boolean.TRUE;
+            case GREATER: 
+                return Boolean.FALSE;
+            case UNKNOWN:
+                return null;
+            default:
+                throw new RuntimeException("Unknown comparison result");
+        }
+    }
+
+    public static Boolean isEqual(CompareResult result) {
+        switch (result) {
+            case EQUAL:
+                return Boolean.TRUE;
+            case LESS: 
+            case GREATER: 
+                return Boolean.FALSE;
+            case UNKNOWN:
+                return null;
+            default:
+                throw new RuntimeException("Unknown comparison result");
+        }
+    }
 }

@@ -4,8 +4,9 @@ import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import javax.json.JsonValue;
 
-public class RangeFactory extends Factory<Value.Atomic, Range> {
+public class RangeFactory extends Factory<JsonValue, Range> {
 
 	@Override
 	public Range intersect(List<Range> elements) {

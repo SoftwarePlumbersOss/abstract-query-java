@@ -4,6 +4,7 @@ import org.junit.runner.RunWith;
 
 import com.softwareplumbers.common.QualifiedName;
 import com.softwareplumbers.common.abstractquery.formatter.Formatter;
+import javax.json.Json;
 
 import org.junit.Test;
 
@@ -18,9 +19,9 @@ public class QueryTest {
 	@Test
     public void canCreateCube() {
     	ObjectConstraint query = ObjectConstraint.fromJson("{ 'x':2, 'y':4}");
-    	assertTrue(query.containsItem(Value.MapValue.fromJson("{ 'x':2, 'y':4}")));
-    	assertFalse(query.containsItem(Value.MapValue.fromJson("{ 'x':3, 'y':4}")));
-    	assertFalse(query.containsItem(Value.MapValue.fromJson("{ 'x':2, 'y':5}")));
+    	assertTrue(query.containsItem(JsonUtil.parseObject("{ 'x':2, 'y':4}")));
+    	assertFalse(query.containsItem(JsonUtil.parseObject("{ 'x':3, 'y':4}")));
+    	assertFalse(query.containsItem(JsonUtil.parseObject("{ 'x':2, 'y':5}")));
     }
 
 	@Test
@@ -38,8 +39,8 @@ public class QueryTest {
     		.fromJson("{'x': 2, 'y': 4}")
     		.union("{'z': 5}");
 
-    	assertTrue(query.containsItem(Value.MapValue.fromJson("{ 'x':2, 'y':4, 'z':3}")));
-    	assertTrue(query.containsItem(Value.MapValue.fromJson("{ 'x':3, 'y':4, 'z':5}")));
+    	assertTrue(query.containsItem(JsonUtil.parseObject("{ 'x':2, 'y':4, 'z':3}")));
+    	assertTrue(query.containsItem(JsonUtil.parseObject("{ 'x':3, 'y':4, 'z':5}")));
     }
 
 	@Test
@@ -428,8 +429,8 @@ public class QueryTest {
 	
 	@Test
 	public void testEquivalenceOfQualifedName() {
-		ObjectConstraint query1 = ObjectConstraint.from("a", ObjectConstraint.from("b", ObjectConstraint.from("c", Range.equals(Value.from("d")))));
-		ObjectConstraint query2 = ObjectConstraint.from(QualifiedName.of("a","b","c"), Range.equals(Value.from("d")));
+		ObjectConstraint query1 = ObjectConstraint.from("a", ObjectConstraint.from("b", ObjectConstraint.from("c", Range.equals(Json.createValue("d")))));
+		ObjectConstraint query2 = ObjectConstraint.from(QualifiedName.of("a","b","c"), Range.equals(Json.createValue("d")));
 		assertEquals(query1.toString(), query2.toString());
 	}
 	

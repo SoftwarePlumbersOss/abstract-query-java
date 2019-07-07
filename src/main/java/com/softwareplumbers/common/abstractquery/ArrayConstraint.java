@@ -9,27 +9,27 @@ import javax.json.JsonArray;
 import javax.json.JsonObject;
 import javax.json.JsonValue;
 
-import com.softwareplumbers.common.abstractquery.Value.ArrayValue;
 import com.softwareplumbers.common.abstractquery.formatter.Context;
 import com.softwareplumbers.common.abstractquery.formatter.Formatter;
+import javax.json.JsonValue.ValueType;
 
 /** Expresses a constraint on an array 
 *
 * @param <V> Value type of the array
 * @param <S> The type of the given constraint
 */
-public interface ArrayConstraint<V extends Value, S extends AbstractSet<V,S>> extends AbstractSet<Value.ArrayValue, ArrayConstraint<V,S>> {
+public interface ArrayConstraint<V extends JsonValue, S extends AbstractSet<V,S>> extends AbstractSet<JsonArray, ArrayConstraint<V,S>> {
 
 	public static final String OPERATOR = "has";
 	
 	//public S getMatch();
 	
 	@Override
-	public default Factory<ArrayValue, ArrayConstraint<V, S>> getFactory() {
+	public default Factory<JsonArray, ArrayConstraint<V, S>> getFactory() {
 		return new ArrayConstraintFactory<V,S>();
 	}
 	
-	public static class Has <V extends Value, S extends AbstractSet<V,S>> implements ArrayConstraint<V,S> {
+	public static class Has <V extends JsonValue, S extends AbstractSet<V,S>> implements ArrayConstraint<V,S> {
 	
 	private final S match;
 
@@ -53,7 +53,7 @@ public interface ArrayConstraint<V extends Value, S extends AbstractSet<V,S>> ex
 	}
 
 	// For every bound, there is some element in item that matches that bound.
-	public Boolean containsItem(Value.ArrayValue item) {
+	public Boolean containsItem(JsonArray item) {
 		return Tristate.any(item.stream(), element -> match.containsItem((V)element)); 
 	}
 
@@ -87,7 +87,7 @@ public interface ArrayConstraint<V extends Value, S extends AbstractSet<V,S>> ex
 		return null;
 	}	
 
-	public ArrayConstraint<V,S> bind(Value.MapValue parameters) {
+	public ArrayConstraint<V,S> bind(JsonObject parameters) {
 		return new Has<V,S>(match.bind(parameters));
 	}
 	
@@ -120,22 +120,22 @@ public interface ArrayConstraint<V extends Value, S extends AbstractSet<V,S>> ex
 	}
 	}
 	
-	public class ArrayConstraintIntersection<V extends Value, S extends AbstractSet<V,S>> extends Intersection<Value.ArrayValue, ArrayConstraint<V,S>> implements ArrayConstraint<V,S> {
+	public class ArrayConstraintIntersection<V extends JsonValue, S extends AbstractSet<V,S>> extends Intersection<JsonArray, ArrayConstraint<V,S>> implements ArrayConstraint<V,S> {
 
 		public ArrayConstraintIntersection(List<ArrayConstraint<V, S>> data) {
-			super(Value.Type.ARRAY, data);
+			super(ValueType.ARRAY, data);
 		}
 	}
 	
-	public static <V extends Value, S extends AbstractSet<V,S>> ArrayConstraint<V, S> match(S match) {
+	public static <V extends JsonValue, S extends AbstractSet<V,S>> ArrayConstraint<V, S> match(S match) {
 		return new Has<V,S>(match);
 	}
 	
-	public static ArrayConstraint<Value.Atomic, Range> matchAny(Range... matches) {
-		return new Has<Value.Atomic, Range>(Range.union(matches));
+	public static ArrayConstraint<JsonValue, Range> matchAny(Range... matches) {
+		return new Has<JsonValue, Range>(Range.union(matches));
 	}
 	
-	public static ArrayConstraint<Value.Atomic, Range> matchRanges(JsonValue matches) {
+	public static ArrayConstraint<JsonValue, Range> matchRanges(JsonValue matches) {
 		Range constraint;
 		if (matches instanceof JsonArray) {
 			constraint = Range.union(((JsonArray) matches).stream().map(value -> Range.from(value)).collect(Collectors.toList()));
@@ -145,7 +145,7 @@ public interface ArrayConstraint<V extends Value, S extends AbstractSet<V,S>> ex
 		return match(constraint);
 	}
 	
-	public static ArrayConstraint<Value.MapValue, ObjectConstraint> matchCubes(JsonValue matches) {
+	public static ArrayConstraint<JsonObject, ObjectConstraint> matchCubes(JsonValue matches) {
 		ObjectConstraint constraint;
 		if (matches instanceof JsonArray) {
 			constraint = ObjectConstraint.union(((JsonArray) matches).stream().map(value -> ObjectConstraint.from((JsonObject)value)).collect(Collectors.toList()));
@@ -179,15 +179,15 @@ public interface ArrayConstraint<V extends Value, S extends AbstractSet<V,S>> ex
 
 	}
 	
-	public static  <V extends Value, S extends AbstractSet<V,S>> ArrayConstraint<V,S> intersect(List<ArrayConstraint<V,S>> items) {
+	public static  <V extends JsonValue, S extends AbstractSet<V,S>> ArrayConstraint<V,S> intersect(List<ArrayConstraint<V,S>> items) {
 		return new ArrayConstraintFactory<V,S>().intersect(items);
 	}
 	
-	public static <V extends Value, S extends AbstractSet<V,S>> ArrayConstraint<V,S> intersect(ArrayConstraint<V,S>... items) {
+	public static <V extends JsonValue, S extends AbstractSet<V,S>> ArrayConstraint<V,S> intersect(ArrayConstraint<V,S>... items) {
 		return new ArrayConstraintFactory<V,S>().intersect(items);
 	}
 	
-	public static <V extends Value, S extends AbstractSet<V,S>> ArrayConstraint<V,S> union(List<ArrayConstraint<V,S>> items) {
+	public static <V extends JsonValue, S extends AbstractSet<V,S>> ArrayConstraint<V,S> union(List<ArrayConstraint<V,S>> items) {
 		return new ArrayConstraintFactory<V,S>().union(items);		
 	}
 	

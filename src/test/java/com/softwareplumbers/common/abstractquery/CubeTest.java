@@ -2,8 +2,9 @@ package com.softwareplumbers.common.abstractquery;
 
 import org.junit.runner.RunWith;
 
-import com.softwareplumbers.common.abstractquery.Value.MapValue;
 import com.softwareplumbers.common.abstractquery.formatter.Formatter;
+import javax.json.Json;
+import javax.json.JsonObject;
 
 import org.junit.Test;
 
@@ -14,8 +15,8 @@ public class CubeTest {
 	@Test
     public void canCreateCube() {
     	ObjectConstraint cube1 = ObjectConstraint.fromJson("{ 'x': 43, 'y': 33 }");
-    	assertEquals(Range.equals(Value.from(43)), cube1.getConstraint("x"));
-    	assertEquals(Range.equals(Value.from(33)), cube1.getConstraint("y"));
+    	assertEquals(Range.equals(Json.createValue(43)), cube1.getConstraint("x"));
+    	assertEquals(Range.equals(Json.createValue(33)), cube1.getConstraint("y"));
     }
 
 	@Test
@@ -64,24 +65,24 @@ public class CubeTest {
     }
 	
 	@Test public void canProgramaticallyCreateSubquery() {
-		ObjectConstraint x = ObjectConstraint.from("x", Range.lessThan(Value.from(19)));
-		ObjectConstraint y = ObjectConstraint.from("y", Range.greaterThan(Value.from(21)));
+		ObjectConstraint x = ObjectConstraint.from("x", Range.lessThan(Json.createValue(19)));
+		ObjectConstraint y = ObjectConstraint.from("y", Range.greaterThan(Json.createValue(21)));
 		ObjectConstraint sub = x.intersect(y);
-		ObjectConstraint tags = ObjectConstraint.from("tags", ArrayConstraint.matchAny(Range.equals(Value.from("a")), Range.equals(Value.from("c"))));
+		ObjectConstraint tags = ObjectConstraint.from("tags", ArrayConstraint.matchAny(Range.equals(Json.createValue("a")), Range.equals(Json.createValue("c"))));
 		ObjectConstraint location = ObjectConstraint.from("location", sub);
 		ObjectConstraint object = tags.intersect(location);
 		
-		Value.MapValue value1 = MapValue.fromJson("{ 'location': { 'x': 17, 'y': 22 }, 'tags': [ 'a', 'g' ] }");
-		Value.MapValue value2 = MapValue.fromJson("{ 'location': { 'x': 21, 'y': 22 }, 'tags': [ 'a', 'g' ] }");
+		JsonObject value1 = JsonUtil.parseObject("{ 'location': { 'x': 17, 'y': 22 }, 'tags': [ 'a', 'g' ] }");
+		JsonObject value2 = JsonUtil.parseObject("{ 'location': { 'x': 21, 'y': 22 }, 'tags': [ 'a', 'g' ] }");
 		assertTrue(object.containsItem(value1));
 		assertFalse(object.containsItem(value2));
 	}
 	
 	@Test public void canCreateSubqueryFromJson() {
-		ObjectConstraint x = ObjectConstraint.from("x", Range.lessThan(Value.from(19)));
-		ObjectConstraint y = ObjectConstraint.from("y", Range.greaterThan(Value.from(21)));
+		ObjectConstraint x = ObjectConstraint.from("x", Range.lessThan(Json.createValue(19)));
+		ObjectConstraint y = ObjectConstraint.from("y", Range.greaterThan(Json.createValue(21)));
 		ObjectConstraint sub = x.intersect(y);
-		ObjectConstraint tags = ObjectConstraint.from("tags", ArrayConstraint.matchAny(Range.equals(Value.from("a")), Range.equals(Value.from("c"))));
+		ObjectConstraint tags = ObjectConstraint.from("tags", ArrayConstraint.matchAny(Range.equals(Json.createValue("a")), Range.equals(Json.createValue("c"))));
 		ObjectConstraint location = ObjectConstraint.from("location", sub);
 		ObjectConstraint object1 = tags.intersect(location);
 		

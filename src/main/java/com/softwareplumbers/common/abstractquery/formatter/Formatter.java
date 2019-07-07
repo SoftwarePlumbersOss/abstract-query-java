@@ -1,5 +1,6 @@
 package com.softwareplumbers.common.abstractquery.formatter;
 
+import com.softwareplumbers.common.abstractquery.Param;
 import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -16,7 +17,8 @@ import javax.json.JsonObjectBuilder;
 import javax.json.JsonValue;
 
 import com.softwareplumbers.common.abstractquery.Range;
-import com.softwareplumbers.common.abstractquery.Value;
+import javax.json.JsonString;
+import javax.json.JsonValue.ValueType;
 
 
 /** Format a Query
@@ -33,13 +35,13 @@ public interface Formatter<T,U> {
 	/** End the expression */
 	U build(T expr);
 	/** Create a representation of a constraint on a dimension */
-	T operExpr(Context context, String operator, Value value);
+	T operExpr(Context context, String operator, JsonValue value);
 	/** Create a representation of an intersection of constraints */
-	T andExpr(Context context, Value.Type type, Stream<T> expressions);
+	T andExpr(Context context, ValueType type, Stream<T> expressions);
 	/** Create a representation of a union of constraints */
-	T orExpr(Context context, Value.Type type, Stream<T> expressions);
+	T orExpr(Context context, ValueType type, Stream<T> expressions);
 	/** Create a representation of an operation over subexpressions */
-	default T betweenExpr(Context context, Value.Type type, T lower_bound, T upper_bound) {
+	default T betweenExpr(Context context, ValueType type, T lower_bound, T upper_bound) {
 		return andExpr(context, type, Stream.of(lower_bound, upper_bound));
 	}
 	/** Create a representation of an operation over subexpressions */
@@ -68,27 +70,33 @@ public interface Formatter<T,U> {
 			return result;
 		}
 		
-		String printValue(Value value) {
-			return value.toString();
+		String printValue(JsonValue value) {
+            if (Param.isParam(value)) {
+                return "$" + ((JsonObject)value).getString("$");
+            }
+            switch (value.getValueType()) {
+                case STRING: return "'" + ((JsonString)value).getString() + "'";
+                default: return value.toString();
+            }
 		}
 
-    	public String andExpr(Context context, Value.Type type, Stream<String> ands) { 
+    	public String andExpr(Context context, ValueType type, Stream<String> ands) { 
     		return ands.collect(Collectors.joining(" and ")); 
     	}
     	
-    	public String orExpr(Context context, Value.Type type, Stream<String> ors) { 
+    	public String orExpr(Context context, ValueType type, Stream<String> ors) { 
     		return "(" + ors.collect(Collectors.joining(" or ")) + ")"; 
     	}
     	
-    	public String operExpr(Context context, String operator, Value value) {
+    	public String operExpr(Context context, String operator, JsonValue value) {
     			// null dimension implies that we are in a 'has' clause where the dimension is attached to the
     			// outer 'has' operator 
     			if (operator.equals("match"))
-    				return value.toString();
+    				return printValue(value);
     			if (operator.equals("has"))
-    				return printDimension(context) + " has(" + value + ")";
+    				return printDimension(context) + " has(" + printValue(value) + ")";
     			if (operator.equals("like"))
-    				return printDimension(context) + " like(" + value + ")";
+    				return printDimension(context) + " like(" + printValue(value) + ")";
     			//if (dimension === null) return '$self' + operator + printValue(value) 
 
     			return printDimension(context) + operator + printValue(value) ;
@@ -112,8 +120,8 @@ public interface Formatter<T,U> {
 			return value; 
 		}
 		
-    	public JsonValue andExpr(Context context, Value.Type type, Stream<JsonValue> ands) {
-    		if (type == Value.Type.MAP) {
+    	public JsonValue andExpr(Context context, ValueType type, Stream<JsonValue> ands) {
+    		if (type == ValueType.OBJECT) {
     			JsonObjectBuilder object = Json.createObjectBuilder();
     			ands.forEach(value-> {
     				if (value instanceof JsonObject)
@@ -131,7 +139,7 @@ public interface Formatter<T,U> {
     		}
     	}
     	
-    	public JsonValue orExpr(Context context, Value.Type type, Stream<JsonValue> ors) { 
+    	public JsonValue orExpr(Context context, ValueType type, Stream<JsonValue> ors) { 
     		JsonArrayBuilder array = Json.createArrayBuilder();
     		ors.forEach(value->array.add(value));
     		JsonObjectBuilder object = Json.createObjectBuilder();
@@ -143,7 +151,7 @@ public interface Formatter<T,U> {
     		return value.asJsonObject().keySet().iterator().next();
     	}
     	
-    	public JsonValue betweenExpr(Context context, Value.Type type, JsonValue lower_bound, JsonValue upper_bound) {
+    	public JsonValue betweenExpr(Context context, ValueType type, JsonValue lower_bound, JsonValue upper_bound) {
     		JsonArrayBuilder array = Json.createArrayBuilder();
     		String lbp = getFirstProperty(lower_bound);
     		String ubp = getFirstProperty(upper_bound);
@@ -157,12 +165,12 @@ public interface Formatter<T,U> {
     		return Json.createObjectBuilder().add(lbp, array).build();
     	}
     	
-    	public JsonValue operExpr(Context context, String operator, Value value) {
+    	public JsonValue operExpr(Context context, String operator, JsonValue value) {
     		JsonObjectBuilder object = Json.createObjectBuilder();
     		if (operator.equals(Range.Equals.OPERATOR))
-    			object.add(context.dimension,  value.toJSON());
+    			object.add(context.dimension,  value);
     		else
-    			object.add(context.dimension, Json.createObjectBuilder().add(operator, value.toJSON()));
+    			object.add(context.dimension, Json.createObjectBuilder().add(operator, value));
     		return object.build();
     	}
     	
@@ -201,8 +209,8 @@ public interface Formatter<T,U> {
 		@Override public Node get(int index) { return null; }
 		@Override public int size() { return 0; };
 		public final String operator;
-		public final Value value;
-		public Operator(Context context, String operator, Value value) { this.context = context; this.operator = operator; this.value = value; }
+		public final JsonValue value;
+		public Operator(Context context, String operator, JsonValue value) { this.context = context; this.operator = operator; this.value = value; }
 		@Override
 		public <T,U> T toExpression(Formatter<T,U> format, Context ctx) { return format.operExpr(context, operator, value); }
 		public String toString() { return toExpression(DEFAULT, context); }
@@ -213,9 +221,9 @@ public interface Formatter<T,U> {
 	
 	public class And extends ArrayList<Node> implements Node { 
 		public final Context context;
-		public final Value.Type type;
-		public And(Value.Type type, Context context, Node... items) { super(Arrays.asList(items)); this.type = type; this.context = context;  }
-		public And(Value.Type type, Context context) { this.type = type; this.context = context; }
+		public final ValueType type;
+		public And(ValueType type, Context context, Node... items) { super(Arrays.asList(items)); this.type = type; this.context = context;  }
+		public And(ValueType type, Context context) { this.type = type; this.context = context; }
 		public <T,U> T toExpression(Formatter<T,U> format, Context ctx) { return format.andExpr(context, type, stream().map(item->item.toExpression(format,context))); }
 		public String toString() { return toExpression(DEFAULT, context); }
 		public Context getContext() { return context; }
@@ -223,9 +231,9 @@ public interface Formatter<T,U> {
 	
 	public class Between extends ArrayList<Node> implements Node { 
 		public final Context context;
-		public final Value.Type type;
-		public Between(Value.Type type, Context context, Node lower, Node upper) { super(Arrays.asList(lower,upper)); this.type = type; this.context = context;  }
-		public Between(Value.Type type, Context context) { this.type = type; this.context = context; }
+		public final ValueType type;
+		public Between(ValueType type, Context context, Node lower, Node upper) { super(Arrays.asList(lower,upper)); this.type = type; this.context = context;  }
+		public Between(ValueType type, Context context) { this.type = type; this.context = context; }
 		public <T,U> T toExpression(Formatter<T,U> format, Context ctx) { return format.betweenExpr(context, type, get(0).toExpression(format,context), get(1).toExpression(format,context)); }
 		public String toString() { return toExpression(DEFAULT, context); }
 		public Context getContext() { return context; }
@@ -234,9 +242,9 @@ public interface Formatter<T,U> {
 		
 	public class Or extends ArrayList<Node> implements Node { 
 		public final Context context;
-		public final Value.Type type;
-		public Or(Value.Type type, Context context, List<? extends Node> items) { super(items); this.context = context; this.type = type; }
-		public Or(Value.Type type, Context context) { this.type = type; this.context = context; }		
+		public final ValueType type;
+		public Or(ValueType type, Context context, List<? extends Node> items) { super(items); this.context = context; this.type = type; }
+		public Or(ValueType type, Context context) { this.type = type; this.context = context; }		
 		public <T,U> T toExpression(Formatter<T,U> format, Context ctx) { return format.orExpr(context, type, stream().map(item->item.toExpression(format, context))); }
 		public String toString() { return toExpression(DEFAULT, context); }
 		public Context getContext() { return context; }
@@ -268,17 +276,17 @@ public interface Formatter<T,U> {
 		}
 		
 		@Override
-		public Node operExpr(Context context, String operator, Value value) { 
+		public Node operExpr(Context context, String operator, JsonValue value) { 
 			return new Operator(context, operator, value);
 		}
 
 		@Override
-		public Node andExpr(Context context, Value.Type type, Stream<Node> expressions) {
+		public Node andExpr(Context context, ValueType type, Stream<Node> expressions) {
 			return expressions.collect(()->new And(type, context), And::add, And::addAll);
 		}
 
 		@Override
-		public Node orExpr(Context context, Value.Type type, Stream<Node> expressions) {
+		public Node orExpr(Context context, ValueType type, Stream<Node> expressions) {
 			return expressions.collect(()->new Or(type, context), Or::add, Or::addAll);
 		}
 
@@ -287,7 +295,7 @@ public interface Formatter<T,U> {
 			return new Sub(context, operator, sub);
 		}
 		
-		public Node betweenExpr(Context context, Value.Type type, Node lower, Node upper) {
+		public Node betweenExpr(Context context, ValueType type, Node lower, Node upper) {
 			return new Between(type, context, lower, upper);
 		}
 
@@ -323,7 +331,7 @@ public interface Formatter<T,U> {
 			
 		}
 		
-		public Optional<Node> factorize(Context context, Value.Type type, List<And> ands) {
+		public Optional<Node> factorize(Context context, ValueType type, List<And> ands) {
 			
 			Optional<Node> factor = getCommonestFactor(ands);
 			if (factor.isPresent()) {
@@ -359,7 +367,7 @@ public interface Formatter<T,U> {
 		}
 		
 		@Override
-		public Node orExpr(Context context, Value.Type type, Stream<Node> expressions) {
+		public Node orExpr(Context context, ValueType type, Stream<Node> expressions) {
 			final List<And> ands = new ArrayList<And>();
 			final Or atomics = new Or(type, context);
 			expressions.forEach(node -> triage(ands,atomics,node));

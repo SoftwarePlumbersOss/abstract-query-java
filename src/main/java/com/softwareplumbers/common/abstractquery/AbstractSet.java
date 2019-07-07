@@ -5,6 +5,7 @@ import javax.json.JsonValue;
 import com.softwareplumbers.common.abstractquery.formatter.CanFormat;
 import com.softwareplumbers.common.abstractquery.formatter.Context;
 import com.softwareplumbers.common.abstractquery.formatter.Formatter;
+import javax.json.JsonObject;
 
 /** Interface representing an object on which fundamental set operations can be performed.
  * 
@@ -91,11 +92,11 @@ public interface AbstractSet<T, U extends AbstractSet<T,U>> extends CanFormat {
 	
 	/** Output set as Json
 	 * 
-	 * @return A Json representatio  of the set
+	 * @return A Json representation  of the set
 	 */
 	JsonValue toJSON();
 	
-	U bind(Value.MapValue values);
+	U bind(JsonObject values);
 	
 	boolean isEmpty();
 	boolean isUnconstrained();

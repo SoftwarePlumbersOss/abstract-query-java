@@ -8,13 +8,15 @@ import javax.json.JsonValue;
 
 import com.softwareplumbers.common.abstractquery.formatter.Context;
 import com.softwareplumbers.common.abstractquery.formatter.Formatter;
+import javax.json.JsonObject;
+import javax.json.JsonValue.ValueType;
 
-public abstract class Intersection<T extends Value, U extends AbstractSet<T,U>> implements AbstractSet<T,U> {
+public abstract class Intersection<T extends JsonValue, U extends AbstractSet<T,U>> implements AbstractSet<T,U> {
 
 	protected List<U> data;
-	protected Value.Type type;
+	protected ValueType type;
 	
-	public Intersection(Value.Type type, List<U> data) {
+	public Intersection(ValueType type, List<U> data) {
 		this.data = data;
 		this.type = type;
 	}
@@ -76,7 +78,7 @@ public abstract class Intersection<T extends Value, U extends AbstractSet<T,U>> 
 	}
 
 	@Override
-	public U bind(Value.MapValue parameters) {
+	public U bind(JsonObject parameters) {
 		
 		List<U> result = new ArrayList<U>();
 		
@@ -92,7 +94,7 @@ public abstract class Intersection<T extends Value, U extends AbstractSet<T,U>> 
 		return null;
 	}
 
-	public Value.Type getType() {
+	public ValueType getType() {
 		return type;
 	}
 

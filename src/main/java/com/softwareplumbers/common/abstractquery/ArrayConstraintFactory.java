@@ -4,8 +4,10 @@ import java.util.Iterator;
 import java.util.List;
 
 import com.softwareplumbers.common.abstractquery.ArrayConstraint.ArrayConstraintIntersection;
+import javax.json.JsonArray;
+import javax.json.JsonValue;
 
-public class ArrayConstraintFactory <V extends Value, S extends AbstractSet<V,S>> extends Factory<Value.ArrayValue, ArrayConstraint<V,S>> {
+public class ArrayConstraintFactory <V extends JsonValue, S extends AbstractSet<V,S>> extends Factory<JsonArray, ArrayConstraint<V,S>> {
 
 	@Override
 	public ArrayConstraint<V, S> intersect(List<ArrayConstraint<V, S>> elements) {
@@ -21,7 +23,7 @@ public class ArrayConstraintFactory <V extends Value, S extends AbstractSet<V,S>
 		return result;
 	}
 	
-	public static <V extends Value, S extends AbstractSet<V,S>> ArrayConstraintFactory<V,S>  getInstance() {
+	public static <V extends JsonValue, S extends AbstractSet<V,S>> ArrayConstraintFactory<V,S>  getInstance() {
 		return new ArrayConstraintFactory<V,S>();
 	}
 
