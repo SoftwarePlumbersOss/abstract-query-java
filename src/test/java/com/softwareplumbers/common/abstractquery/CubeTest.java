@@ -14,7 +14,7 @@ public class CubeTest {
 
 	@Test
     public void canCreateCube() {
-    	ObjectConstraint cube1 = ObjectConstraint.fromJson("{ 'x': 43, 'y': 33 }");
+    	Query cube1 = Query.fromJson("{ 'x': 43, 'y': 33 }");
     	assertEquals(Range.equals(Json.createValue(43)), cube1.getConstraint("x"));
     	assertEquals(Range.equals(Json.createValue(33)), cube1.getConstraint("y"));
     }
@@ -22,11 +22,11 @@ public class CubeTest {
 	@Test
     public void hasWorkingContainsMethodIn2d() {
     	// Test with equals
-    	ObjectConstraint cube1 = ObjectConstraint.fromJson("{ 'x': 43, 'y': 33 }");
-    	ObjectConstraint cube2 = ObjectConstraint.fromJson("{ 'x': 33, 'y': 43 }");
-    	ObjectConstraint cube3 = ObjectConstraint.fromJson("{ 'x': 43, 'y': 99 }");
-    	ObjectConstraint cube4 = ObjectConstraint.fromJson("{ 'x': 22, 'y': 33 }");
-    	ObjectConstraint cube5 = ObjectConstraint.fromJson("{ 'x': 43, 'y': 33 }");
+    	Query cube1 = Query.fromJson("{ 'x': 43, 'y': 33 }");
+    	Query cube2 = Query.fromJson("{ 'x': 33, 'y': 43 }");
+    	Query cube3 = Query.fromJson("{ 'x': 43, 'y': 99 }");
+    	Query cube4 = Query.fromJson("{ 'x': 22, 'y': 33 }");
+    	Query cube5 = Query.fromJson("{ 'x': 43, 'y': 33 }");
 
     	assertFalse(cube1.contains(cube2));
     	assertFalse(cube1.contains(cube3));
@@ -38,15 +38,15 @@ public class CubeTest {
 
 	@Test
     public void hasWorkingRemoveContainsMethodIn2dd() {
-    	ObjectConstraint.Impl cube1 = (ObjectConstraint.Impl)ObjectConstraint.fromJson("{ 'x': 43, 'y': 33 }");
+    	Query.Impl cube1 = (Query.Impl)Query.fromJson("{ 'x': 43, 'y': 33 }");
 
-		ObjectConstraint cube2 = cube1.removeConstraints(ObjectConstraint.fromJson("{'x':43}")); 
-		assertEquals(ObjectConstraint.fromJson("{'y':33}"), cube2);
+		Query cube2 = cube1.removeConstraints(Query.fromJson("{'x':43}")); 
+		assertEquals(Query.fromJson("{'y':33}"), cube2);
 
 		boolean ok = true;
 		
     	try {
-    		cube1.removeConstraints(ObjectConstraint.fromJson("{'x':33}"));
+    		cube1.removeConstraints(Query.fromJson("{'x':33}"));
     		ok = false;
     	} catch (RuntimeException err) {
     		// Nothing
@@ -55,7 +55,7 @@ public class CubeTest {
     	assertTrue(ok);
 
     	try {
-    		cube1.removeConstraints(ObjectConstraint.fromJson("{'z' : 33}"));
+    		cube1.removeConstraints(Query.fromJson("{'z' : 33}"));
     		ok = false;
     	} catch (RuntimeException err) {
     		// ok
@@ -65,12 +65,12 @@ public class CubeTest {
     }
 	
 	@Test public void canProgramaticallyCreateSubquery() {
-		ObjectConstraint x = ObjectConstraint.from("x", Range.lessThan(Json.createValue(19)));
-		ObjectConstraint y = ObjectConstraint.from("y", Range.greaterThan(Json.createValue(21)));
-		ObjectConstraint sub = x.intersect(y);
-		ObjectConstraint tags = ObjectConstraint.from("tags", ArrayConstraint.matchAny(Range.equals(Json.createValue("a")), Range.equals(Json.createValue("c"))));
-		ObjectConstraint location = ObjectConstraint.from("location", sub);
-		ObjectConstraint object = tags.intersect(location);
+		Query x = Query.from("x", Range.lessThan(Json.createValue(19)));
+		Query y = Query.from("y", Range.greaterThan(Json.createValue(21)));
+		Query sub = x.intersect(y);
+		Query tags = Query.from("tags", ArrayConstraint.matchAny(Range.equals(Json.createValue("a")), Range.equals(Json.createValue("c"))));
+		Query location = Query.from("location", sub);
+		Query object = tags.intersect(location);
 		
 		JsonObject value1 = JsonUtil.parseObject("{ 'location': { 'x': 17, 'y': 22 }, 'tags': [ 'a', 'g' ] }");
 		JsonObject value2 = JsonUtil.parseObject("{ 'location': { 'x': 21, 'y': 22 }, 'tags': [ 'a', 'g' ] }");
@@ -79,27 +79,27 @@ public class CubeTest {
 	}
 	
 	@Test public void canCreateSubqueryFromJson() {
-		ObjectConstraint x = ObjectConstraint.from("x", Range.lessThan(Json.createValue(19)));
-		ObjectConstraint y = ObjectConstraint.from("y", Range.greaterThan(Json.createValue(21)));
-		ObjectConstraint sub = x.intersect(y);
-		ObjectConstraint tags = ObjectConstraint.from("tags", ArrayConstraint.matchAny(Range.equals(Json.createValue("a")), Range.equals(Json.createValue("c"))));
-		ObjectConstraint location = ObjectConstraint.from("location", sub);
-		ObjectConstraint object1 = tags.intersect(location);
+		Query x = Query.from("x", Range.lessThan(Json.createValue(19)));
+		Query y = Query.from("y", Range.greaterThan(Json.createValue(21)));
+		Query sub = x.intersect(y);
+		Query tags = Query.from("tags", ArrayConstraint.matchAny(Range.equals(Json.createValue("a")), Range.equals(Json.createValue("c"))));
+		Query location = Query.from("location", sub);
+		Query object1 = tags.intersect(location);
 		
 		
-		ObjectConstraint object2 = ObjectConstraint.fromJson("{'location': { 'x': { '<':19 }, 'y' : { '>':21 } }, 'tags': { '$has': ['a','c'] } }");
+		Query object2 = Query.fromJson("{'location': { 'x': { '<':19 }, 'y' : { '>':21 } }, 'tags': { '$has': ['a','c'] } }");
 
 		assertEquals(object1,object2);
 	}
 	
 	@Test
     public void canBindParameters(){
-        ObjectConstraint cube1 = ObjectConstraint.fromJson("{ 'x': [22, {'$':'param1' } ], 'y' : [ {'$':'param2'}, {'$':'param3'} ]}" );
-        ObjectConstraint cube2 = cube1.bind("{ 'param5': 'slartibartfast'}");
+        Query cube1 = Query.fromJson("{ 'x': [22, {'$':'param1' } ], 'y' : [ {'$':'param2'}, {'$':'param3'} ]}" );
+        Query cube2 = cube1.bind("{ 'param5': 'slartibartfast'}");
         assertEquals(cube2, cube2);
-        ObjectConstraint cube3 = cube1.bind("{ 'param1': 44, 'param3': 66}");
-        assertEquals(ObjectConstraint.fromJson("{ 'x': [22, 44], 'y': [ { '$': 'param2'}, 66] }"), cube3);
-        ObjectConstraint cube4 = cube1.bind("{ 'param1': 20, 'param3': 66}");
+        Query cube3 = cube1.bind("{ 'param1': 44, 'param3': 66}");
+        assertEquals(Query.fromJson("{ 'x': [22, 44], 'y': [ { '$': 'param2'}, 66] }"), cube3);
+        Query cube4 = cube1.bind("{ 'param1': 20, 'param3': 66}");
         assertNull(cube4);
         //todo: put back in a 'has' test
         //let cube5 = cube1.bind({ param1: 44, param2: 11, param3: 66, param4: 'idiocy'}
@@ -108,7 +108,7 @@ public class CubeTest {
 
     @Test public void canCreateaAQueryOnAnArrayOfObjects() { 
 
-    	ObjectConstraint query = ObjectConstraint.fromJson("{ 'a': '23', 'b': { '$has' : { 'drumkit': 'bongo' } } }");
+    	Query query = Query.fromJson("{ 'a': '23', 'b': { '$has' : { 'drumkit': 'bongo' } } }");
     	
 
     	assertEquals("a='23' and b has (drumkit='bongo')", query.toExpression(Formatter.DEFAULT)); 
@@ -117,8 +117,8 @@ public class CubeTest {
     @Test public void canDecodeFromURL() {
         //This generated by javascript implementation
         String urlFormat = "eyJCcmFuY2giOiIxMDIyOCIsIk91clJlZmVyZW5jZSI6eyIkbGlrZSI6IlRFU1QtKiJ9LCJFdmVudFJlZmVyZW5jZSI6eyIkbGlrZSI6IklTUyoifX0=";
-        ObjectConstraint result = ObjectConstraint.urlDecode(urlFormat);
-        ObjectConstraint reference = ObjectConstraint.fromJson("{ 'Branch': '10228', 'EventReference': { '$like': 'ISS*' }, 'OurReference': { '$like': 'TEST-*'}}");
+        Query result = Query.urlDecode(urlFormat);
+        Query reference = Query.fromJson("{ 'Branch': '10228', 'EventReference': { '$like': 'ISS*' }, 'OurReference': { '$like': 'TEST-*'}}");
         assertEquals(reference, result);
     }
 }

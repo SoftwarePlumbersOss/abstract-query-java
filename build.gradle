@@ -21,42 +21,41 @@ apply plugin: 'maven'
 repositories {
     // Use jcenter for resolving your dependencies.
     // You can declare any Maven/Ivy/file repository here.
-	maven { url propValue("proxyMavenCentral", "https://repo.maven.apache.org/maven2/") }
-	maven { url "https://nexus.softwareplumbers.com/repository/maven-oss" }
+    maven { url propValue("proxyMavenCentral", "https://repo.maven.apache.org/maven2/") }
+    maven { url "https://nexus.softwareplumbers.com/repository/maven-oss" }
 }
 
 uploadArchives {
-  repositories {
-    mavenDeployer {
-      repository(url: "https://nexus.softwareplumbers.com/repository/maven-oss") {
-      	authentication(userName: propValue("mavenUploadUser",""), password: propValue("mavenUploadPassword",""))
-      }
+    repositories {
+        mavenDeployer {
+            repository(url: "https://nexus.softwareplumbers.com/repository/maven-oss") {
+                authentication(userName: propValue("mavenUploadUser",""), password: propValue("mavenUploadPassword",""))
+            }
+        }
     }
-  }
 }
 
 dependencies {
 
-	compile group: 'javax.json', name: 'javax.json-api', version: '1.1.2'
-	compile group: 'commons-beanutils', name: 'commons-beanutils', version: '1.9.3'
-	compile group: 'com.softwareplumbers.oss', name: 'qualified-name', version: '0.0.12'
-	
-	
+    compile group: 'javax.json', name: 'javax.json-api', version: '1.1.2'
+    compile group: 'com.softwareplumbers.oss', name: 'qualified-name', version: '0.0.12'
+    compile group: 'com.softwareplumbers.oss', name: 'json-view', version: '0.0.2'
+		
     // Use JUnit test framework
     testImplementation 'junit:junit:4.12'
-	testImplementation group: 'org.glassfish', name: 'javax.json', version: '1.1.2'
+    testImplementation group: 'org.glassfish', name: 'javax.json', version: '1.1.2'
 }
 
 jar {
-  baseName 'abstract-query-java'
+    baseName 'abstract-query-java'
 }
 
 task sourcesJar(type: Jar, dependsOn: classes) {
-	classifier 'sources'
-	from sourceSets.main.allSource
+    classifier 'sources'
+    from sourceSets.main.allSource
 }
 
 artifacts {
-	archives sourcesJar
+    archives sourcesJar
 }
 

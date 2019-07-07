@@ -145,12 +145,12 @@ public interface ArrayConstraint<V extends JsonValue, S extends AbstractSet<V,S>
 		return match(constraint);
 	}
 	
-	public static ArrayConstraint<JsonObject, ObjectConstraint> matchCubes(JsonValue matches) {
-		ObjectConstraint constraint;
+	public static ArrayConstraint<JsonObject, Query> matchCubes(JsonValue matches) {
+		Query constraint;
 		if (matches instanceof JsonArray) {
-			constraint = ObjectConstraint.union(((JsonArray) matches).stream().map(value -> ObjectConstraint.from((JsonObject)value)).collect(Collectors.toList()));
+			constraint = Query.union(((JsonArray) matches).stream().map(value -> Query.from((JsonObject)value)).collect(Collectors.toList()));
 		} else {
-			constraint = ObjectConstraint.from((JsonObject)matches);
+			constraint = Query.from((JsonObject)matches);
 		}
 		return match(constraint);
 	}
@@ -163,7 +163,7 @@ public interface ArrayConstraint<V extends JsonValue, S extends AbstractSet<V,S>
 					Range constraint = Range.union(array.stream().map(value -> Range.from(value)).collect(Collectors.toList()));
 					return match(constraint);
 				} else {
-					ObjectConstraint constraint = ObjectConstraint.union(array.stream().map(value -> ObjectConstraint.from((JsonObject)value)).collect(Collectors.toList()));
+					Query constraint = Query.union(array.stream().map(value -> Query.from((JsonObject)value)).collect(Collectors.toList()));
 					return match(constraint);
 				}
 			} else {
@@ -173,7 +173,7 @@ public interface ArrayConstraint<V extends JsonValue, S extends AbstractSet<V,S>
 			if (Range.isRange(matches)) {
 				return match(Range.from(matches));
 			} else {
-				return match(ObjectConstraint.from((JsonObject)matches));
+				return match(Query.from((JsonObject)matches));
 			}
 		}
 
