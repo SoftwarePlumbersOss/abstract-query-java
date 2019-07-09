@@ -8,8 +8,8 @@ import javax.json.JsonObject;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
-import com.softwareplumbers.common.abstractquery.vistor.Visitor;
-import com.softwareplumbers.common.abstractquery.vistor.Visitors;
+import com.softwareplumbers.common.abstractquery.visitor.Visitor;
+import com.softwareplumbers.common.abstractquery.visitor.Visitors;
 
 public class CubeTest {
 
