@@ -1,20 +1,15 @@
 package com.softwareplumbers.common.abstractquery;
 
-import org.junit.runner.RunWith;
 
 import org.junit.Test;
 
 import static org.junit.Assert.*;
 
-import java.util.HashMap;
-import java.util.Map;
 import javax.json.Json;
 import javax.json.JsonArray;
 import javax.json.JsonObject;
 import javax.json.JsonValue;
 
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.equalTo;
 
 public class RangeTest {
 

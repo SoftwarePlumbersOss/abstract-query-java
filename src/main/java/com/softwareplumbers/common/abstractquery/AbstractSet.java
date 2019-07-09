@@ -2,10 +2,10 @@ package com.softwareplumbers.common.abstractquery;
 
 import javax.json.JsonValue;
 
-import com.softwareplumbers.common.abstractquery.formatter.CanFormat;
-import com.softwareplumbers.common.abstractquery.formatter.Context;
-import com.softwareplumbers.common.abstractquery.formatter.Formatter;
+import visitor.Context;
 import javax.json.JsonObject;
+import visitor.Visitor;
+import visitor.Visitable;
 
 /** Interface representing an object on which fundamental set operations can be performed.
  * 
@@ -14,7 +14,7 @@ import javax.json.JsonObject;
  * @param <T> The value type of the set
  * @param <U> The implementing class on which operations are performed.
  */
-public interface AbstractSet<T, U extends AbstractSet<T,U>> extends CanFormat {
+public interface AbstractSet<T, U extends AbstractSet<T,U>> extends Visitable {
 	
 	/** Factory that can be used to create new unions and intersections.
 	 * 
@@ -83,12 +83,11 @@ public interface AbstractSet<T, U extends AbstractSet<T,U>> extends CanFormat {
 	 */
 	Boolean maybeEquals(U other);
 	
-	/** Output a description of the set using a Formatter object.
+	/** Visit this and child nodes
 	 * 
-	 * @param formatter the object used to create a description of the set
-	 * @param context object which passes information about complex sets which may have this set as a component
+	 * @param visitor the object which will visit
 	 */
-	<X,V> X toExpression(Formatter<X,V> formatter, Context context);
+	void visit(Visitor<?> visitor);
 	
 	/** Output set as Json
 	 * 

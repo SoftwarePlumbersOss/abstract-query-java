@@ -2,13 +2,14 @@ package com.softwareplumbers.common.abstractquery;
 
 import org.junit.runner.RunWith;
 
-import com.softwareplumbers.common.abstractquery.formatter.Formatter;
 import javax.json.Json;
 import javax.json.JsonObject;
 
 import org.junit.Test;
 
 import static org.junit.Assert.*;
+import visitor.Visitor;
+import visitor.Visitors;
 
 public class CubeTest {
 
@@ -111,7 +112,7 @@ public class CubeTest {
     	Query query = Query.fromJson("{ 'a': '23', 'b': { '$has' : { 'drumkit': 'bongo' } } }");
     	
 
-    	assertEquals("a='23' and b has (drumkit='bongo')", query.toExpression(Formatter.DEFAULT)); 
+    	assertEquals("a='23' and b has (drumkit='bongo')", query.toExpression(Visitors.DEFAULT)); 
     }
     
     @Test public void canDecodeFromURL() {

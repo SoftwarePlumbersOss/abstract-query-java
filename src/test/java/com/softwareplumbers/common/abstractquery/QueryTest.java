@@ -3,7 +3,6 @@ package com.softwareplumbers.common.abstractquery;
 import org.junit.runner.RunWith;
 
 import com.softwareplumbers.common.QualifiedName;
-import com.softwareplumbers.common.abstractquery.formatter.Formatter;
 import javax.json.Json;
 
 import org.junit.Test;
@@ -12,6 +11,8 @@ import static org.junit.Assert.*;
 
 import javax.json.JsonObject;
 import javax.json.JsonValue;
+import visitor.Visitor;
+import visitor.Visitors;
 
 
 public class QueryTest {
@@ -84,6 +85,16 @@ public class QueryTest {
     }    
 
 	@Test
+    public void createsSameExpressExpressionFromTree() {
+    	Query query = Query
+    		.fromJson("{'x': [null,2], 'y': 4}")
+    		.intersect(Query.fromJson("{ 'z': 5}"))
+    		.union(Query.fromJson("{'x':[6,8], 'y':3, 'z':99}"));
+
+    	assertEquals("(x<2 and y=4 and z=5 or x>=6 and x<8 and y=3 and z=99)",query.toExpression(Visitors.TREE).toExpression(Visitors.DEFAULT));
+    }    
+    
+    @Test
     public void createsExpressionWithOr() {
     	Query query = Query
     		.fromJson("{'x': [null,2], 'y': 4}")
@@ -203,7 +214,7 @@ public class QueryTest {
     	// TODO: Do all sets contain the empty set? q1 intersect q2 is empty here
     	//assertTrue(query1.contains(query1.intersect(query4)));
    	}
-
+    
 	@Test
     public void hasWorkingContainsOperatorWithParameters() {
         Query query2 = Query
@@ -226,7 +237,7 @@ public class QueryTest {
     		.union("{'x':3, 'y': [3,null], 'z': 7}");
 
     	// TODO: factor should break out the y<4 but does not because it's hidden in a 'between'.
-    	assertEquals("(x=3 and y>=3 and z=7 or x=2 and (y>=3 and y<4 and z=8 or y<4 and z=7))", query.toExpression(Formatter.SIMPLIFY).toExpression(Formatter.DEFAULT));
+    	assertEquals("(x=3 and y>=3 and z=7 or x=2 and (y>=3 and y<4 and z=8 or y<4 and z=7))", query.toExpression(Visitors.SIMPLIFY).toExpression(Visitors.DEFAULT));
     }
 
 	@Test
@@ -245,7 +256,7 @@ public class QueryTest {
     		.fromJson("{ 'course': 'javascript 101', 'student': { 'age' : [21, null] }, 'grade': [null,'C']}")
     		.union("{ 'course': 'medieval French poetry', 'student': { 'age': [40,65]}, 'grade': [null,'C']}");
 
-    	String expr = query.toExpression(Formatter.SIMPLIFY).toExpression(Formatter.DEFAULT);
+    	String expr = query.toExpression(Visitors.SIMPLIFY).toExpression(Visitors.DEFAULT);
     	assertEquals("(grade<'C' and (course='javascript 101' and student.age>=21 or course='medieval French poetry' and student.age>=40 and student.age<65))", expr);
     /*
 		const formatter = {

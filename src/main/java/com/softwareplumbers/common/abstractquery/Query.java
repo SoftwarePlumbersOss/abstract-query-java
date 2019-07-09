@@ -12,14 +12,15 @@ import java.util.stream.Collectors;
 import javax.json.JsonArray;
 import javax.json.JsonValue;
 
-import com.softwareplumbers.common.abstractquery.formatter.Context;
-import com.softwareplumbers.common.abstractquery.formatter.Formatter;
+import visitor.Context;
 import com.softwareplumbers.common.QualifiedName;
 import java.io.StringReader;
 import javax.json.Json;
 
 import javax.json.JsonObject;
 import javax.json.JsonValue.ValueType;
+import visitor.Visitor;
+import visitor.Visitors;
 
 /** A constraint maps each dimension in an abstract space to a range.
  *
@@ -254,7 +255,7 @@ public interface Query extends AbstractSet<JsonObject, Query> {
 	 * 
 	 */
 	public String toString() {
-		return toExpression(Formatter.DEFAULT);
+		return toExpression(Visitors.DEFAULT);
 	}
 	
 	/** Convert to JSON.
@@ -264,7 +265,7 @@ public interface Query extends AbstractSet<JsonObject, Query> {
 	 * @return A JSON object representing this Cube.
 	 */
 	public JsonValue toJSON() {
-		return toExpression(Formatter.JSON);
+		return toExpression(Visitors.JSON);
 	}
 
 	/** Convert a Cube to an expression using the given formatter and context
@@ -276,14 +277,14 @@ public interface Query extends AbstractSet<JsonObject, Query> {
 	 * @param formatter Object used to format an expression from this Cube
 	 * @return A formatted expression
 	 */
-	public <T,U> T toExpression(Formatter<T,U> formatter, Context context) {
-		final Context obj = context.setType(Context.Type.OBJECT);
-		return formatter.andExpr(obj,
-				ValueType.OBJECT,
-			constraints.entrySet().stream().map(
-				entry -> entry.getValue().toExpression(formatter, obj.in(entry.getKey()))
-			)
-		);
+	public void visit(Visitor<?> visitor) {
+        visitor.queryExpr();
+        constraints.forEach((key,value)->{
+            visitor.dimensionExpr(key);
+                value.visit(visitor);
+            visitor.endExpr();
+        });
+        visitor.endExpr();
 	}
 
 	/** Bind parameterized values to concrete values.
@@ -370,15 +371,15 @@ public interface Query extends AbstractSet<JsonObject, Query> {
 		@Override	public Boolean containsItem(JsonObject item) { return Boolean.TRUE; }
 		@Override	public Boolean contains(Query set) { return Boolean.TRUE; }
 		@Override	public Boolean maybeEquals(Query other) { return other == UNBOUNDED; }
-		@Override	public <X,V> X toExpression(Formatter<X,V> formatter, Context context) { return formatter.unbounded(context); }
-		@Override	public JsonValue toJSON() { return toExpression(Formatter.JSON); }
+		@Override	public void visit(Visitor<?> visitor) { visitor.unbounded(); }
+		@Override	public JsonValue toJSON() { return toExpression(Visitors.JSON); }
 		@Override	public Query bind(JsonObject values) { return this; }
 		@Override	public boolean isEmpty() { return false; }
 		@Override	public boolean isUnconstrained() { return true; }
 		@Override	public AbstractSet<? extends JsonValue, ?> getConstraint(String dimension) { return null; }
 		@Override	public Set<String> getConstraints() { return Collections.emptySet(); }		
 		@Override  	public Query maybeUnion(Query other) { return this; }
-		@Override  	public String toString() { return toExpression(Formatter.DEFAULT); }
+		@Override  	public String toString() { return toExpression(Visitors.DEFAULT); }
 
 	}
 	
@@ -389,15 +390,15 @@ public interface Query extends AbstractSet<JsonObject, Query> {
 		@Override	public Boolean containsItem(JsonObject item) { return Boolean.FALSE; }
 		@Override	public Boolean contains(Query set) { return Boolean.FALSE; }
 		@Override	public Boolean maybeEquals(Query other) { return other == EMPTY; }
-		@Override	public <X,V> X toExpression(Formatter<X,V> formatter, Context context) { return formatter.operExpr(context, "=", Json.createValue("[]")); }
-		@Override	public JsonValue toJSON() { return toExpression(Formatter.JSON); }
+        @Override	public void visit(Visitor<?> visitor) { visitor.operExpr("="); visitor.value(Json.createValue("[]")); visitor.endExpr(); }
+		@Override	public JsonValue toJSON() { return toExpression(Visitors.JSON); }
 		@Override	public Query bind(JsonObject values) { return this; }
 		@Override	public boolean isEmpty() { return true; }
 		@Override	public boolean isUnconstrained() { return false; }
 		@Override	public AbstractSet<? extends JsonValue, ?> getConstraint(String dimension) { return null; }
 		@Override	public Set<String> getConstraints() { return Collections.emptySet(); }		
 		@Override  	public Query maybeUnion(Query other) { return other; }
-		@Override  	public String toString() { return toExpression(Formatter.DEFAULT); }
+		@Override  	public String toString() { return toExpression(Visitors.DEFAULT); }
 	}
 	
 	public class UnionCube extends Union<JsonObject,Query> implements Query {

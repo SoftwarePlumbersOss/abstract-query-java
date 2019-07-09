@@ -2,15 +2,13 @@ package com.softwareplumbers.common.abstractquery;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.function.Function;
 
 import javax.json.JsonValue;
 
-import com.softwareplumbers.common.abstractquery.formatter.Context;
-import com.softwareplumbers.common.abstractquery.formatter.Formatter;
 import javax.json.JsonObject;
 import javax.json.JsonValue.ValueType;
+import visitor.Visitor;
+import visitor.Visitors;
 
 public abstract class Union<T extends JsonValue, U extends AbstractSet<T,U>> implements AbstractSet<T,U>   {
 	
@@ -68,18 +66,21 @@ public abstract class Union<T extends JsonValue, U extends AbstractSet<T,U>> imp
 		return Tristate.every(data, constraint->Tristate.any(((Union<T,U>)other).data, oconstraint->constraint.maybeEquals(oconstraint)));
 	}
 	
+    @Override
 	public boolean equals(Object other) {
 		return other instanceof Union && Boolean.TRUE == maybeEquals((U)other);
 	}
 
 	@Override
-	public <V,U> V toExpression(Formatter<V,U> formatter, Context context) {
-		return formatter.orExpr(context, type, data.stream().map(item -> item.toExpression(formatter, context)));
+	public void visit(Visitor<?> visitor) {
+        visitor.orExpr(type);
+		data.forEach(item -> item.visit(visitor));
+        visitor.endExpr();
 	}
 
 	@Override
 	public JsonValue toJSON() {
-		return toExpression(Formatter.JSON);
+		return toExpression(Visitors.JSON);
 	}
 
 	@Override
@@ -100,7 +101,7 @@ public abstract class Union<T extends JsonValue, U extends AbstractSet<T,U>> imp
 	}
 	
 	public String toString() {
-		return toExpression(Formatter.DEFAULT);
+		return toExpression(Visitors.DEFAULT);
 	}
 
 	public boolean isEmpty() {

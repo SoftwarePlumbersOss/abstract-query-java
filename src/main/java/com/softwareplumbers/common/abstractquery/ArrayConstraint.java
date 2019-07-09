@@ -9,9 +9,9 @@ import javax.json.JsonArray;
 import javax.json.JsonObject;
 import javax.json.JsonValue;
 
-import com.softwareplumbers.common.abstractquery.formatter.Context;
-import com.softwareplumbers.common.abstractquery.formatter.Formatter;
+import visitor.Context;
 import javax.json.JsonValue.ValueType;
+import visitor.Visitor;
 
 /** Expresses a constraint on an array 
 *
@@ -65,9 +65,17 @@ public interface ArrayConstraint<V extends JsonValue, S extends AbstractSet<V,S>
 		return ArrayConstraint.intersect(this, other);
 	}
 
-	public <U,X> U toExpression(Formatter<U,X> formatter, Context context) { 
-		Context array = context.setType(Context.Type.ARRAY);
-		return formatter.subExpr(context, OPERATOR, match.toExpression(formatter, array));
+    /** Visit this and child nodes
+	 * 
+	 * @param visitor the object which will visit
+	 */
+    @Override
+	public void visit(Visitor<?> visitor) {
+		visitor.subExpr("has");
+        visitor.arrayExpr();
+        match.visit(visitor);
+        visitor.endExpr();
+        visitor.endExpr();
 	}
 
 	@SuppressWarnings("unchecked")

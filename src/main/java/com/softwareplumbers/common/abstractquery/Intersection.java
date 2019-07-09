@@ -3,13 +3,14 @@ package com.softwareplumbers.common.abstractquery;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 
 import javax.json.JsonValue;
 
-import com.softwareplumbers.common.abstractquery.formatter.Context;
-import com.softwareplumbers.common.abstractquery.formatter.Formatter;
 import javax.json.JsonObject;
 import javax.json.JsonValue.ValueType;
+import visitor.Visitor;
+import visitor.Visitors;
 
 public abstract class Intersection<T extends JsonValue, U extends AbstractSet<T,U>> implements AbstractSet<T,U> {
 
@@ -28,10 +29,8 @@ public abstract class Intersection<T extends JsonValue, U extends AbstractSet<T,
 	
 	@Override
 	public U intersect(U other) {
-		List<U> result = new ArrayList<U>();
-		for (U item : this.data) {
-			result.add(item);
-		}
+		ArrayList<U> result = new ArrayList<>();
+		data.forEach(item->result.add(item));
 		result.add(other);
 		return getFactory().intersect(result);
 	}
@@ -59,33 +58,45 @@ public abstract class Intersection<T extends JsonValue, U extends AbstractSet<T,
 	}
 
 	@SuppressWarnings("unchecked") // Because every instance of Intersection<T,U> is a U
+    @Override
 	public boolean equals(Object other) {
 		return other instanceof Intersection && Boolean.TRUE == maybeEquals((U)other);
 	}
 
+    @Override
+    public int hashCode() {
+        int hash = 5;
+        hash = 97 * hash + Objects.hashCode(this.data);
+        hash = 97 * hash + Objects.hashCode(this.type);
+        return hash;
+    }
+
 	@Override
-	public <V,W> V toExpression(Formatter<V,W> formatter, Context context) {
-		return formatter.andExpr(context, type, data.stream().map(item -> item.toExpression(formatter, context)));
+	public void visit(Visitor<?> visitor) {
+		visitor.andExpr(type);
+        data.forEach(item->item.visit(visitor));
+        visitor.endExpr();
 	}
 	
+    @Override
 	public String toString() {
-		return toExpression(Formatter.DEFAULT);
+		return toExpression(Visitors.DEFAULT);
 	}
 
 	@Override
 	public JsonValue toJSON() {
-		return toExpression(Formatter.JSON);
+		return toExpression(Visitors.JSON);
 	}
 
 	@Override
 	public U bind(JsonObject parameters) {
 		
-		List<U> result = new ArrayList<U>();
+		ArrayList<U> result = new ArrayList<>();
 		
-		for (U item : this.data) {
+		data.forEach(item->{
 			item = item.bind(parameters);
 			if (item != null) result.add(item);
-		}
+		});
 		
 		return getFactory().intersect(result);
 	}
@@ -98,10 +109,12 @@ public abstract class Intersection<T extends JsonValue, U extends AbstractSet<T,
 		return type;
 	}
 
+    @Override
 	public boolean isEmpty() {
 		return false;
 	}
 	
+    @Override
 	public boolean isUnconstrained() {
 		return false;
 	}

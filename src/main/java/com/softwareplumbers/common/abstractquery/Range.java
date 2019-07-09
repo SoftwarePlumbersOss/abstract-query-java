@@ -15,10 +15,10 @@ import javax.json.JsonObject;
 import javax.json.JsonObjectBuilder;
 import javax.json.JsonValue;
 
-import com.softwareplumbers.common.abstractquery.formatter.Context;
-import com.softwareplumbers.common.abstractquery.formatter.Formatter;
 import javax.json.JsonString;
 import javax.json.JsonValue.ValueType;
+import visitor.Visitor;
+import visitor.Visitors;
 
 /** Range is an abstract class representing a range of values.
  *
@@ -45,20 +45,24 @@ public interface Range extends AbstractSet<JsonValue, Range> {
 		return mightEqual == Boolean.TRUE;
 	}
 	
+    @Override
 	public default Range union(Range other) {
 		Range result = maybeUnion(other);
 		if (result == null) result = Range.union(this, other);
 		return result;
 	}
 	
+    @Override
 	public default boolean isEmpty() {
 		return false;
 	}
 	
+    @Override
 	public default boolean isUnconstrained() {
 		return false;
 	}
 
+    @Override
 	public default Range intersect(Range other) {
 		Range result = maybeIntersect(other);
 		if (result == null) result = Range.intersect(this, other);
@@ -69,6 +73,7 @@ public interface Range extends AbstractSet<JsonValue, Range> {
 		return this.bind(JsonUtil.parseObject(params));
 	}
 	
+    @Override
 	public default Factory<JsonValue, Range> getFactory() {
 		return FACTORY;
 	}
@@ -336,57 +341,71 @@ public interface Range extends AbstractSet<JsonValue, Range> {
 	 */
 	public static class Unbounded implements Range {
 		
+        @Override
 		public boolean isEmpty() {
 			return false;
 		}
 		
+        @Override
 		public boolean isUnconstrained() {
 			return true;
 		}
 
+        @Override
 		public Boolean contains(Range range) {
 			return true;
 		}
 
+        @Override
 		public Boolean containsItem(JsonValue item) {
 			return true;
 		}
 
+        @Override
 		public Boolean intersects(Range range) {
 			return Boolean.TRUE;
 		}
 		
-		public <U,V> U toExpression(Formatter<U,V> formatter, Context context)	{ 
-			return formatter.unbounded(context); 
+        @Override
+		public void visit(Visitor<?> visitor)	{
+            visitor.unbounded();
 		}
 
+        @Override
 		public Boolean maybeEquals(Range range)	{ return range instanceof Unbounded; }
 		
+        @Override
 		public boolean equals(Object other) {
 			return other instanceof Range && maybeEquals((Range)other) == Boolean.TRUE;
 		}
 
+        @Override
 		public JsonValue toJSON() {
 			// TODO: fixme
 			return null;
 		}
 		
+        @Override
 		public Range maybeUnion(Range other) {
 			return this;
 		}
 		
+        @Override
 		public Range maybeIntersect(Range other) {
 			return other;
 		}
 
+        @Override
 		public String toString() {
-			return toExpression(Formatter.DEFAULT);
+			return toExpression(Visitors.DEFAULT);
 		}
 		
+        @Override
 		public ValueType getType() {
 			return null;
 		}
         
+        @Override
         public Range bind(JsonObject parameters) {
 			return this;
 		}
@@ -398,57 +417,73 @@ public interface Range extends AbstractSet<JsonValue, Range> {
 	 */
 	public static class Empty implements Range {
 
+        @Override
 		public boolean isEmpty() {
 			return true;
 		}
 		
+        @Override
 		public boolean isUnconstrained() {
 			return false;
 		}
 		
+        @Override
 		public Boolean contains(Range range) {
 			return Boolean.FALSE;
 		}
 
+        @Override
 		public Boolean containsItem(JsonValue item) {
 			return Boolean.FALSE;
 		}
 
+        @Override
 		public Boolean intersects(Range range) {
 			return Boolean.FALSE;
 		}
 		
-		public <U,V> U toExpression(Formatter<U,V> formatter, Context context)	{ 
-			return formatter.operExpr(context, "=", Json.createValue("[]")); 
+        @Override
+        public void visit(Visitor<?> visitor)	{
+            visitor.operExpr("=");
+                visitor.value(JsonValue.EMPTY_JSON_ARRAY);
+            visitor.endExpr();
 		}
 
+        @Override
 		public Boolean maybeEquals(Range range)	{ return range instanceof Empty; }
 		
+        @Override
 		public boolean equals(Object other) {
 			return other instanceof Range && maybeEquals((Range)other) == Boolean.TRUE;
 		}
 
+        @Override
 		public JsonValue toJSON() {
 			// TODO: fixme
 			return null;
 		}
 
+        @Override
 		public Range bind(JsonObject parameters) {
 			return this;
 		}
 		
+        @Override
 		public Range maybeUnion(Range other) {
 			return other;
 		}
 		
+        @Override
 		public Range maybeIntersect(Range other) {
 			return this;
 		}
 
+        @Override
 		public String toString() {
-			return toExpression(Formatter.DEFAULT);
+			return toExpression(Visitors.DEFAULT);
 		}
 		
+        @Override
 		public ValueType getType() {
 			return null;
 		}
@@ -469,10 +504,14 @@ public interface Range extends AbstractSet<JsonValue, Range> {
 			this.operator = operator;
 		}
 
-		public <U,V> U toExpression(Formatter<U,V> formatter, Context context)	{ 
-			return formatter.operExpr(context, this.operator, this.value); 
+        @Override
+        public void visit(Visitor<?> visitor)	{
+            visitor.operExpr(operator);
+            visitor.value(value);
+            visitor.endExpr();
 		}
 
+        @Override
 		public Boolean maybeEquals(Range range)	{ 
 			if (range instanceof OpenRange) {
 				if (this.operator.equals(((OpenRange)range).operator)) 
@@ -484,20 +523,24 @@ public interface Range extends AbstractSet<JsonValue, Range> {
 				return false;
 		}
 
+        @Override
 		public boolean equals(Object other) {
 			return other instanceof Range && maybeEquals((Range)other) == Boolean.TRUE;
 		}
 
+        @Override
 		public JsonValue toJSON() {
 			JsonObjectBuilder builder = Json.createObjectBuilder();
 			builder.add(this.operator, this.value);
 			return builder.build();
 		}
 		
+        @Override
 		public String toString() {
-			return toExpression(Formatter.DEFAULT);
+			return toExpression(Visitors.DEFAULT);
 		}
 		
+        @Override
 		public Range bind(JsonObject parameters) {
 			if (Param.isParam(value)) {
                 String key = Param.getKey(value);
@@ -509,6 +552,7 @@ public interface Range extends AbstractSet<JsonValue, Range> {
 			return this;
 		}
 		
+        @Override
 		public ValueType getType() {
 			return value.getValueType();
 		}
@@ -528,16 +572,19 @@ public interface Range extends AbstractSet<JsonValue, Range> {
 			this.upper_bound = upper_bound;
 		}
 
+        @Override
 		public Boolean contains(Range range) {
 			if (range == UNBOUNDED) return Boolean.FALSE;
 			if (range == EMPTY) return Boolean.FALSE;
 			return Tristate.and(this.lower_bound.contains(range), this.upper_bound.contains(range));
 		}
 
+        @Override
 		public Boolean containsItem(JsonValue item) {
 			return this.lower_bound.containsItem(item) && this.upper_bound.containsItem(item);
 		}
 
+        @Override
 		public Range maybeIntersect(Range range) {
 			if (range == EMPTY) return EMPTY;
 			if (range == UNBOUNDED) return this;
@@ -566,6 +613,7 @@ public interface Range extends AbstractSet<JsonValue, Range> {
 			return null;
 		}
 		
+        @Override
 		public Boolean intersects(Range range) {
 			if (range instanceof Unbounded) return Boolean.TRUE;
 			if (range instanceof Between) {
@@ -590,10 +638,15 @@ public interface Range extends AbstractSet<JsonValue, Range> {
 			return null;
 		}
 
-		public <U,V> U toExpression(Formatter<U,V> formatter, Context context)	{ 
-			return formatter.betweenExpr(context, getType(), lower_bound.toExpression(formatter, context), upper_bound.toExpression(formatter, context));
+        @Override
+		public void visit(Visitor<?> visitor)	{ 
+            visitor.betweenExpr(getType());
+			lower_bound.visit(visitor);
+            upper_bound.visit(visitor);
+            visitor.endExpr();
 		}
 
+        @Override
 		public Boolean maybeEquals(Range range) { 
 			if (range instanceof Between) {
 				Boolean lower = this.lower_bound.maybeEquals(((Between)range).lower_bound);
@@ -606,10 +659,12 @@ public interface Range extends AbstractSet<JsonValue, Range> {
 				return false;
 		}
 
+        @Override
 		public boolean equals(Object other) {
 			return other instanceof Range && maybeEquals((Range)other) == Boolean.TRUE;
 		}
 
+        @Override
 		public JsonValue toJSON() {
 			JsonArrayBuilder builder = Json.createArrayBuilder();
 
@@ -626,10 +681,12 @@ public interface Range extends AbstractSet<JsonValue, Range> {
 			return builder.build();
 		}
 		
+        @Override
 		public String toString() {
-			return toExpression(Formatter.DEFAULT);
+			return toExpression(Visitors.DEFAULT);
 		}
 
+        @Override
 		public Range bind(JsonObject parameters) {
 			Range new_lower_bound = lower_bound.bind(parameters);
 			Range new_upper_bound = upper_bound.bind(parameters);
@@ -669,6 +726,7 @@ public interface Range extends AbstractSet<JsonValue, Range> {
 
 		}
 		
+        @Override
 		public ValueType getType() {
 			if (lower_bound.getType() != null) return lower_bound.getType();
 			return upper_bound.getType();
@@ -688,6 +746,7 @@ public interface Range extends AbstractSet<JsonValue, Range> {
 			this.value = value;
 		}
 
+        @Override
 		public Boolean contains(Range range) {
 			if (range == UNBOUNDED) return Boolean.FALSE;
 			if (range == EMPTY) return Boolean.FALSE;
@@ -695,10 +754,12 @@ public interface Range extends AbstractSet<JsonValue, Range> {
 		}
 
 
+        @Override
 		public Boolean containsItem(JsonValue item) {
 			return JsonUtil.maybeEquals(value, item);
 		}
 
+        @Override
 		public Range maybeIntersect(Range range) {
 			if (range == EMPTY) return EMPTY;
 			if (range == UNBOUNDED) return this;
@@ -707,10 +768,12 @@ public interface Range extends AbstractSet<JsonValue, Range> {
 			return (result ? this : EMPTY);
 		}
 		
+        @Override
 		public Boolean intersects(Range range) {
 			return range.containsItem(value);
 		}
 		
+        @Override
 		public Range maybeUnion(Range range) {
 			if (range == UNBOUNDED) return this;
 			if (range == EMPTY) return EMPTY;
@@ -718,10 +781,15 @@ public interface Range extends AbstractSet<JsonValue, Range> {
 			return null;
 		}
 
-		public <U,V> U toExpression(Formatter<U,V> formatter, Context context)	{ 
-			return formatter.operExpr(context, OPERATOR, this.value); 
+        @Override
+        public void visit(Visitor<?> visitor)	{
+            visitor.operExpr(OPERATOR);
+			visitor.value(value);
+            visitor.endExpr();
+
 		}
 
+        @Override
 		public Boolean maybeEquals(Range range) {
 			if (range instanceof Equals) {
 				Boolean result = JsonUtil.maybeEquals(value, ((Equals)range).value);
@@ -730,15 +798,18 @@ public interface Range extends AbstractSet<JsonValue, Range> {
 				return Boolean.FALSE;
 		}
 		
+        @Override
 		public boolean equals(Object other) {
 			return other instanceof Range && maybeEquals((Range)other) == Boolean.TRUE;
 		}
 
 
+        @Override
 		public JsonValue toJSON() {
 			return value;
 		}
 
+        @Override
 		public Range bind(JsonObject parameters) {
 			if (Param.isParam(value)) {
                 String key = Param.getKey(value);
@@ -748,6 +819,7 @@ public interface Range extends AbstractSet<JsonValue, Range> {
 			return this;	
 		}
 		
+        @Override
 		public ValueType getType() { return Param.isParam(value) ? null : value.getValueType(); }
 	}
 
@@ -763,6 +835,7 @@ public interface Range extends AbstractSet<JsonValue, Range> {
 			super(OPERATOR, value);
 		}
 
+        @Override
 		public Boolean contains(Range range) {
 			if (range == UNBOUNDED) return Boolean.FALSE;
 			if (range == EMPTY) return Boolean.FALSE;
@@ -786,10 +859,12 @@ public interface Range extends AbstractSet<JsonValue, Range> {
 			return false; 
 		}
 
+        @Override
 		public Boolean containsItem(JsonValue item) {
 			return Tristate.isLessThan(JsonUtil.maybeCompare(item,this.value));
 		}
 		
+        @Override
 		public Boolean intersects(Range range) {
 			if (range == UNBOUNDED) return Boolean.TRUE;
 			if (range == EMPTY) return Boolean.FALSE;
@@ -809,6 +884,7 @@ public interface Range extends AbstractSet<JsonValue, Range> {
 			throw new IllegalArgumentException("Uknown range type: " + range);
 		}
 
+        @Override
 		public Range maybeIntersect(Range range) {
 			if (range == EMPTY) return EMPTY;
 			if (range == UNBOUNDED) return this;
@@ -849,6 +925,7 @@ public interface Range extends AbstractSet<JsonValue, Range> {
 			return null;
 		}
 		
+        @Override
 		public Range maybeUnion(Range range) {
 			if (range == EMPTY) return this;
 			if (range == UNBOUNDED) return UNBOUNDED;
@@ -884,6 +961,7 @@ public interface Range extends AbstractSet<JsonValue, Range> {
 			super(OPERATOR, value);
 		}
 
+        @Override
 		public Boolean contains(Range range) {
 			if (range == UNBOUNDED) return Boolean.FALSE;
 			if (range == EMPTY) return Boolean.FALSE;
@@ -905,11 +983,13 @@ public interface Range extends AbstractSet<JsonValue, Range> {
 			return false;
 		}
 
+        @Override
 		public Boolean containsItem(JsonValue item) {
 			//return item.lessThanOrEqual(this.value);
             return Tristate.isLessThanOrEqual(JsonUtil.maybeCompare(item, this.value));
 		}
 
+        @Override
 		public Boolean intersects(Range range) {
 			if (range == UNBOUNDED) return Boolean.TRUE;
 			if (range == EMPTY) return Boolean.FALSE;
@@ -929,6 +1009,7 @@ public interface Range extends AbstractSet<JsonValue, Range> {
 			throw new IllegalArgumentException("Uknown range type: " + range);
 		}
 		
+        @Override
 		public Range maybeIntersect(Range range) {
 			
 			if (range == EMPTY) return EMPTY;
@@ -982,6 +1063,7 @@ public interface Range extends AbstractSet<JsonValue, Range> {
 		}
 		
 		
+        @Override
 		public Range maybeUnion(Range range) {
 			if (range == EMPTY) return this;
 			if (range == UNBOUNDED) return UNBOUNDED;
@@ -1017,6 +1099,7 @@ public interface Range extends AbstractSet<JsonValue, Range> {
 			super(GreaterThan.OPERATOR, value);
 		}
 
+        @Override
 		public Boolean contains(Range range) {
 			if (range == UNBOUNDED) return Boolean.FALSE;
 			if (range == EMPTY) return Boolean.FALSE;
@@ -1041,11 +1124,13 @@ public interface Range extends AbstractSet<JsonValue, Range> {
 			return false;
 		}
 
+        @Override
 		public Boolean containsItem(JsonValue item) {
 			//return item.greaterThan(this.value);
             return Tristate.isGreaterThan(JsonUtil.maybeCompare(item, this.value));
 		}
 		
+        @Override
 		public Boolean intersects(Range range) {
 			if (range == UNBOUNDED) return Boolean.TRUE;
 			if (range == EMPTY) return Boolean.FALSE;
@@ -1065,6 +1150,7 @@ public interface Range extends AbstractSet<JsonValue, Range> {
 			throw new IllegalArgumentException("Uknown range type: " + range);
 		}
 
+        @Override
 		public Range maybeIntersect(Range range) {
 			if (range == EMPTY) return EMPTY;
 			if (range == UNBOUNDED) return this;
@@ -1107,6 +1193,7 @@ public interface Range extends AbstractSet<JsonValue, Range> {
 		}
 
 
+        @Override
 		public Range maybeUnion(Range range) {
 			if (range == EMPTY) return this;
 			if (range == UNBOUNDED) return UNBOUNDED;
@@ -1143,6 +1230,7 @@ public interface Range extends AbstractSet<JsonValue, Range> {
 		}
 
 
+        @Override
 		public Boolean contains(Range range) {
 			if (range == UNBOUNDED) return Boolean.FALSE;
 			if (range == EMPTY) return Boolean.FALSE;
@@ -1163,11 +1251,13 @@ public interface Range extends AbstractSet<JsonValue, Range> {
 			return false;
 		}
 
+        @Override
 		public Boolean containsItem(JsonValue item) {
 			//return item.greaterThanOrEqual(this.value);
             return Tristate.isGreaterThanOrEqual(JsonUtil.maybeCompare(item, this.value));
 		}
 
+        @Override
 		public Boolean intersects(Range range) {
 			if (range == UNBOUNDED) return Boolean.TRUE;
 			if (range == EMPTY) return Boolean.FALSE;
@@ -1187,6 +1277,7 @@ public interface Range extends AbstractSet<JsonValue, Range> {
 			throw new IllegalArgumentException("Uknown range type: " + range);
 		}
 		
+        @Override
 		public Range maybeIntersect(Range range) {
 
 			if (range == EMPTY) return EMPTY;
@@ -1240,6 +1331,7 @@ public interface Range extends AbstractSet<JsonValue, Range> {
 			return null;
 		}
 
+        @Override
 		public Range maybeUnion(Range range) {
 			if (range == EMPTY) return this;
 			if (range == UNBOUNDED) return UNBOUNDED;
@@ -1274,10 +1366,12 @@ public interface Range extends AbstractSet<JsonValue, Range> {
 			super(Range.getType(range), range);
 		}
 		
+        @Override
 		public Range maybeUnion(Range other) {
 			return null;
 		}
 		
+        @Override
 		public Range maybeIntersect(Range other) {
 			return null;
 		}
@@ -1323,14 +1417,14 @@ public interface Range extends AbstractSet<JsonValue, Range> {
 		
 		private static String nextSeq(String string) {
 			int end = string.length() - 1;
-			StringBuffer buf = new StringBuffer(string);
+			StringBuilder buf = new StringBuilder(string);
 			buf.setCharAt(end, (char)(string.charAt(end) + 1));
 			return buf.toString();
 		}
 		
 		private Range bounds;
-		private Pattern pattern;
-		private String template;
+		private final Pattern pattern;
+		private final String template;
 		
 		public Like(String template) {
 			this.template = template;
@@ -1391,11 +1485,13 @@ public interface Range extends AbstractSet<JsonValue, Range> {
 		public Boolean maybeEquals(Range other) {
 			return other instanceof Like && template.equals(((Like)other).template);
 		}
-
-		@Override
-		public <X, V> X toExpression(Formatter<X, V> formatter, Context context) {
-			return formatter.operExpr(context, OPERATOR, Json.createValue(this.template)); 
-		}
+        
+        @Override
+        public void visit(Visitor<?> visitor) {
+            visitor.operExpr(OPERATOR);
+            visitor.value(Json.createValue(this.template));
+            visitor.endExpr();
+        }
 
 		@Override
 		public JsonValue toJSON() {
