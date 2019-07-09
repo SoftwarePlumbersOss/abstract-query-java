@@ -35,7 +35,7 @@ public class Visitors {
 	*/
 	public static class DefaultFormat extends ContextualVisitor<String> {
                 
-        private Stack<String> elements = new Stack<String>();
+        protected Stack<String> elements = new Stack<String>();
         
         public DefaultFormat() { 
         }
