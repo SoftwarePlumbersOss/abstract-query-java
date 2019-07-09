@@ -1,7 +1,5 @@
 package com.softwareplumbers.common.abstractquery;
 
-import org.junit.runner.RunWith;
-
 import com.softwareplumbers.common.QualifiedName;
 import com.softwareplumbers.common.jsonview.JsonViewFactory;
 import java.util.Arrays;
@@ -15,7 +13,6 @@ import static org.junit.Assert.*;
 
 import javax.json.JsonObject;
 import javax.json.JsonValue;
-import com.softwareplumbers.common.abstractquery.visitor.Visitor;
 import com.softwareplumbers.common.abstractquery.visitor.Visitors;
 
 
@@ -268,7 +265,7 @@ public class QueryTest {
     	String expr = query.toExpression(Visitors.SIMPLIFY).toExpression(Visitors.DEFAULT);
     	assertEquals("(grade<'C' and (course='javascript 101' and student.age>=21 or course='medieval French poetry' and student.age>=40 and student.age<65))", expr);
     
-		String expr2 = query.toExpression(Visitors.SIMPLIFY).toExpression(MyVisitor.class);
+		String expr2 = query.toExpression(Visitors.SIMPLIFY).toExpression(MyVisitor::new);
    		assertEquals("(grade<'C' && (course='javascript 101' && student.age>=21 || course='medieval French poetry' && student.age>=40 && student.age<65))", expr2);
     }
 

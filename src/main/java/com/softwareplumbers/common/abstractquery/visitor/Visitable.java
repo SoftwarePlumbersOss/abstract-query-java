@@ -1,15 +1,13 @@
 package com.softwareplumbers.common.abstractquery.visitor;
 
+import java.util.function.Supplier;
+
 public interface Visitable {
 	void visit(Visitor<?> visitor);
     
-	default <T, U extends Visitor<T>> T toExpression(Class<U> format) { 
-        try {
-            Visitor<T> visitor = format.newInstance();
-            visit(visitor);
-            return visitor.getResult();
-        } catch (InstantiationException | IllegalAccessException ex) {
-            throw new RuntimeException(ex);
-        }
+	default <T, U extends Visitor<T>> T toExpression(Supplier<U> format) { 
+        Visitor<T> visitor = format.get();
+        visit(visitor);
+        return visitor.getResult();
     }
 }

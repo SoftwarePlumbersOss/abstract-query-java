@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Stack;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.json.Json;
@@ -604,11 +605,11 @@ public class Visitors {
 		}
 	}
 	
-	public  static Class<Factorizer> SIMPLIFY = Factorizer.class;	
-	public  static Class<TreeFormatter> TREE =  TreeFormatter.class;
+	public  static Supplier<Factorizer> SIMPLIFY = Factorizer::new;	
+	public  static Supplier<TreeFormatter> TREE =  TreeFormatter::new;
 	/** Default formatter creates a compact string expression */
-	public  static Class<DefaultFormat> DEFAULT = DefaultFormat.class;
+	public  static Supplier<DefaultFormat> DEFAULT = DefaultFormat::new;
 	/** Default JSON creates a JSON representation */
-	public  static Class<JsonFormat> JSON = JsonFormat.class;
+	public  static Supplier<JsonFormat> JSON = JsonFormat::new;
 
 }
