@@ -17,7 +17,7 @@ Query query = Query
 		grade: [,'C']
 	}")
 
-String expr = query.toExpression();
+String expr = query.toExpression(Visitors.SIMPLIFY).toExpression(Visitors.DEFAULT);
 ```
 
 and expression should equal:
@@ -28,52 +28,54 @@ Note that the common expression `grade<"C"` has been factored out of the 'or'. P
 
 ## Expression Formatters
 
-The `toExpression` method takes a formatter object so that query objects can be used to create any kind of output. For example:
+The `toExpression` method takes a visitor class so that query objects can be used to create any kind of output. For example:
 
 ```java
-Formatter<String> formatter = new Formatter<String>() {
-	andExpr(...ands) { return ands.join(' && ') }
-	orExpr(...ors) { return "(" + ors.join(' || ') + ")"}
-	operExpr(dimension, operator, value, context) { 
-		return (operator === 'contains')
-			? dimension"[" + value + "]"
-			: dimension + operator +value 
-	}
+
+public static class MyVisitor extends Visitors.DefaultFormat {
+    public String formatAndExpr(List<String> ands) { return ands.stream().collect(Collectors.joining(" && ")); }
+    public String formatOrExpr(List<String> ors) { return "(" + ors.stream().collect(Collectors.joining(" || ")) + ")"; }
 }
 
-String expr = query.toExpression(formatter)
+query.toExpression(Visitors.SIMPLIFY).toExpression(MyVisitor.class);
 ```
 
-Will result in an expr like: 
+Will result in an expression like: 
 
-`grade<"C" && (course="javascript 101" && student[age>="21"] || course="medieval French poetry" && student[age>="40" && age<"65"])`
+`(grade<'C' && (course='javascript 101' && student.age>=21 || course='medieval French poetry' && student.age>=40 && student.age<65))`
 
-The objective is to provide several different expression formatters, to support (at a minumum) constructing suitable expressions for IndexedDB, MongoDB, and MySQL. These formatters will be provided in separate packages so that a code can be written to the abstract-query API without creating a dependency on any given back-end store. The following are currently available:
+The objective is to provide several different expression formatters, to support (at a minumum) constructing suitable expressions for 
+IndexedDB, MongoDB, and MySQL. These formatters will be provided in separate packages so that a code can be written to the abstract-query API 
+without creating a dependency on any given back-end store. The following are currently available:
 
 | Target Language | Package |
 |-----------------|---------|
 | MongoDB         | [mongo-query-format](https://projects.softwareplumbers.com/common-java/mongo-query-format) |
+| Filenet SQL     | [filenet-query-format](https://projects.softwareplumbers.com/common-java/filenet-query-format-java) |
 
-## Filtering Arrays and Iterables
+## Filtering Streams
 
 Abstract Query itself provides a simple 'predicate' property that can be used to filter streams. For example Person is a bean with name and age properties:
 
 ```java
 
-List<Person> data = Arrays.asList( 
-    new Person("jonathan", 14), 
-    new Person("cindy", 18), 
-    new Person("ada", 21) 
-);
+        List<Person> data = Arrays.asList( 
+            new Person() {{ name="jonathan"; age=14; }}, 
+            new Person() {{ name="cindy"; age=18; }}, 
+            new Person() {{ name="ada"; age=21; }} 
+        );
 
-Query query = Query.from("{ age: [,18]}");
-List<Person> result = data
-    .stream()
-    .filter(query.predicate)
-    .collect(Collectors.toList());
+        Query query = Query.fromJson("{ 'age': [null,18]}");
+        List<Person> result = data.stream()
+            .filter(query.predicate().compose(JsonViewFactory::asJsonObject))
+            .collect(Collectors.toList());
 ```
 
-Will filter all the items with age less than 18 from the given data array. While the query API offers little advantage over an anonymous predicate function in this simple example, the ability to compose, optimise, and parametrize queries is a significant benefit in more complex cases. As more expression formatters are built, the ability to use a single query format across native data structures, front-end data stores, and back-end data stores will provide significant benefits to code readability and portability.
+Will filter all the items with age less than 18 from the given data array. While the query API offers
+little advantage over an anonymous predicate function in this simple example, the ability to compose, 
+optimise, and parametrize queries is a significant benefit in more complex cases. As more expression 
+formatters are built, the ability to use a single query format across native data structures, front-end 
+data stores, and back-end data stores will provide significant benefits to code readability and portability.
 
 ## Parameters
 

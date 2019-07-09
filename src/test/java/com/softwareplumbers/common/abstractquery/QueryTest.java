@@ -3,6 +3,10 @@ package com.softwareplumbers.common.abstractquery;
 import org.junit.runner.RunWith;
 
 import com.softwareplumbers.common.QualifiedName;
+import com.softwareplumbers.common.jsonview.JsonViewFactory;
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
 import javax.json.Json;
 
 import org.junit.Test;
@@ -250,6 +254,11 @@ public class QueryTest {
     	assertEquals("{\"$or\":[{\"x\":2,\"y\":[3,4],\"z\":8},{\"x\":2,\"y\":{\"<\":4},\"z\":7},{\"x\":3,\"y\":{\">=\":3},\"z\":{\"$\":\"param1\"}}]}", json);
     }
 
+    public static class MyVisitor extends Visitors.DefaultFormat {
+        public String formatAndExpr(List<String> ands) { return ands.stream().collect(Collectors.joining(" && ")); }
+        public String formatOrExpr(List<String> ors) { return "(" + ors.stream().collect(Collectors.joining(" || ")) + ")"; }
+    }
+
     @Test
     public void sampleCodeForReadmeTestsOK() {
     	Query query = Query
@@ -258,20 +267,9 @@ public class QueryTest {
 
     	String expr = query.toExpression(Visitors.SIMPLIFY).toExpression(Visitors.DEFAULT);
     	assertEquals("(grade<'C' and (course='javascript 101' and student.age>=21 or course='medieval French poetry' and student.age>=40 and student.age<65))", expr);
-    /*
-		const formatter = {
-    		andExpr(...ands) { return ands.join(' and ') }, 
-    		orExpr(...ors) { return "(" + ors.join(' or ') + ")"},
-    		operExpr(dimension, operator, value, context) { 
-    			return (operator === 'match')
-    				? dimension + "[" + value + "]"
-    				: dimension + operator + '"' + value + '"' 
-    		}
-    	}
-
-		let expr2 = query.toExpression(formatter);
-   		expect(expr2).to.equal('grade<"C" and (course="javascript 101" and student[age>="21"] or course="medieval French poetry" and student[age>="40" and age<"65"])');
-   	*/
+    
+		String expr2 = query.toExpression(Visitors.SIMPLIFY).toExpression(MyVisitor.class);
+   		assertEquals("(grade<'C' && (course='javascript 101' && student.age>=21 || course='medieval French poetry' && student.age>=40 && student.age<65))", expr2);
     }
 
 /*
@@ -287,20 +285,31 @@ public class QueryTest {
         expect(expr2).to.equal('grade<"C" and (course="javascript 101" and student.age>=27 or course="medieval French poetry" and student.age>=27 and student.age<65)');
     }
 
-    /*
-    it('sample code for README.md with predicate tests OK', ()=>{
-
-        let data = [ 
-            { name: 'jonathan', age: 12}, 
-            { name: 'cindy', age: 18}, 
-            { name: 'ada', age: 21} 
-        ];
-
-        Cube query = Cube.fromJson("{ age: [null,18]}
-        let result = data.filter(query.predicate);
-
-        expect(result).to.have.length(1);
+    */
+    
+    public static class Person {
+        public int age;
+        public String name;
+        
+        public int getAge() { return age; }
+        public String getName() { return name; }
     }
+    
+    @Test
+    public void sampleCodeForPredicateSearchTestsOK()
+    {
+
+        List<Person> data = Arrays.asList( 
+            new Person() {{ name="jonathan"; age=14; }}, 
+            new Person() {{ name="cindy"; age=18; }}, 
+            new Person() {{ name="ada"; age=21; }} 
+        );
+
+        Query query = Query.fromJson("{ 'age': [null,18]}");
+        List<Person> result = data.stream().filter(query.predicate().compose(JsonViewFactory::asJsonObject)).collect(Collectors.toList());
+        assertEquals(1, result.size());
+    }
+    /*
 
     it('sample code for README.md with subquery tests OK', ()=>{
 

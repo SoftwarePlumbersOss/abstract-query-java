@@ -14,7 +14,10 @@ import javax.json.JsonValue;
 
 import visitor.Context;
 import com.softwareplumbers.common.QualifiedName;
+import com.softwareplumbers.common.jsonview.JsonViewFactory;
 import java.io.StringReader;
+import java.util.function.Function;
+import java.util.function.Predicate;
 import javax.json.Json;
 
 import javax.json.JsonObject;
@@ -30,6 +33,21 @@ public interface Query extends AbstractSet<JsonObject, Query> {
 	public static final Query UNBOUNDED = new Unbounded();
 	public static final Query EMPTY = new Empty();
 	public static final QueryFactory FACTORY = new QueryFactory();
+    
+    public class ComposablePredicate implements Predicate<JsonObject> {
+        
+        Predicate<JsonObject> base;
+        
+        public boolean test(JsonObject obj) { return base.test(obj); }
+        
+        public <T> Predicate<T> compose(Function<T,JsonObject> map) {
+            return item->test(map.apply(item));
+        }
+        
+        public ComposablePredicate(Predicate<JsonObject> base) {
+            this.base = base;
+        }
+    }
 	
 	public AbstractSet<?, ?> getConstraint(String dimension);
 	public Set<String> getConstraints();
@@ -46,6 +64,10 @@ public interface Query extends AbstractSet<JsonObject, Query> {
 		return union(Query.fromJson(json));
 	}
 	
+    default ComposablePredicate predicate() {
+        return new ComposablePredicate(this::containsItem);
+    }
+
 	default Factory<JsonObject, Query> getFactory() {
 		return FACTORY;
 	}
@@ -186,7 +208,7 @@ public interface Query extends AbstractSet<JsonObject, Query> {
 		return Tristate.every(constraints.keySet(),
 			entry -> containsItem(entry, item));		
 	}
-	
+    	
 	public <T extends JsonValue,U extends AbstractSet<T,U>> Boolean intersects(String dimension, Query other) {
 		U constraint1 = (U)getConstraint(dimension);
 		U constraint2 = (U)other.getConstraint(dimension);
@@ -546,7 +568,7 @@ public interface Query extends AbstractSet<JsonObject, Query> {
 		// TODO: maybe do this better, like use JSURL. Or alternatively add compression?
 		return Query.fromJson(new String(Base64.getUrlDecoder().decode(query)));
 	}
-
+    
 }
 
 
