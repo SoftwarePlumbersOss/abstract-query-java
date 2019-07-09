@@ -50,7 +50,7 @@ public class Visitors {
         }
         
         
-		static String formatDimension(Context context) {
+		public String formatDimension(Context context) {
             switch (context.type) {
                 case ROOT: return "";
                 case ARRAY: return "$self";
