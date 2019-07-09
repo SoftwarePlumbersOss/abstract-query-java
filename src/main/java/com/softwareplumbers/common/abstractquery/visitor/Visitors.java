@@ -50,7 +50,7 @@ public class Visitors {
         }
         
         
-		static String printDimension(Context context) {
+		static String formatDimension(Context context) {
             switch (context.type) {
                 case ROOT: return "";
                 case ARRAY: return "$self";
@@ -68,12 +68,12 @@ public class Visitors {
                                 if (container.dimension == null)
                                     return context.dimension;
                                 else
-                                    return printDimension(container) + "." + context.dimension;
+                                    return formatDimension(container) + "." + context.dimension;
                                 default:
                                     throw new RuntimeException("Unexpected container type");
                         }
                     }
-                default: return printDimension(context.parent);
+                default: return formatDimension(context.parent);
             }
 		}
         
@@ -149,7 +149,7 @@ public class Visitors {
         @Override
         public void endOperExpr(Context context) {
             String value = elements.pop();
-            elements.push(formatOperExpr(printDimension(context), context.operator, value));
+            elements.push(formatOperExpr(formatDimension(context), context.operator, value));
         }
         
     	public String formatOperExpr(String dimension, String operator, String value) {
@@ -169,7 +169,7 @@ public class Visitors {
         @Override
         public void endSubExpr(Context context) {
             String value = elements.pop();
-            elements.push(formatSubExpr(printDimension(context), context.operator, value));            
+            elements.push(formatSubExpr(formatDimension(context), context.operator, value));            
         }
     	
     	public String formatSubExpr(String dimension, String operator, String sub) {
