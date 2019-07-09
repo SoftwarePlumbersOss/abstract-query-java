@@ -15,8 +15,8 @@ import static org.junit.Assert.*;
 
 import javax.json.JsonObject;
 import javax.json.JsonValue;
-import visitor.Visitor;
-import visitor.Visitors;
+import com.softwareplumbers.common.abstractquery.vistor.Visitor;
+import com.softwareplumbers.common.abstractquery.vistor.Visitors;
 
 
 public class QueryTest {

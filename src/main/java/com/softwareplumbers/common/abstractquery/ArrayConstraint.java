@@ -9,9 +9,9 @@ import javax.json.JsonArray;
 import javax.json.JsonObject;
 import javax.json.JsonValue;
 
-import visitor.Context;
+import com.softwareplumbers.common.abstractquery.vistor.Context;
 import javax.json.JsonValue.ValueType;
-import visitor.Visitor;
+import com.softwareplumbers.common.abstractquery.vistor.Visitor;
 
 /** Expresses a constraint on an array 
 *

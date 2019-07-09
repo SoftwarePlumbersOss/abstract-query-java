@@ -12,7 +12,7 @@ import java.util.stream.Collectors;
 import javax.json.JsonArray;
 import javax.json.JsonValue;
 
-import visitor.Context;
+import com.softwareplumbers.common.abstractquery.vistor.Context;
 import com.softwareplumbers.common.QualifiedName;
 import com.softwareplumbers.common.jsonview.JsonViewFactory;
 import java.io.StringReader;
@@ -22,8 +22,8 @@ import javax.json.Json;
 
 import javax.json.JsonObject;
 import javax.json.JsonValue.ValueType;
-import visitor.Visitor;
-import visitor.Visitors;
+import com.softwareplumbers.common.abstractquery.vistor.Visitor;
+import com.softwareplumbers.common.abstractquery.vistor.Visitors;
 
 /** A constraint maps each dimension in an abstract space to a range.
  *

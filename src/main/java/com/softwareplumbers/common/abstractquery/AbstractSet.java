@@ -2,10 +2,10 @@ package com.softwareplumbers.common.abstractquery;
 
 import javax.json.JsonValue;
 
-import visitor.Context;
+import com.softwareplumbers.common.abstractquery.vistor.Context;
 import javax.json.JsonObject;
-import visitor.Visitor;
-import visitor.Visitable;
+import com.softwareplumbers.common.abstractquery.vistor.Visitor;
+import com.softwareplumbers.common.abstractquery.vistor.Visitable;
 
 /** Interface representing an object on which fundamental set operations can be performed.
  * 

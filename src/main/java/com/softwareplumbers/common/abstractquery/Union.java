@@ -7,8 +7,8 @@ import javax.json.JsonValue;
 
 import javax.json.JsonObject;
 import javax.json.JsonValue.ValueType;
-import visitor.Visitor;
-import visitor.Visitors;
+import com.softwareplumbers.common.abstractquery.vistor.Visitor;
+import com.softwareplumbers.common.abstractquery.vistor.Visitors;
 
 public abstract class Union<T extends JsonValue, U extends AbstractSet<T,U>> implements AbstractSet<T,U>   {
 	

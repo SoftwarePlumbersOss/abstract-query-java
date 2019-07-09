@@ -1,4 +1,4 @@
-package visitor;
+package com.softwareplumbers.common.abstractquery.vistor;
 
 public interface Visitable {
 	void visit(Visitor<?> visitor);
