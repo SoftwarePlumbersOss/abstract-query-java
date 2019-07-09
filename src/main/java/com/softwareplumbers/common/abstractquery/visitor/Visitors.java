@@ -83,7 +83,7 @@ public class Visitors {
         }
                
 				
-		String formatValue(JsonValue value) {
+		public String formatValue(JsonValue value) {
             if (Param.isParam(value)) {
                 return "$" + ((JsonObject)value).getString("$");
             }
