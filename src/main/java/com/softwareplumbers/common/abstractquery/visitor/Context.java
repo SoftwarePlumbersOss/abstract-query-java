@@ -1,4 +1,4 @@
-package com.softwareplumbers.common.abstractquery.vistor;
+package com.softwareplumbers.common.abstractquery.visitor;
 
 import javax.json.JsonValue;
 import javax.json.JsonValue.ValueType;

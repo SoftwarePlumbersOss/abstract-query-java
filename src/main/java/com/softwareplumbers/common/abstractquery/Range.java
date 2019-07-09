@@ -17,8 +17,8 @@ import javax.json.JsonValue;
 
 import javax.json.JsonString;
 import javax.json.JsonValue.ValueType;
-import com.softwareplumbers.common.abstractquery.vistor.Visitor;
-import com.softwareplumbers.common.abstractquery.vistor.Visitors;
+import com.softwareplumbers.common.abstractquery.visitor.Visitor;
+import com.softwareplumbers.common.abstractquery.visitor.Visitors;
 
 /** Range is an abstract class representing a range of values.
  *

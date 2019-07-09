@@ -9,8 +9,8 @@ import javax.json.JsonValue;
 
 import javax.json.JsonObject;
 import javax.json.JsonValue.ValueType;
-import com.softwareplumbers.common.abstractquery.vistor.Visitor;
-import com.softwareplumbers.common.abstractquery.vistor.Visitors;
+import com.softwareplumbers.common.abstractquery.visitor.Visitor;
+import com.softwareplumbers.common.abstractquery.visitor.Visitors;
 
 public abstract class Intersection<T extends JsonValue, U extends AbstractSet<T,U>> implements AbstractSet<T,U> {
 
