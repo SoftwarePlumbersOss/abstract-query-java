@@ -456,4 +456,16 @@ public class QueryTest {
 		assertEquals("<unbounded>", Query.UNBOUNDED.toString());
 		assertEquals("<unbounded>", Query.from("test", ArrayConstraint.match(Query.UNBOUNDED)).toString());
 	}
+    
+    @Test
+    public void testContainsItemWithSubQuery() {
+    	Query query = Query.fromJson("{ 'x':2, 'y': { 'z': 3}}");
+    	assertTrue(query.containsItem(JsonUtil.parseObject("{ 'x':2, 'y': { 'z': 3}}")));
+    	assertFalse(query.containsItem(JsonUtil.parseObject("{ 'x':3, 'y': { 'z': 3}}")));
+    	assertFalse(query.containsItem(JsonUtil.parseObject("{ 'x':2, 'y': { 'z': 4}}")));
+    	query = Query.fromJson("{ 'y': { 'z': 3}, 'x':2 }");
+    	assertTrue(query.containsItem(JsonUtil.parseObject("{ 'x':2, 'y': { 'z': 3}}")));
+    	assertFalse(query.containsItem(JsonUtil.parseObject("{ 'x':3, 'y': { 'z': 3}}")));
+    	assertFalse(query.containsItem(JsonUtil.parseObject("{ 'x':2, 'y': { 'z': 4}}")));
+    }
 }
