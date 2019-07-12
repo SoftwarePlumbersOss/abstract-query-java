@@ -12,11 +12,11 @@ import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import java.util.Stack;
 import java.util.function.Function;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.json.Json;
@@ -39,15 +39,20 @@ public class Visitors {
 	*/
 	public static class DefaultFormat extends ContextualVisitor<String> {
                 
-        protected Stack<String> elements = new Stack<String>();
+        /** Stack of elements awaiting consolidation into a formatted expression
+         */
+        protected final Stack<String> elements;
         
         public DefaultFormat() { 
+            this.elements = new Stack<>();
         }
         
+        @Override
         public String getResult() {
             return elements.firstElement();
         }
 		
+        @Override
         public void beginDimensionExpr(Context context, String dimension) {
             
         }
@@ -608,11 +613,31 @@ public class Visitors {
 		}
 	}
     
+    /** Visitor that remaps names in a query.
+     * 
+     * @param <T> The type of the final result
+     */
     public static class NameRemapper<T> extends DelegatingVisitor<T> {
         
-        protected final Function<QualifiedName, String> mapper;
+        protected final Function<QualifiedName, QualifiedName> mapper;
         
-        protected NameRemapper(Visitor<T> output, Function<QualifiedName, String> mapper) {
+        /** Create a new NameRemapper visitor
+         * 
+         * The supplied function maps names in the visited query to new names. The input name is the 
+         * a fully qualified field name in the visited query. The output name is a partial new name
+         * with the same scope as the input name. This is best illustrated with a few examples:
+         * 
+         * | Input Name    | Output Name  |  What it does                |
+         * |---------------|--------------|------------------------------|
+         * | currency      | ccy          | converts currency to ccy only in the root scope |
+         * | currency.code | ROOT         | brings all sub-fields and values of 'code' into the 'currency' scope |
+         * | currency      | ccy.code     | move all sub-fields and values of 'currency' into a new scope 'ccy.code' |
+         * | currency.code  | currency.iso | rename 'code' to 'iso' only in the currency scope |
+         * 
+         * @param output
+         * @param mapper 
+         */
+        protected NameRemapper(Visitor<T> output, Function<QualifiedName, QualifiedName> mapper) {
             super(output);
             this.mapper = mapper;
         }
@@ -620,15 +645,24 @@ public class Visitors {
         @Override 
         public void dimensionExpr(String dimension) {
             context = context.dimensionExpr(dimension);
-            String mapped = mapper.apply(context.getDimension());
-            if (mapped != null) output.dimensionExpr(mapped);
+            QualifiedName mapped = mapper.apply(context.getDimension());
+            Iterator<String> namePart = mapped.iterator();
+            if (namePart.hasNext()) 
+                output.dimensionExpr(namePart.next());
+            while (namePart.hasNext()) {
+                output.queryExpr();
+                output.dimensionExpr(namePart.next());
+            }
         }
         
         @Override
         public void endExpr() {
             if (context.type == Context.Type.DIMENSION) {
-                String mapped = mapper.apply(context.getDimension());
-                if (mapped != null) output.endExpr();
+                QualifiedName mapped = mapper.apply(context.getDimension());
+                Iterator<String> namePart = mapped.iterator();
+                int expressionCount = mapped.size() * 2 - 1; 
+                for (int i = 0; i < expressionCount; i++ )
+                    output.endExpr();
             } else {
                 output.endExpr();
             }
@@ -644,7 +678,7 @@ public class Visitors {
 	/** Default JSON creates a JSON representation */
 	public static Formatter<JsonValue> JSON = JsonFormat::new;
     
-    public static <T> Function<Visitor<T>, Visitor<T>> rename(Function<QualifiedName,String> mapper) {
+    public static <T> Function<Visitor<T>, Visitor<T>> rename(Function<QualifiedName,QualifiedName> mapper) {
         return output -> new NameRemapper<T>(output,  mapper);
     }
 }

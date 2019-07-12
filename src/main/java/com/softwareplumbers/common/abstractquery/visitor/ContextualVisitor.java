@@ -7,6 +7,11 @@ package com.softwareplumbers.common.abstractquery.visitor;
 
 import javax.json.JsonValue;
 
+/** Visits nodes of a query while building up context visible at each node
+ * 
+ * @author jonathan.local
+ * @param <T> The type of the
+ */
 public abstract class ContextualVisitor<T> implements Visitor<T> {
 
     private Context context = new Context(Context.Type.ROOT);
