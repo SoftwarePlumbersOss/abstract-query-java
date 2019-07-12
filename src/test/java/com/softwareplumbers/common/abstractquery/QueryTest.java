@@ -51,16 +51,16 @@ public class QueryTest {
     	assertEquals("branch.country='UK' and branch.type='accounting' and currency='GBP'", query.toString());
     };
 
-    private static String renameCurrency(QualifiedName name) {
-        return (name.equals(QualifiedName.of("currency"))) ? "ccy" : name.part;
+    private static QualifiedName renameCurrency(QualifiedName name) {
+        return QualifiedName.of(name.equals(QualifiedName.of("currency")) ? "ccy" : name.part);
     }
 
-    private static String renameBranch(QualifiedName name) {
-        return (name.equals(QualifiedName.of("branch"))) ? "unit" : name.part;
+    private static QualifiedName renameBranch(QualifiedName name) {
+        return QualifiedName.of(name.equals(QualifiedName.of("branch")) ? "unit" : name.part);
     }
     
-    private static String renameCountry(QualifiedName name) {
-        return (name.equals(QualifiedName.of("branch","country"))) ? "ctry" : name.part;
+    private static QualifiedName renameCountry(QualifiedName name) {
+        return QualifiedName.of(name.equals(QualifiedName.of("branch","country")) ? "ctry" : name.part);
     }
 
     
@@ -75,8 +75,8 @@ public class QueryTest {
                 query.toExpression(Visitors.DEFAULT.transform(Visitors.rename(QueryTest::renameCountry))));
     };
     
-    private static String pullUpBranch(QualifiedName name) {
-        return (name.equals(QualifiedName.of("branch"))) ? null : name.part;
+    private static QualifiedName pullUpBranch(QualifiedName name) {
+        return (name.equals(QualifiedName.of("branch"))) ? QualifiedName.ROOT : QualifiedName.of(name.part);
     }
     
     @Test
@@ -84,6 +84,17 @@ public class QueryTest {
     	Query query = Query.fromJson("{ 'currency': 'GBP', 'branch': { 'country': 'UK', 'type': 'accounting'}}");
     	assertEquals("country='UK' and type='accounting' and currency='GBP'", 
                 query.toExpression(Visitors.DEFAULT.transform(Visitors.rename(QueryTest::pullUpBranch))));
+    };
+
+    private static QualifiedName pushDownCurrency(QualifiedName name) {
+        return (name.equals(QualifiedName.of("currency"))) ? QualifiedName.of("ccy","code") : QualifiedName.of(name.part);
+    }
+
+    @Test
+    public void canPushDownFields() {
+    	Query query = Query.fromJson("{ 'currency': 'GBP', 'branch': { 'country': 'UK', 'type': 'accounting'}}");
+    	assertEquals("branch.country='UK' and branch.type='accounting' and ccy.code='GBP'", 
+                query.toExpression(Visitors.DEFAULT.transform(Visitors.rename(QueryTest::pushDownCurrency))));
     };
 
 	@Test
