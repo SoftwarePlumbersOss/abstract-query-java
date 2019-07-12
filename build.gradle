@@ -6,6 +6,10 @@
  * user guide available at https://docs.gradle.org/4.4.1/userguide/java_library_plugin.html
  */
 
+plugins {
+  id "org.jdrupes.mdoclet" version "1.0.3"
+}
+
 String propValue(String propName, String defValue) {
     (project.hasProperty(propName) && project.getProperty(propName)) ? project.getProperty(propName) : defValue
 }
@@ -35,6 +39,13 @@ uploadArchives {
     }
 }
 
+test {
+	systemProperties = System.properties
+	testLogging {
+        events "passed", "skipped", "failed"
+    }
+}
+
 dependencies {
 
     compile group: 'javax.json', name: 'javax.json-api', version: '1.1.2'
@@ -48,6 +59,11 @@ dependencies {
 
 jar {
     baseName 'abstract-query-java'
+}
+
+javadoc {
+    source = sourceSets.main.allJava
+    classpath = configurations.compile
 }
 
 task sourcesJar(type: Jar, dependsOn: classes) {

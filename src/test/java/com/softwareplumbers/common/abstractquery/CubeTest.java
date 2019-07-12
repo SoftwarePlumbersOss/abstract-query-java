@@ -1,14 +1,11 @@
 package com.softwareplumbers.common.abstractquery;
 
-import org.junit.runner.RunWith;
-
 import javax.json.Json;
 import javax.json.JsonObject;
 
 import org.junit.Test;
 
 import static org.junit.Assert.*;
-import com.softwareplumbers.common.abstractquery.visitor.Visitor;
 import com.softwareplumbers.common.abstractquery.visitor.Visitors;
 
 public class CubeTest {
