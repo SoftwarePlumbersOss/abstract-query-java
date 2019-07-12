@@ -51,6 +51,41 @@ public class QueryTest {
     	assertEquals("branch.country='UK' and branch.type='accounting' and currency='GBP'", query.toString());
     };
 
+    private static String renameCurrency(QualifiedName name) {
+        return (name.equals(QualifiedName.of("currency"))) ? "ccy" : name.part;
+    }
+
+    private static String renameBranch(QualifiedName name) {
+        return (name.equals(QualifiedName.of("branch"))) ? "unit" : name.part;
+    }
+    
+    private static String renameCountry(QualifiedName name) {
+        return (name.equals(QualifiedName.of("branch","country"))) ? "ctry" : name.part;
+    }
+
+    
+    @Test
+    public void canRenameFields() {
+    	Query query = Query.fromJson("{ 'currency': 'GBP', 'branch': { 'country': 'UK', 'type': 'accounting'}}");
+    	assertEquals("branch.country='UK' and branch.type='accounting' and ccy='GBP'", 
+                query.toExpression(Visitors.DEFAULT.transform(Visitors.rename(QueryTest::renameCurrency))));
+    	assertEquals("unit.country='UK' and unit.type='accounting' and currency='GBP'", 
+                query.toExpression(Visitors.DEFAULT.transform(Visitors.rename(QueryTest::renameBranch))));
+    	assertEquals("branch.ctry='UK' and branch.type='accounting' and currency='GBP'", 
+                query.toExpression(Visitors.DEFAULT.transform(Visitors.rename(QueryTest::renameCountry))));
+    };
+    
+    private static String pullUpBranch(QualifiedName name) {
+        return (name.equals(QualifiedName.of("branch"))) ? null : name.part;
+    }
+    
+    @Test
+    public void canPullUpFields() {
+    	Query query = Query.fromJson("{ 'currency': 'GBP', 'branch': { 'country': 'UK', 'type': 'accounting'}}");
+    	assertEquals("country='UK' and type='accounting' and currency='GBP'", 
+                query.toExpression(Visitors.DEFAULT.transform(Visitors.rename(QueryTest::pullUpBranch))));
+    };
+
 	@Test
     public void redundantConstraintsAreSuppressed() {
     	Query query = Query

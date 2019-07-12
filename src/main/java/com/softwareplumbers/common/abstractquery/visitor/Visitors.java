@@ -32,6 +32,9 @@ import javax.json.JsonValue.ValueType;
  * @author jonathan.local
  */
 public class Visitors {
+    
+    
+    
     /** Get the default query formatter
 	*/
 	public static class DefaultFormat extends ContextualVisitor<String> {
@@ -604,12 +607,44 @@ public class Visitors {
             super.endExpr();
 		}
 	}
+    
+    public static class NameRemapper<T> extends DelegatingVisitor<T> {
+        
+        protected final Function<QualifiedName, String> mapper;
+        
+        protected NameRemapper(Visitor<T> output, Function<QualifiedName, String> mapper) {
+            super(output);
+            this.mapper = mapper;
+        }
+        
+        @Override 
+        public void dimensionExpr(String dimension) {
+            context = context.dimensionExpr(dimension);
+            String mapped = mapper.apply(context.getDimension());
+            if (mapped != null) output.dimensionExpr(mapped);
+        }
+        
+        @Override
+        public void endExpr() {
+            if (context.type == Context.Type.DIMENSION) {
+                String mapped = mapper.apply(context.getDimension());
+                if (mapped != null) output.endExpr();
+            } else {
+                output.endExpr();
+            }
+            context = context.parent;
+            context.count++;
+        }
+    }
 	
-	public  static Supplier<Factorizer> SIMPLIFY = Factorizer::new;	
-	public  static Supplier<TreeFormatter> TREE =  TreeFormatter::new;
+	public static Formatter<Node> SIMPLIFY = Factorizer::new;	
+	public static Formatter<Node> TREE =  TreeFormatter::new;
 	/** Default formatter creates a compact string expression */
-	public  static Supplier<DefaultFormat> DEFAULT = DefaultFormat::new;
+	public static Formatter<String> DEFAULT = DefaultFormat::new;
 	/** Default JSON creates a JSON representation */
-	public  static Supplier<JsonFormat> JSON = JsonFormat::new;
-
+	public static Formatter<JsonValue> JSON = JsonFormat::new;
+    
+    public static <T> Function<Visitor<T>, Visitor<T>> rename(Function<QualifiedName,String> mapper) {
+        return output -> new NameRemapper<T>(output,  mapper);
+    }
 }

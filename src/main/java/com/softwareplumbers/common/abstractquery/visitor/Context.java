@@ -1,5 +1,6 @@
 package com.softwareplumbers.common.abstractquery.visitor;
 
+import com.softwareplumbers.common.QualifiedName;
 import javax.json.JsonValue;
 import javax.json.JsonValue.ValueType;
 
@@ -95,6 +96,14 @@ public class Context {
                 return parent;
             default:
                 return parent.getContainer();
+        }
+    }
+    
+    public QualifiedName getDimension() {
+        switch (type) {
+            case ROOT: return QualifiedName.ROOT;
+            case DIMENSION: return parent.getDimension().add(dimension);
+            default: return parent.getDimension();
         }
     }
 }

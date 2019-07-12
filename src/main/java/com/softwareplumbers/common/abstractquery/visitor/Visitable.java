@@ -5,8 +5,8 @@ import java.util.function.Supplier;
 public interface Visitable {
 	void visit(Visitor<?> visitor);
     
-	default <T, U extends Visitor<T>> T toExpression(Supplier<U> format) { 
-        Visitor<T> visitor = format.get();
+	default <T> T toExpression(Formatter<T> format) { 
+        Visitor<T> visitor = format.getVisitor();
         visit(visitor);
         return visitor.getResult();
     }
