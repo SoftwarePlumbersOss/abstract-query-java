@@ -25,4 +25,7 @@ publish:
 
 deploy:
   stage: downstream-builds
-  trigger: document-management/rest-server-core
+  only: 
+    - master
+  script:
+    - "curl -X POST -F token=${DOCTANE_CORE_TRIGGER_TOKEN} -F ref=master https://projects.softwareplumbers.com/api/v4/projects/46/trigger/pipeline"
