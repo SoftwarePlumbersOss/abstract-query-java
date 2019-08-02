@@ -14,7 +14,7 @@ String propValue(String propName, String defValue) {
     (project.hasProperty(propName) && project.getProperty(propName)) ? project.getProperty(propName) : defValue
 }
 
-version = propValue("ci_version","master");
+version = propValue("ci_version","master-SNAPSHOT");
 group = "com.softwareplumbers.oss"
 
 // Apply the java-library plugin to add support for Java Library
@@ -27,12 +27,16 @@ repositories {
     // You can declare any Maven/Ivy/file repository here.
     maven { url propValue("proxyMavenCentral", "https://repo.maven.apache.org/maven2/") }
     maven { url "https://nexus.softwareplumbers.com/repository/maven-oss" }
+    maven { url 'https://nexus.softwareplumbers.com/repository/maven-oss-snapshot' }
 }
 
 uploadArchives {
     repositories {
         mavenDeployer {
             repository(url: "https://nexus.softwareplumbers.com/repository/maven-oss") {
+                authentication(userName: propValue("mavenUploadUser",""), password: propValue("mavenUploadPassword",""))
+            }
+            snapshotRepository(url: "https://nexus.softwareplumbers.com/repository/maven-oss-snapshot") {
                 authentication(userName: propValue("mavenUploadUser",""), password: propValue("mavenUploadPassword",""))
             }
         }
