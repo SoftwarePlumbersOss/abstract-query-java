@@ -14,8 +14,12 @@ String propValue(String propName, String defValue) {
     (project.hasProperty(propName) && project.getProperty(propName)) ? project.getProperty(propName) : defValue
 }
 
-version = propValue("ci_version","master-SNAPSHOT");
+version = propValue("ci_version","master");
 group = "com.softwareplumbers.oss"
+
+def SNAPSHOT_BUILDS = ["master"];
+
+if (SNAPSHOT_BUILDS.contains(version)) { version = version + "-SNAPSHOT" };
 
 // Apply the java-library plugin to add support for Java Library
 apply plugin: 'java'
