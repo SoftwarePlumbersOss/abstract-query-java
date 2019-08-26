@@ -1,12 +1,14 @@
 package com.softwareplumbers.common.abstractquery;
 
+import com.softwareplumbers.common.abstractpattern.Pattern;
+import com.softwareplumbers.common.abstractpattern.parsers.Parsers;
+import com.softwareplumbers.common.abstractpattern.visitor.Builders;
+import com.softwareplumbers.common.abstractpattern.visitor.Visitor.PatternSyntaxException;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Predicate;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import javax.json.Json;
 import javax.json.JsonArray;
@@ -19,6 +21,8 @@ import javax.json.JsonString;
 import javax.json.JsonValue.ValueType;
 import com.softwareplumbers.common.abstractquery.visitor.Visitor;
 import com.softwareplumbers.common.abstractquery.visitor.Visitors;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /** Range is an abstract class representing a range of values.
  *
@@ -172,10 +176,11 @@ public interface Range extends AbstractSet<JsonValue, Range> {
 	 * @return a Range object
 	 */
 	public static Range like(String template) {
-		if (Like.isTemplate(template))
-			return new Like(template);
-		else
-			return new Equals(Json.createValue(template));
+        Pattern pattern = Parsers.parseUnixWildcard(template);
+		if (pattern.isSimple())
+			return new Equals(Json.createValue(pattern.lowerBound()));
+        else
+            return new Like(pattern);
 	}
 	
 	/**
@@ -1410,11 +1415,7 @@ public interface Range extends AbstractSet<JsonValue, Range> {
 		private static final String REGEX_MULTI=".*";
 		private static final String REGEX_SINGLE=".";
 		public static final String OPERATOR="like";
-		
-		public static boolean isTemplate(String template) {
-			return template.contains("*") || template.contains("?");
-		}
-		
+				
 		private static String nextSeq(String string) {
 			int end = string.length() - 1;
 			StringBuilder buf = new StringBuilder(string);
@@ -1423,32 +1424,27 @@ public interface Range extends AbstractSet<JsonValue, Range> {
 		}
 		
 		private Range bounds;
-		private final Pattern pattern;
-		private final String template;
+		private final java.util.regex.Pattern pattern;
+        private Pattern template;
 		
-		public Like(String template) {
-			this.template = template;
-			int first_star = template.indexOf("*");
-			int first_questionmark = template.indexOf("?");
-			int first_wildcard = -1;
+		public Like(Pattern pattern) {
+            
+            this.template = pattern;
+            String lowerBound = pattern.lowerBound();
 			
-			if (first_star >= 0 && first_questionmark >= 0) 
-				first_wildcard = Math.min(first_star, first_questionmark);
-			else
-				first_wildcard = Math.max(first_star, first_questionmark);
-			
-			if (first_wildcard == 0) {
+			if ("".equals(lowerBound)) {
 				this.bounds = UNBOUNDED;
 			} else {
-				String lower_bound = template.substring(0, first_wildcard);
-				String upper_bound = nextSeq(lower_bound);
-				this.bounds = between(Json.createValue(lower_bound), Json.createValue(upper_bound));
+				String upper_bound = nextSeq(lowerBound);
+				this.bounds = between(Json.createValue(lowerBound), Json.createValue(upper_bound));
 			} 
-			
-			String regex = template.replace("*", REGEX_MULTI);
-			regex = regex.replace("?", REGEX_SINGLE);
-			this.pattern = Pattern.compile(regex);
-		}
+            
+            try {
+    			this.pattern = pattern.build(Builders.toPattern());
+            } catch (PatternSyntaxException e) {
+                throw new RuntimeException(e);
+            }
+        }
 
 		@Override
 		public Boolean intersects(Range other) {
@@ -1463,8 +1459,7 @@ public interface Range extends AbstractSet<JsonValue, Range> {
                 return null;
             
 			if (item.getValueType() == ValueType.STRING) {
-				Matcher matcher = pattern.matcher(((JsonString)item).getString());
-				return matcher.matches();
+                return pattern.matcher(((JsonString)item).getString()).matches();
 			}
 			return Boolean.FALSE;
 		}
@@ -1489,13 +1484,21 @@ public interface Range extends AbstractSet<JsonValue, Range> {
         @Override
         public void visit(Visitor<?> visitor) {
             visitor.operExpr(OPERATOR);
-            visitor.value(Json.createValue(this.template));
+            try {
+                visitor.value(Json.createValue(template.build(Builders.toUnixWildcard())));
+            } catch (PatternSyntaxException ex) {
+                throw new RuntimeException(ex);
+            }
             visitor.endExpr();
         }
 
 		@Override
 		public JsonValue toJSON() {
-			return Json.createObjectBuilder().add("$like", template).build();
+            try {
+                return Json.createObjectBuilder().add("$like", template.build(Builders.toUnixWildcard())).build();
+            } catch (PatternSyntaxException ex) {
+                throw new RuntimeException(ex);
+            }
 		}
 
 		@Override
