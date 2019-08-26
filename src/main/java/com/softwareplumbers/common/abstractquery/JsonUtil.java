@@ -88,6 +88,10 @@ public class JsonUtil {
         }
     }
     
+    public static ValueType getValueType(JsonValue value) {
+        return value == null ? ValueType.NULL : value.getValueType();
+    }
+    
     public static CompareResult maybeCompare(JsonValue a, JsonValue b) {
         boolean isParamA = Param.isParam(a);
         boolean isParamB = Param.isParam(b);
@@ -97,9 +101,9 @@ public class JsonUtil {
             else
                 return CompareResult.UNKNOWN;
         } 
-        ValueType type = a.getValueType();
+        ValueType type = getValueType(a);
 
-        if (type == b.getValueType()) {
+        if (type == getValueType(b)) {
             switch (type) {
                 case STRING: 
                     return CompareResult.valueOf(compare((JsonString)a, (JsonString)b));
@@ -119,14 +123,14 @@ public class JsonUtil {
             case NULL: 
                 return CompareResult.LESS; // Null deemed less than any value
             case TRUE:
-                if (b.getValueType() == ValueType.FALSE)
+                if (getValueType(b) == ValueType.FALSE)
                     return CompareResult.GREATER; // True deemed greater than false
                 break;
             case FALSE:
-                if (b.getValueType() == ValueType.TRUE) // False deemed less than true
+                if (getValueType(b) == ValueType.TRUE) // False deemed less than true
                     return CompareResult.LESS;
             default:
-                if (b.getValueType() == ValueType.NULL)
+                if (getValueType(b) == ValueType.NULL)
                     return CompareResult.GREATER; // Any value deemed greater than null
         }
         

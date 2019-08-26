@@ -514,4 +514,10 @@ public class QueryTest {
     	assertFalse(query.containsItem(JsonUtil.parseObject("{ 'x':3, 'y': { 'z': 3}}")));
     	assertFalse(query.containsItem(JsonUtil.parseObject("{ 'x':2, 'y': { 'z': 4}}")));
     }
+    
+    @Test
+    public void testContainsItemWithMissingValue() {
+    	Query query = Query.fromJson("{ 'x':2, 'y': { 'z': 3}}");
+    	assertFalse(query.containsItem(JsonUtil.parseObject("{ 'x':2, 'y': { 'a': 3}}")));
+    }
 }

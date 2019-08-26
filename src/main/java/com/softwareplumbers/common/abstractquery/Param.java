@@ -26,6 +26,7 @@ public class Param  {
 	* @return true of obj is a Param
 	*/
 	public static boolean isParam(JsonValue obj) {
+        if (obj == null) return false;
         if (obj.getValueType().equals(JsonValue.ValueType.OBJECT))
     		return ((JsonObject)obj).containsKey("$");
         return false;
