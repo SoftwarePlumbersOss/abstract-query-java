@@ -1458,7 +1458,7 @@ public interface Range extends AbstractSet<JsonValue, Range> {
             if (Param.isParam(item))
                 return null;
             
-			if (item.getValueType() == ValueType.STRING) {
+			if (item != null && item.getValueType() == ValueType.STRING) {
                 return pattern.matcher(((JsonString)item).getString()).matches();
 			}
 			return Boolean.FALSE;
