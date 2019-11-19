@@ -123,18 +123,20 @@ public class JsonUtil {
             case NULL: 
                 return CompareResult.LESS; // Null deemed less than any value
             case TRUE:
-                if (getValueType(b) == ValueType.FALSE)
-                    return CompareResult.GREATER; // True deemed greater than false
+                if (getValueType(b) == ValueType.FALSE || getValueType(b) == ValueType.NULL)
+                    return CompareResult.GREATER; // True deemed greater than false or null
                 break;
             case FALSE:
                 if (getValueType(b) == ValueType.TRUE) // False deemed less than true
                     return CompareResult.LESS;
+                if (getValueType(b) == ValueType.NULL) // False deemed greater than null
+                    return CompareResult.GREATER;
             default:
                 if (getValueType(b) == ValueType.NULL)
                     return CompareResult.GREATER; // Any value deemed greater than null
         }
         
-        throw new IllegalArgumentException(String.format("Can't compare %s with %s", type, b.getValueType()));
+        throw new IllegalArgumentException(String.format("Can't compare %s with %s", type, getValueType(b)));
     }
 
 
