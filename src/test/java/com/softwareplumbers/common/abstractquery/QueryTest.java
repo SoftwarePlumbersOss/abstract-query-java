@@ -492,8 +492,8 @@ public class QueryTest {
 	
 	@Test
 	public void testEquivalenceOfQualifedName() {
-		Query query1 = Query.from("a", Query.from("b", Query.from("c", Range.equals(Json.createValue("d")))));
-		Query query2 = Query.from(QualifiedName.of("a","b","c"), Range.equals(Json.createValue("d")));
+		Query query1 = Query.from("a", Query.from("b", Query.from("c", Range.equals(JsonViewFactory.asJson("d")))));
+		Query query2 = Query.from(QualifiedName.of("a","b","c"), Range.equals(JsonViewFactory.asJson("d")));
 		assertEquals(query1.toString(), query2.toString());
 	}
 	

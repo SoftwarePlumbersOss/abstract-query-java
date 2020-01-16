@@ -1,6 +1,7 @@
 package com.softwareplumbers.common.abstractquery;
 
 
+import com.softwareplumbers.common.jsonview.JsonViewFactory;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
@@ -15,10 +16,10 @@ public class RangeTest {
 
 	@Test
     public void canCreateEquals() {
-    	Range range1 = Range.equals(Json.createValue(37));
-    	assertTrue(range1.containsItem(Json.createValue(37)));
-    	assertFalse(range1.containsItem(Json.createValue(38)));
-    	assertFalse(range1.containsItem(Json.createValue(36)));
+    	Range range1 = Range.equals(JsonViewFactory.asJson(37));
+    	assertTrue(range1.containsItem(JsonViewFactory.asJson(37)));
+    	assertFalse(range1.containsItem(JsonViewFactory.asJson(38)));
+    	assertFalse(range1.containsItem(JsonViewFactory.asJson(36)));
     	Range range2 = Range.from("37");
     	assertEquals(range1, range2);
     }
@@ -34,10 +35,10 @@ public class RangeTest {
 
 	@Test
     public void canCreateLessThan() {
-    	Range range1 = Range.lessThan(Json.createValue(37));
-    	assertFalse(range1.containsItem(Json.createValue(37)));
-    	assertFalse(range1.containsItem(Json.createValue(38)));
-    	assertTrue(range1.containsItem(Json.createValue(36)));
+    	Range range1 = Range.lessThan(JsonViewFactory.asJson(37));
+    	assertFalse(range1.containsItem(JsonViewFactory.asJson(37)));
+    	assertFalse(range1.containsItem(JsonViewFactory.asJson(38)));
+    	assertTrue(range1.containsItem(JsonViewFactory.asJson(36)));
     	Range range2 = Range.from("{ '<' : 37 }");
     	assertEquals(range1, range2);
     }
@@ -51,10 +52,10 @@ public class RangeTest {
 
 	@Test
     public void canCreateGreaterThan() {
-    	Range range1 = Range.greaterThan(Json.createValue(37));
-    	assertFalse(range1.containsItem(Json.createValue(37)));
-    	assertTrue(range1.containsItem(Json.createValue(38)));
-    	assertFalse(range1.containsItem(Json.createValue(36)));
+    	Range range1 = Range.greaterThan(JsonViewFactory.asJson(37));
+    	assertFalse(range1.containsItem(JsonViewFactory.asJson(37)));
+    	assertTrue(range1.containsItem(JsonViewFactory.asJson(38)));
+    	assertFalse(range1.containsItem(JsonViewFactory.asJson(36)));
     	Range range2 = Range.from("{ '>' : 37 }");
     	assertEquals(range1, range2);
     }
@@ -68,16 +69,16 @@ public class RangeTest {
 
 	@Test
     public void canCreateBetween() {
-    	Range range1 = Range.between(Json.createValue(14), Json.createValue(37));
-    	assertFalse(range1.containsItem(Json.createValue(11)));
-    	assertFalse(range1.containsItem(Json.createValue(38)));
-    	assertTrue(range1.containsItem(Json.createValue(36)));
+    	Range range1 = Range.between(JsonViewFactory.asJson(14), JsonViewFactory.asJson(37));
+    	assertFalse(range1.containsItem(JsonViewFactory.asJson(11)));
+    	assertFalse(range1.containsItem(JsonViewFactory.asJson(38)));
+    	assertTrue(range1.containsItem(JsonViewFactory.asJson(36)));
     	Range range2 = Range.from("[14,37]");
     	assertEquals(range1, range2);
     }
 
     public void canCreateHas() {
-        ArrayConstraint<JsonValue,Range> range1 = ArrayConstraint.match(Range.equals(Json.createValue("mytag")));
+        ArrayConstraint<JsonValue,Range> range1 = ArrayConstraint.match(Range.equals(JsonViewFactory.asJson("mytag")));
         
         JsonArray val1 = Json.createArrayBuilder().add("one").add("two").add("mytag").add("arkensaw").build();
         JsonArray val2 = Json.createArrayBuilder().add("one").add("two").add("arkensaw").build();
@@ -89,17 +90,17 @@ public class RangeTest {
 	@Test
     public void canCreateRangesFromBoundsObject() {
     	Range range1 = Range.from("{'=':5}");
-    	assertEquals(range1,Range.equals(Json.createValue(5)));
+    	assertEquals(range1,Range.equals(JsonViewFactory.asJson(5)));
     	range1 = Range.from("{'<':5}");
-    	assertEquals(range1,Range.lessThan(Json.createValue(5)));
+    	assertEquals(range1,Range.lessThan(JsonViewFactory.asJson(5)));
     	range1 = Range.from("{'>':5}");
-    	assertEquals(range1,Range.greaterThan(Json.createValue(5)));
+    	assertEquals(range1,Range.greaterThan(JsonViewFactory.asJson(5)));
     	range1 = Range.from("{'<=':5}");
-    	assertEquals(range1,Range.lessThanOrEqual(Json.createValue(5)));
+    	assertEquals(range1,Range.lessThanOrEqual(JsonViewFactory.asJson(5)));
     	range1 = Range.from("{'>=':5}");
-    	assertEquals(range1,Range.greaterThanOrEqual(Json.createValue(5)));
+    	assertEquals(range1,Range.greaterThanOrEqual(JsonViewFactory.asJson(5)));
         //range1 = Range.fromBounds({$has: {'=':5}}
-        //assertEquals(range1,Range.has(Range.equals(Json.createValue(5))));
+        //assertEquals(range1,Range.has(Range.equals(JsonViewFactory.asJson(5))));
     }
 
 	@Test
@@ -112,14 +113,14 @@ public class RangeTest {
 
 	@Test
     public void canCompareRangesWithEquals() {
-		Range range1 = Range.equals(Json.createValue(37));
-		Range range2 = Range.equals(Json.createValue(37));
+		Range range1 = Range.equals(JsonViewFactory.asJson(37));
+		Range range2 = Range.equals(JsonViewFactory.asJson(37));
 		assertEquals(range1,range2);
-		Range range3 = Range.equals(Json.createValue(14));
+		Range range3 = Range.equals(JsonViewFactory.asJson(14));
 		assertNotEquals(range1,range3);
-		Range range4 = Range.lessThan(Json.createValue(37));
+		Range range4 = Range.lessThan(JsonViewFactory.asJson(37));
 		assertNotEquals(range1,range4);
-		Range range5 = Range.lessThan(Json.createValue(37));
+		Range range5 = Range.lessThan(JsonViewFactory.asJson(37));
 		assertEquals(range5,range4);
 		Range range6 = Range.from("[14,37]");
 		Range range7 = Range.from("[14,37]");
@@ -138,7 +139,7 @@ public class RangeTest {
 	
 	@Test
     public void canCompareParametrizedRangesWithEquals() {
-        Range range1 = Range.equals(Json.createValue(37));
+        Range range1 = Range.equals(JsonViewFactory.asJson(37));
         Range range2 = Range.equals(Param.from("param1"));
         Range range3 = Range.equals(Param.from("param2"));
         Range range4 = Range.equals(Param.from("param1"));
@@ -154,10 +155,10 @@ public class RangeTest {
         assertEquals(null, range5.maybeEquals(range7));
         assertEquals(false, range1.maybeEquals(range5));
 
-        Range range8 = Range.between(Json.createValue(5), Param.from("param2"));
-        Range range9 = Range.between(Json.createValue(5), Param.from("param1"));
-        Range range10 = Range.between(Json.createValue(5), Param.from("param2"));
-        Range range11 = Range.between(Json.createValue(4), Param.from("param2"));
+        Range range8 = Range.between(JsonViewFactory.asJson(5), Param.from("param2"));
+        Range range9 = Range.between(JsonViewFactory.asJson(5), Param.from("param1"));
+        Range range10 = Range.between(JsonViewFactory.asJson(5), Param.from("param2"));
+        Range range11 = Range.between(JsonViewFactory.asJson(4), Param.from("param2"));
 
         assertEquals(null, range8.maybeEquals(range9));
         assertEquals(true, range8.maybeEquals(range10));
@@ -166,9 +167,9 @@ public class RangeTest {
 
 	@Test
     public void correctContainmentForEquals() {
-    	Range range1 = Range.equals(Json.createValue(37));
-    	Range range2 = Range.equals(Json.createValue(14));
-    	Range range3 = Range.equals(Json.createValue(37));
+    	Range range1 = Range.equals(JsonViewFactory.asJson(37));
+    	Range range2 = Range.equals(JsonViewFactory.asJson(14));
+    	Range range3 = Range.equals(JsonViewFactory.asJson(37));
 
     	assertFalse(range1.contains(range2));
     	assertFalse(range2.contains(range1));
@@ -177,7 +178,7 @@ public class RangeTest {
 
 	@Test
     public void correctContainmentForEqualsWithParameters() {
-        Range range1 = Range.equals(Json.createValue(37));
+        Range range1 = Range.equals(JsonViewFactory.asJson(37));
         Range range2 = Range.equals(Param.from("param"));
 
         assertEquals(null, range1.contains(range2));
@@ -186,9 +187,9 @@ public class RangeTest {
 
 	@Test
     public void correctContainmentForLessThan() {
-    	Range range1 = Range.lessThan(Json.createValue(37));
-    	Range range2 = Range.lessThan(Json.createValue(14));
-    	Range range3 = Range.lessThan(Json.createValue(37));
+    	Range range1 = Range.lessThan(JsonViewFactory.asJson(37));
+    	Range range2 = Range.lessThan(JsonViewFactory.asJson(14));
+    	Range range3 = Range.lessThan(JsonViewFactory.asJson(37));
 
     	assertTrue(range1.contains(range2));
     	assertFalse(range2.contains(range1));
@@ -197,7 +198,7 @@ public class RangeTest {
 
 	@Test
     public void correctContainmentForLessThanWithParameters() {
-        Range range1 = Range.lessThan(Json.createValue(37));
+        Range range1 = Range.lessThan(JsonViewFactory.asJson(37));
         Range range2 = Range.lessThan(Param.from("param"));
         Range range3 = Range.lessThan(Param.from("param"));
 
@@ -208,12 +209,12 @@ public class RangeTest {
 
 	@Test
     public void correctContainmentForlessThanAndIntersection() {
-        Range range1 = Range.lessThan(Json.createValue(37));
+        Range range1 = Range.lessThan(JsonViewFactory.asJson(37));
         Range range2 = Range.lessThan(Param.from("param1"));
         Range range3 = Range.lessThan(Param.from("param2"));
         Range range4 = range1.intersect(range2).intersect(range3);
         Range range5 = Range.greaterThan(Param.from("param1"));
-        Range range7 = Range.lessThan(Json.createValue(8));
+        Range range7 = Range.lessThan(JsonViewFactory.asJson(8));
 
         assertTrue(range1.contains(range4));
         assertTrue(range2.contains(range4));
@@ -224,9 +225,9 @@ public class RangeTest {
 
 	@Test
     public void correctContainmentForlessThanOrEqual() {
-    	Range range1 = Range.lessThanOrEqual(Json.createValue(37));
-    	Range range2 = Range.lessThanOrEqual(Json.createValue(14));
-    	Range range3 = Range.lessThanOrEqual(Json.createValue(37));
+    	Range range1 = Range.lessThanOrEqual(JsonViewFactory.asJson(37));
+    	Range range2 = Range.lessThanOrEqual(JsonViewFactory.asJson(14));
+    	Range range3 = Range.lessThanOrEqual(JsonViewFactory.asJson(37));
 
     	assertTrue(range1.contains(range2));
     	assertFalse(range2.contains(range1));
@@ -235,7 +236,7 @@ public class RangeTest {
 
 	@Test
     public void correctContainmentForlessThanOrEqualWithParameters() {
-        Range range1 = Range.lessThanOrEqual(Json.createValue(37));
+        Range range1 = Range.lessThanOrEqual(JsonViewFactory.asJson(37));
         Range range2 = Range.lessThanOrEqual(Param.from("param"));
         Range range3 = Range.lessThanOrEqual(Param.from("param"));
 
@@ -246,9 +247,9 @@ public class RangeTest {
 
 	@Test
     public void correctContainmentForlessThanOrEqualLessThanEquals() {
-    	Range range1 = Range.lessThanOrEqual(Json.createValue(37));
-    	Range range2 = Range.equals(Json.createValue(37));
-    	Range range3 = Range.lessThan(Json.createValue(37));
+    	Range range1 = Range.lessThanOrEqual(JsonViewFactory.asJson(37));
+    	Range range2 = Range.equals(JsonViewFactory.asJson(37));
+    	Range range3 = Range.lessThan(JsonViewFactory.asJson(37));
 
     	assertTrue(range1.contains(range3));
     	assertTrue(range1.contains(range2));
@@ -271,9 +272,9 @@ public class RangeTest {
 
 	@Test
     public void correctContainmentForgreaterThan() {
-    	Range range1 = Range.greaterThan(Json.createValue(37));
-    	Range range2 = Range.greaterThan(Json.createValue(14));
-    	Range range3 = Range.greaterThan(Json.createValue(37));
+    	Range range1 = Range.greaterThan(JsonViewFactory.asJson(37));
+    	Range range2 = Range.greaterThan(JsonViewFactory.asJson(14));
+    	Range range3 = Range.greaterThan(JsonViewFactory.asJson(37));
 
     	assertFalse(range1.contains(range2));
     	assertTrue(range2.contains(range1));
@@ -282,9 +283,9 @@ public class RangeTest {
 
 	@Test
     public void correctContainmentForgreaterThanOrEqual() {
-    	Range range1 = Range.greaterThanOrEqual(Json.createValue(37));
-    	Range range2 = Range.greaterThanOrEqual(Json.createValue(14));
-    	Range range3 = Range.greaterThanOrEqual(Json.createValue(37));
+    	Range range1 = Range.greaterThanOrEqual(JsonViewFactory.asJson(37));
+    	Range range2 = Range.greaterThanOrEqual(JsonViewFactory.asJson(14));
+    	Range range3 = Range.greaterThanOrEqual(JsonViewFactory.asJson(37));
 
     	assertFalse(range1.contains(range2));
     	assertTrue(range2.contains(range1));
@@ -293,9 +294,9 @@ public class RangeTest {
 
 	@Test
     public void correctContainmentForgreaterThanOrEqualGreterThanEquals() {
-    	Range range1 = Range.greaterThanOrEqual(Json.createValue(37));
-    	Range range2 = Range.equals(Json.createValue(37));
-    	Range range3 = Range.greaterThan(Json.createValue(37));
+    	Range range1 = Range.greaterThanOrEqual(JsonViewFactory.asJson(37));
+    	Range range2 = Range.equals(JsonViewFactory.asJson(37));
+    	Range range3 = Range.greaterThan(JsonViewFactory.asJson(37));
 
     	assertTrue(range1.contains(range3));
     	assertTrue(range1.contains(range2));
@@ -305,10 +306,10 @@ public class RangeTest {
 
 	@Test
     public void correctContainmentForgreaterThanLessThan() {
-    	Range range1 = Range.greaterThan(Json.createValue(37));
-    	Range range2 = Range.greaterThan(Json.createValue(14));
-    	Range range3 = Range.lessThan(Json.createValue(37));
-    	Range range4 = Range.lessThan(Json.createValue(14));
+    	Range range1 = Range.greaterThan(JsonViewFactory.asJson(37));
+    	Range range2 = Range.greaterThan(JsonViewFactory.asJson(14));
+    	Range range3 = Range.lessThan(JsonViewFactory.asJson(37));
+    	Range range4 = Range.lessThan(JsonViewFactory.asJson(14));
 
     	assertFalse(range1.contains(range3));
     	assertFalse(range1.contains(range4));
@@ -331,12 +332,12 @@ public class RangeTest {
 	
 	@Test
     public void correctContainmentForbetween(){
-    	Range range1 = Range.between(Json.createValue(14),Json.createValue(37));
-    	Range range2 = Range.between(Json.createValue(15),Json.createValue(36));
-    	Range range3 = Range.between(Json.createValue(13),Json.createValue(15));
-    	Range range4 = Range.between(Json.createValue(36),Json.createValue(38));
-    	Range range5 = Range.between(Json.createValue(12),Json.createValue(13));
-    	Range range6 = Range.between(Json.createValue(38),Json.createValue(39));
+    	Range range1 = Range.between(JsonViewFactory.asJson(14),JsonViewFactory.asJson(37));
+    	Range range2 = Range.between(JsonViewFactory.asJson(15),JsonViewFactory.asJson(36));
+    	Range range3 = Range.between(JsonViewFactory.asJson(13),JsonViewFactory.asJson(15));
+    	Range range4 = Range.between(JsonViewFactory.asJson(36),JsonViewFactory.asJson(38));
+    	Range range5 = Range.between(JsonViewFactory.asJson(12),JsonViewFactory.asJson(13));
+    	Range range6 = Range.between(JsonViewFactory.asJson(38),JsonViewFactory.asJson(39));
 
     	assertTrue(range1.contains(range2));
     	assertFalse(range1.contains(range3));
@@ -347,10 +348,10 @@ public class RangeTest {
 
 	@Test
     public void correctContainmentForbetweenWithParameters() {
-        Range range1 = Range.between(Json.createValue(14),Param.from("param1"));
-        Range range2 = Range.between(Json.createValue(15),Param.from("param1"));
-        Range range3 = Range.between(Param.from("param1"),Json.createValue(15));
-        Range range4 = Range.between(Param.from("param1"),Json.createValue(14));
+        Range range1 = Range.between(JsonViewFactory.asJson(14),Param.from("param1"));
+        Range range2 = Range.between(JsonViewFactory.asJson(15),Param.from("param1"));
+        Range range3 = Range.between(Param.from("param1"),JsonViewFactory.asJson(15));
+        Range range4 = Range.between(Param.from("param1"),JsonViewFactory.asJson(14));
         assertTrue(range1.contains(range2));
         assertTrue(range3.contains(range4));
     }
@@ -375,9 +376,9 @@ public class RangeTest {
 
 	@Test
     public void CorrectIntersectionForEquals() {
-    	Range range1 = Range.equals(Json.createValue(37));
-    	Range range2 = Range.equals(Json.createValue(14));
-    	Range range3 = Range.equals(Json.createValue(37));
+    	Range range1 = Range.equals(JsonViewFactory.asJson(37));
+    	Range range2 = Range.equals(JsonViewFactory.asJson(14));
+    	Range range3 = Range.equals(JsonViewFactory.asJson(37));
 
     	assertEquals(Range.EMPTY,range1.intersect(range2));
     	assertEquals(Range.EMPTY,range2.intersect(range1));
@@ -387,7 +388,7 @@ public class RangeTest {
 	@Test
     public void CorrectIntersectionForEqualsWithParameters() {
         Range range1 = Range.equals(Param.from("param1"));
-        Range range2 = Range.equals(Json.createValue(14));
+        Range range2 = Range.equals(JsonViewFactory.asJson(14));
         Range range3 = Range.equals(Param.from("param1"));
 
         assertEquals(range1.intersect(range2), range2.intersect(range1));
@@ -396,9 +397,9 @@ public class RangeTest {
 
 	@Test
     public void CorrectIntersectionForlessThan() {
-    	Range range1 = Range.lessThan(Json.createValue(37));
-    	Range range2 = Range.lessThan(Json.createValue(14));
-    	Range range3 = Range.lessThan(Json.createValue(37));
+    	Range range1 = Range.lessThan(JsonViewFactory.asJson(37));
+    	Range range2 = Range.lessThan(JsonViewFactory.asJson(14));
+    	Range range3 = Range.lessThan(JsonViewFactory.asJson(37));
 
     	assertEquals(range1.intersect(range2), range2);
     	assertEquals(range2.intersect(range1), range2);
@@ -408,7 +409,7 @@ public class RangeTest {
 	@Test
     public void CorrectIntersectionForlessThanWithParameters() {
         Range range1 = Range.lessThan(Param.from("param"));
-        Range range2 = Range.lessThan(Json.createValue(14));
+        Range range2 = Range.lessThan(JsonViewFactory.asJson(14));
         Range range3 = Range.lessThan(Param.from("param"));
         
         assertEquals(range1.intersect(range2), range2.intersect(range1));
@@ -417,9 +418,9 @@ public class RangeTest {
 
 	@Test
     public void CorrectIntersectionForgreaterThan() {
-    	Range range1 = Range.greaterThan(Json.createValue(37));
-    	Range range2 = Range.greaterThan(Json.createValue(14));
-    	Range range3 = Range.greaterThan(Json.createValue(37));
+    	Range range1 = Range.greaterThan(JsonViewFactory.asJson(37));
+    	Range range2 = Range.greaterThan(JsonViewFactory.asJson(14));
+    	Range range3 = Range.greaterThan(JsonViewFactory.asJson(37));
 
     	assertEquals(range1.intersect(range2), range1);
     	assertEquals(range2.intersect(range1), range1);
@@ -430,7 +431,7 @@ public class RangeTest {
 	@Test
     public void CorrectIntersectionForgreaterThanWithParameters() {
         Range range1 = Range.greaterThan(Param.from("param"));
-        Range range2 = Range.greaterThan(Json.createValue(14));
+        Range range2 = Range.greaterThan(JsonViewFactory.asJson(14));
         Range range3 = Range.greaterThan(Param.from("param"));
 
         assertEquals(range1.intersect(range2), range2.intersect(range1));
@@ -440,10 +441,10 @@ public class RangeTest {
 
 	@Test
     public void CorrectIntersectionForgreaterThanLessThan() {
-    	Range range1 = Range.lessThan(Json.createValue(37));
-    	Range range2 = Range.greaterThan(Json.createValue(14));
-    	Range range3 = Range.lessThan(Json.createValue(14));
-    	Range range4 = Range.greaterThan(Json.createValue(37));
+    	Range range1 = Range.lessThan(JsonViewFactory.asJson(37));
+    	Range range2 = Range.greaterThan(JsonViewFactory.asJson(14));
+    	Range range3 = Range.lessThan(JsonViewFactory.asJson(14));
+    	Range range4 = Range.greaterThan(JsonViewFactory.asJson(37));
 
     	assertEquals(range1.intersect(range2), Range.between(range2,range1));
     	assertEquals(range2.intersect(range1), Range.between(range2,range1));
@@ -477,11 +478,11 @@ public class RangeTest {
 	@Test
 	public void usedBoundsObjectsInRangeFrom() {
     	Range range1 = Range.from("{ '>':5}");
-    	assertEquals(range1,Range.greaterThan(Json.createValue(5)));
+    	assertEquals(range1,Range.greaterThan(JsonViewFactory.asJson(5)));
     	Range range2 = Range.from("[2,8]");
-    	assertEquals(range2,Range.between(Json.createValue(2),Json.createValue(8)));
+    	assertEquals(range2,Range.between(JsonViewFactory.asJson(2),JsonViewFactory.asJson(8)));
     	Range range3 = Range.from("[{'>':2}, {'<=':8}]");
-    	assertEquals(range3,Range.between(Range.greaterThan(Json.createValue(2)),Range.lessThanOrEqual(Json.createValue(8))));
+    	assertEquals(range3,Range.between(Range.greaterThan(JsonViewFactory.asJson(2)),Range.lessThanOrEqual(JsonViewFactory.asJson(8))));
     }
 	
 	@Test
@@ -501,20 +502,20 @@ public class RangeTest {
     @Test
     public void correctIntersectionForBetween() {
 
-        Range range1 = Range.between(Json.createValue(14),Json.createValue(37));
-        Range range2 = Range.between(Json.createValue(15),Json.createValue(36));
+        Range range1 = Range.between(JsonViewFactory.asJson(14),JsonViewFactory.asJson(37));
+        Range range2 = Range.between(JsonViewFactory.asJson(15),JsonViewFactory.asJson(36));
         Range range3 = range1.intersect(range2);
 
         assertEquals(range3, range2);
 
-        Range range4 = Range.between(Json.createValue(14),Json.createValue(17));
-        Range range5 = Range.between(Json.createValue(29),Json.createValue(36));
+        Range range4 = Range.between(JsonViewFactory.asJson(14),JsonViewFactory.asJson(17));
+        Range range5 = Range.between(JsonViewFactory.asJson(29),JsonViewFactory.asJson(36));
         Range range6 = range4.intersect(range5);
 
         assertEquals(range6, Range.EMPTY);
 
-        Range range7 = Range.between(Json.createValue(14),Json.createValue(17));
-        Range range8 = Range.between(Json.createValue(17),Json.createValue(36));
+        Range range7 = Range.between(JsonViewFactory.asJson(14),JsonViewFactory.asJson(17));
+        Range range8 = Range.between(JsonViewFactory.asJson(17),JsonViewFactory.asJson(36));
         Range range9 = range7.intersect(range8);
 
         assertEquals(range9, Range.EMPTY);
@@ -523,28 +524,28 @@ public class RangeTest {
 /*
     public void CorrectIntersectionForbetweenWithParameters() {
 
-        Range range1 = Range.between(Json.createValue(14),37);
-        Range range2 = Range.between(Param.from("param1"),Json.createValue(36));
+        Range range1 = Range.between(JsonViewFactory.asJson(14),37);
+        Range range2 = Range.between(Param.from("param1"),JsonViewFactory.asJson(36));
         Range range3 = range1.intersect(range2);
 
-        expect(range3.known_bounds).to.deep.equal(Range.between(Json.createValue(14),Json.createValue(36)));
+        expect(range3.known_bounds).to.deep.equal(Range.between(JsonViewFactory.asJson(14),JsonViewFactory.asJson(36)));
         expect(range3.parametrized_bounds.param1).to.deep.equal(Range.greaterThanOrEqual(Param.from("param1")));
 
-        Range range4 = Range.between(Json.createValue(14),Param.from("param1"));
-        Range range5 = Range.between(Json.createValue(15),Json.createValue(36));
+        Range range4 = Range.between(JsonViewFactory.asJson(14),Param.from("param1"));
+        Range range5 = Range.between(JsonViewFactory.asJson(15),JsonViewFactory.asJson(36));
         Range range6 = range4.intersect(range5);
 
-        expect(range6.known_bounds).to.deep.equal(Range.between(Json.createValue(15),Json.createValue(36)));
+        expect(range6.known_bounds).to.deep.equal(Range.between(JsonViewFactory.asJson(15),JsonViewFactory.asJson(36)));
         expect(range6.parametrized_bounds.param1).to.deep.equal(Range.lessThan(Param.from("param1")));
 
-        Range range7 = Range.between(Json.createValue(14),Param.from("param1"));
-        Range range8 = Range.between(Json.createValue(15),Param.from("param1"));
+        Range range7 = Range.between(JsonViewFactory.asJson(14),Param.from("param1"));
+        Range range8 = Range.between(JsonViewFactory.asJson(15),Param.from("param1"));
         Range range9 = range7.intersect(range8);
 
-        expect(range9).to.deep.equal(Range.between(Json.createValue(15), Param.from("param1")));
+        expect(range9).to.deep.equal(Range.between(JsonViewFactory.asJson(15), Param.from("param1")));
 
-        Range range10 = Range.between(Json.createValue(14),Param.from("param1"));
-        Range range11 = Range.between(Param.from("param1"),Json.createValue(36));
+        Range range10 = Range.between(JsonViewFactory.asJson(14),Param.from("param1"));
+        Range range11 = Range.between(Param.from("param1"),JsonViewFactory.asJson(36));
         Range range12 = range10.intersect(range11);
 
         expect(range12).to.be.null;
@@ -559,10 +560,10 @@ public class RangeTest {
     	JsonObject map3 = JsonUtil.parseObject("{'param2':34}");
     	JsonObject map4 = JsonUtil.parseObject("{'param1':55}");
 
-        Range range1 = Range.between(Param.from("param1"), Param.from("param2")).intersect(Range.lessThan(Json.createValue(50)));
-        assertEquals(range1.bind(map1), Range.between(Json.createValue(34), Json.createValue(50)));
+        Range range1 = Range.between(Param.from("param1"), Param.from("param2")).intersect(Range.lessThan(JsonViewFactory.asJson(50)));
+        assertEquals(range1.bind(map1), Range.between(JsonViewFactory.asJson(34), JsonViewFactory.asJson(50)));
         assertEquals(Range.EMPTY, range1.bind(map2));
-        assertEquals(range1.bind(map3), Range.between(Param.from("param1"), Json.createValue(34)));
+        assertEquals(range1.bind(map3), Range.between(Param.from("param1"), JsonViewFactory.asJson(34)));
         assertEquals(Range.EMPTY,range1.bind(map4));
     }
     
@@ -589,17 +590,17 @@ public class RangeTest {
     @Test
     public void canCreateFromJson() {
     	Range range = Range.from("[2,4]");
-    	assertEquals(Range.between(Json.createValue(2), Json.createValue(4)), range);
+    	assertEquals(Range.between(JsonViewFactory.asJson(2), JsonViewFactory.asJson(4)), range);
     	range = Range.from("[2,null]");
-    	assertEquals(Range.greaterThanOrEqual(Json.createValue(2)), range);
+    	assertEquals(Range.greaterThanOrEqual(JsonViewFactory.asJson(2)), range);
     	range = Range.from("{ '$': 'param1'}");
     	assertEquals(Range.equals(Param.from("param1")), range);
     }
     
     @Test public void canUnionLessThan() {
-    	Range range1 = Range.lessThan(Json.createValue(27));
-       	Range range2 = Range.lessThan(Json.createValue(37));
-       	Range range3 = Range.lessThanOrEqual(Json.createValue(27));
+    	Range range1 = Range.lessThan(JsonViewFactory.asJson(27));
+       	Range range2 = Range.lessThan(JsonViewFactory.asJson(37));
+       	Range range3 = Range.lessThanOrEqual(JsonViewFactory.asJson(27));
        	assertEquals(range2, range1.union(range2));
        	assertEquals(range2, range2.union(range1));
        	assertEquals(range3, range1.union(range3));
@@ -609,9 +610,9 @@ public class RangeTest {
     }
     
     @Test public void canUnionGreaterThan() {
-    	Range range1 = Range.greaterThan(Json.createValue(27));
-       	Range range2 = Range.greaterThan(Json.createValue(37));
-       	Range range3 = Range.greaterThanOrEqual(Json.createValue(27));
+    	Range range1 = Range.greaterThan(JsonViewFactory.asJson(27));
+       	Range range2 = Range.greaterThan(JsonViewFactory.asJson(37));
+       	Range range3 = Range.greaterThanOrEqual(JsonViewFactory.asJson(27));
        	assertEquals(range1, range1.union(range2));
        	assertEquals(range1, range2.union(range1));
        	assertEquals(range3, range1.union(range3));
@@ -621,12 +622,12 @@ public class RangeTest {
     }
     
     @Test public void canUnionLessThanAndGreaterThan() {
-    	Range range1 = Range.greaterThan(Json.createValue(27));
-       	Range range2 = Range.lessThan(Json.createValue(37));
-    	Range range3 = Range.greaterThan(Json.createValue(37));
-       	Range range4 = Range.lessThan(Json.createValue(27));
-       	Range range5 = Range.greaterThanOrEqual(Json.createValue(27));
-       	Range range6 = Range.lessThanOrEqual(Json.createValue(27));
+    	Range range1 = Range.greaterThan(JsonViewFactory.asJson(27));
+       	Range range2 = Range.lessThan(JsonViewFactory.asJson(37));
+    	Range range3 = Range.greaterThan(JsonViewFactory.asJson(37));
+       	Range range4 = Range.lessThan(JsonViewFactory.asJson(27));
+       	Range range5 = Range.greaterThanOrEqual(JsonViewFactory.asJson(27));
+       	Range range6 = Range.lessThanOrEqual(JsonViewFactory.asJson(27));
        	assertEquals(Range.UNBOUNDED, range1.union(range2));
        	assertTrue(range3.union(range4) instanceof Union);
        	assertTrue(range1.union(range4) instanceof Union);
@@ -634,20 +635,20 @@ public class RangeTest {
     }
 
     @Test public void canUnionEquals() {
-    	Range range1 = Range.equals(Json.createValue(27));
-       	Range range2 = Range.equals(Json.createValue(37));
-    	Range range3 = Range.equals(Json.createValue(37));
+    	Range range1 = Range.equals(JsonViewFactory.asJson(27));
+       	Range range2 = Range.equals(JsonViewFactory.asJson(37));
+    	Range range3 = Range.equals(JsonViewFactory.asJson(37));
        	assertTrue(range1.union(range2) instanceof Union);
        	assertEquals(range2, range2.union(range3));
     }
     
     @Test public void canDoComplicatedUnion() {
-    	Range range1 = Range.lessThan(Json.createValue(27));
-       	Range range2 = Range.greaterThan(Json.createValue(37));
-       	Range range3 = Range.greaterThanOrEqual(Json.createValue(36));
-    	Range range4 = Range.equals(Json.createValue(29));
-    	Range range5 = Range.lessThan(Json.createValue(26));
-    	Range range6 = Range.equals(Json.createValue(29));
+    	Range range1 = Range.lessThan(JsonViewFactory.asJson(27));
+       	Range range2 = Range.greaterThan(JsonViewFactory.asJson(37));
+       	Range range3 = Range.greaterThanOrEqual(JsonViewFactory.asJson(36));
+    	Range range4 = Range.equals(JsonViewFactory.asJson(29));
+    	Range range5 = Range.lessThan(JsonViewFactory.asJson(26));
+    	Range range6 = Range.equals(JsonViewFactory.asJson(29));
        	assertEquals(Range.union(range1,range3,range4), Range.union(range1,range2,range3,range4,range5,range6));
     }
     
@@ -660,33 +661,33 @@ public class RangeTest {
     
     @Test public void canMatchSimpleStringsWithWildcards() {
     	Range range = Range.like("def*");
-    	assertTrue(range.containsItem(Json.createValue("defabcjkl")));
-    	assertFalse(range.containsItem(Json.createValue("decjkl")));
+    	assertTrue(range.containsItem(JsonViewFactory.asJson("defabcjkl")));
+    	assertFalse(range.containsItem(JsonViewFactory.asJson("decjkl")));
     	range = Range.like("def*jkl");
-    	assertTrue(range.containsItem(Json.createValue("defabcjkl")));
-    	assertTrue(range.containsItem(Json.createValue("defjkl")));
-    	assertFalse(range.containsItem(Json.createValue("decjkl")));
-    	assertFalse(range.containsItem(Json.createValue("defaajl")));
+    	assertTrue(range.containsItem(JsonViewFactory.asJson("defabcjkl")));
+    	assertTrue(range.containsItem(JsonViewFactory.asJson("defjkl")));
+    	assertFalse(range.containsItem(JsonViewFactory.asJson("decjkl")));
+    	assertFalse(range.containsItem(JsonViewFactory.asJson("defaajl")));
     	range = Range.like("def?");
-    	assertTrue(range.containsItem(Json.createValue("defa")));
-    	assertFalse(range.containsItem(Json.createValue("deca")));
-    	assertFalse(range.containsItem(Json.createValue("defca")));
+    	assertTrue(range.containsItem(JsonViewFactory.asJson("defa")));
+    	assertFalse(range.containsItem(JsonViewFactory.asJson("deca")));
+    	assertFalse(range.containsItem(JsonViewFactory.asJson("defca")));
     	range = Range.like("def?jkl");
-    	assertTrue(range.containsItem(Json.createValue("defajkl")));
-    	assertFalse(range.containsItem(Json.createValue("defacjkl")));
-    	assertFalse(range.containsItem(Json.createValue("defajl")));
+    	assertTrue(range.containsItem(JsonViewFactory.asJson("defajkl")));
+    	assertFalse(range.containsItem(JsonViewFactory.asJson("defacjkl")));
+    	assertFalse(range.containsItem(JsonViewFactory.asJson("defajl")));
     	range = Range.like("def*jkl*xyz");
-    	assertTrue(range.containsItem(Json.createValue("defabcjkl123xyz")));
-    	assertTrue(range.containsItem(Json.createValue("defjklxyz")));
-    	assertFalse(range.containsItem(Json.createValue("defjkl123xyw")));
+    	assertTrue(range.containsItem(JsonViewFactory.asJson("defabcjkl123xyz")));
+    	assertTrue(range.containsItem(JsonViewFactory.asJson("defjklxyz")));
+    	assertFalse(range.containsItem(JsonViewFactory.asJson("defjkl123xyw")));
     }
     
     @Test public void canTestContainmentWithWildcards() {
     	Range range = Range.like("def*");
-    	Range box = Range.between(Json.createValue("ab"), Json.createValue("gh"));
+    	Range box = Range.between(JsonViewFactory.asJson("ab"), JsonViewFactory.asJson("gh"));
     	assertTrue(box.contains(range));
     	assertFalse(range.contains(box));
-    	box = Range.between(Json.createValue("defg"), Json.createValue("defz"));
+    	box = Range.between(JsonViewFactory.asJson("defg"), JsonViewFactory.asJson("defz"));
     	assertNull(box.contains(range));
     	assertNull(range.contains(box));
     	// Add more cases
@@ -694,10 +695,10 @@ public class RangeTest {
 
     @Test public void canTestIntersectionWithWildcards() {
     	Range range = Range.like("def*");
-    	Range box = Range.between(Json.createValue("ab"), Json.createValue("gh"));
+    	Range box = Range.between(JsonViewFactory.asJson("ab"), JsonViewFactory.asJson("gh"));
     	assertTrue(box.intersects(range));
     	assertTrue(range.intersects(box));
-    	box = Range.between(Json.createValue("defg"), Json.createValue("defz"));
+    	box = Range.between(JsonViewFactory.asJson("defg"), JsonViewFactory.asJson("defz"));
     	assertNull(box.intersects(range));
     	assertNull(range.intersects(box));
     	// Add more cases
@@ -705,10 +706,10 @@ public class RangeTest {
 
     @Test public void canIntersectWithWildcards() {
     	Range range = Range.like("def*");
-    	Range box = Range.between(Json.createValue("ab"), Json.createValue("gh"));
+    	Range box = Range.between(JsonViewFactory.asJson("ab"), JsonViewFactory.asJson("gh"));
     	Range result = box.intersect(range);
     	assertEquals(range, result);
-    	box = Range.between(Json.createValue("defg"), Json.createValue("defz"));
+    	box = Range.between(JsonViewFactory.asJson("defg"), JsonViewFactory.asJson("defz"));
     	result = box.intersect(range);
     	assertTrue(result instanceof Intersection);
     	// Add more cases
@@ -716,10 +717,10 @@ public class RangeTest {
     
     @Test public void canUnionWithWildcards() {
     	Range range = Range.like("def*");
-    	Range box = Range.between(Json.createValue("ab"), Json.createValue("gh"));
+    	Range box = Range.between(JsonViewFactory.asJson("ab"), JsonViewFactory.asJson("gh"));
     	Range result = box.union(range);
     	assertEquals(box, result);
-    	box = Range.between(Json.createValue("defg"), Json.createValue("defz"));
+    	box = Range.between(JsonViewFactory.asJson("defg"), JsonViewFactory.asJson("defz"));
     	result = box.intersect(range);
     	assertTrue(result instanceof Intersection);
     	// Add more cases
@@ -727,7 +728,7 @@ public class RangeTest {
     
     @Test public void testLikeWithNoWildcardsIsEquals() {
     	Range range = Range.like("def");
-    	Range range1 = Range.equals(Json.createValue("def"));
+    	Range range1 = Range.equals(JsonViewFactory.asJson("def"));
     	assertEquals(range, range1);
     	
     }

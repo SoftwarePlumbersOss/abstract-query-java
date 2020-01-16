@@ -53,7 +53,7 @@ public interface Query extends AbstractSet<JsonObject, Query> {
 	public Set<String> getConstraints();
 	
 	default Query bind(String json) {
-		return bind(Json.createParser(new StringReader(json)).getObject());
+		return bind(JsonUtil.parseObject(json));
 	}
 	
 	default Query intersect(String json) {
@@ -412,7 +412,7 @@ public interface Query extends AbstractSet<JsonObject, Query> {
 		@Override	public Boolean containsItem(JsonObject item) { return Boolean.FALSE; }
 		@Override	public Boolean contains(Query set) { return Boolean.FALSE; }
 		@Override	public Boolean maybeEquals(Query other) { return other == EMPTY; }
-        @Override	public void visit(Visitor<?> visitor) { visitor.operExpr("="); visitor.value(Json.createValue("[]")); visitor.endExpr(); }
+        @Override	public void visit(Visitor<?> visitor) { visitor.operExpr("="); visitor.value(JsonViewFactory.asJson("[]")); visitor.endExpr(); }
 		@Override	public JsonValue toJSON() { return toExpression(Visitors.JSON); }
 		@Override	public Query bind(JsonObject values) { return this; }
 		@Override	public boolean isEmpty() { return true; }

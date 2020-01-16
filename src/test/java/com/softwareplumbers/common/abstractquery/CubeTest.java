@@ -7,14 +7,15 @@ import org.junit.Test;
 
 import static org.junit.Assert.*;
 import com.softwareplumbers.common.abstractquery.visitor.Visitors;
+import com.softwareplumbers.common.jsonview.JsonViewFactory;
 
 public class CubeTest {
 
 	@Test
     public void canCreateCube() {
     	Query cube1 = Query.fromJson("{ 'x': 43, 'y': 33 }");
-    	assertEquals(Range.equals(Json.createValue(43)), cube1.getConstraint("x"));
-    	assertEquals(Range.equals(Json.createValue(33)), cube1.getConstraint("y"));
+    	assertEquals(Range.equals(JsonViewFactory.asJson(43)), cube1.getConstraint("x"));
+    	assertEquals(Range.equals(JsonViewFactory.asJson(33)), cube1.getConstraint("y"));
     }
 
 	@Test
@@ -63,10 +64,10 @@ public class CubeTest {
     }
 	
 	@Test public void canProgramaticallyCreateSubquery() {
-		Query x = Query.from("x", Range.lessThan(Json.createValue(19)));
-		Query y = Query.from("y", Range.greaterThan(Json.createValue(21)));
+		Query x = Query.from("x", Range.lessThan(JsonViewFactory.asJson(19)));
+		Query y = Query.from("y", Range.greaterThan(JsonViewFactory.asJson(21)));
 		Query sub = x.intersect(y);
-		Query tags = Query.from("tags", ArrayConstraint.matchAny(Range.equals(Json.createValue("a")), Range.equals(Json.createValue("c"))));
+		Query tags = Query.from("tags", ArrayConstraint.matchAny(Range.equals(JsonViewFactory.asJson("a")), Range.equals(JsonViewFactory.asJson("c"))));
 		Query location = Query.from("location", sub);
 		Query object = tags.intersect(location);
 		
@@ -77,10 +78,10 @@ public class CubeTest {
 	}
 	
 	@Test public void canCreateSubqueryFromJson() {
-		Query x = Query.from("x", Range.lessThan(Json.createValue(19)));
-		Query y = Query.from("y", Range.greaterThan(Json.createValue(21)));
+		Query x = Query.from("x", Range.lessThan(JsonViewFactory.asJson(19)));
+		Query y = Query.from("y", Range.greaterThan(JsonViewFactory.asJson(21)));
 		Query sub = x.intersect(y);
-		Query tags = Query.from("tags", ArrayConstraint.matchAny(Range.equals(Json.createValue("a")), Range.equals(Json.createValue("c"))));
+		Query tags = Query.from("tags", ArrayConstraint.matchAny(Range.equals(JsonViewFactory.asJson("a")), Range.equals(JsonViewFactory.asJson("c"))));
 		Query location = Query.from("location", sub);
 		Query object1 = tags.intersect(location);
 		

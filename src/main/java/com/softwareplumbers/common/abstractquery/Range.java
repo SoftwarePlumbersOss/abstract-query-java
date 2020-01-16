@@ -21,6 +21,7 @@ import javax.json.JsonString;
 import javax.json.JsonValue.ValueType;
 import com.softwareplumbers.common.abstractquery.visitor.Visitor;
 import com.softwareplumbers.common.abstractquery.visitor.Visitors;
+import com.softwareplumbers.common.jsonview.JsonViewFactory;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -178,7 +179,7 @@ public interface Range extends AbstractSet<JsonValue, Range> {
 	public static Range like(String template) {
         Pattern pattern = Parsers.parseUnixWildcard(template);
 		if (pattern.isSimple())
-			return new Equals(Json.createValue(pattern.lowerBound()));
+			return new Equals(JsonViewFactory.asJson(pattern.lowerBound()));
         else
             return new Like(pattern);
 	}
@@ -450,7 +451,7 @@ public interface Range extends AbstractSet<JsonValue, Range> {
         @Override
         public void visit(Visitor<?> visitor)	{
             visitor.operExpr("=");
-                visitor.value(JsonValue.EMPTY_JSON_ARRAY);
+                visitor.value(JsonUtil.EMPTY_JSON_ARRAY);
             visitor.endExpr();
 		}
 
@@ -1436,7 +1437,7 @@ public interface Range extends AbstractSet<JsonValue, Range> {
 				this.bounds = UNBOUNDED;
 			} else {
 				String upper_bound = nextSeq(lowerBound);
-				this.bounds = between(Json.createValue(lowerBound), Json.createValue(upper_bound));
+				this.bounds = between(JsonViewFactory.asJson(lowerBound), JsonViewFactory.asJson(upper_bound));
 			} 
             
             try {
@@ -1485,7 +1486,7 @@ public interface Range extends AbstractSet<JsonValue, Range> {
         public void visit(Visitor<?> visitor) {
             visitor.operExpr(OPERATOR);
             try {
-                visitor.value(Json.createValue(template.build(Builders.toUnixWildcard())));
+                visitor.value(JsonViewFactory.asJson(template.build(Builders.toUnixWildcard())));
             } catch (PatternSyntaxException ex) {
                 throw new RuntimeException(ex);
             }

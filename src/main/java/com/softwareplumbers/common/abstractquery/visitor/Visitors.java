@@ -6,6 +6,7 @@
 package com.softwareplumbers.common.abstractquery.visitor;
 
 import com.softwareplumbers.common.QualifiedName;
+import com.softwareplumbers.common.abstractquery.JsonUtil;
 import com.softwareplumbers.common.abstractquery.Param;
 import com.softwareplumbers.common.abstractquery.Range;
 import java.util.AbstractList;
@@ -228,7 +229,7 @@ public class Visitors {
     			JsonObjectBuilder object = Json.createObjectBuilder();
     			ands.forEach(value-> {
     				if (value instanceof JsonObject)
-    					object.addAll(Json.createObjectBuilder((JsonObject)value));
+    					JsonUtil.addAll(object, (JsonObject)value);
     				else
     					throw new RuntimeException("Not excpecting a Cube to have member of type:" + value.getValueType());
     			});
@@ -254,7 +255,7 @@ public class Visitors {
     			JsonObjectBuilder object = Json.createObjectBuilder();
     			ands.forEach(value-> {
     				if (value instanceof JsonObject)
-    					object.addAll(Json.createObjectBuilder((JsonObject)value));
+    					JsonUtil.addAll(object, (JsonObject)value);
     				else
     					throw new RuntimeException("Not excpecting a Cube to have member of type:" + value.getValueType());
     			});
@@ -277,7 +278,7 @@ public class Visitors {
     	}
     	    	
     	private static String getFirstProperty(JsonValue value) {
-    		return value.asJsonObject().keySet().iterator().next();
+    		return ((JsonObject)value).keySet().iterator().next();
     	}
         
         @Override
@@ -293,8 +294,8 @@ public class Visitors {
     		String lbp = getFirstProperty(lower_bound);
     		String ubp = getFirstProperty(upper_bound);
     		if (!lbp.equals(ubp)) { throw new RuntimeException("Bad between"); }
-    		JsonObject lb = lower_bound.asJsonObject().getJsonObject(lbp);
-    		JsonObject ub = upper_bound.asJsonObject().getJsonObject(ubp);
+    		JsonObject lb = ((JsonObject)lower_bound).getJsonObject(lbp);
+    		JsonObject ub = ((JsonObject)upper_bound).getJsonObject(ubp);
     		String lbo = getFirstProperty(lb);
     		String ubo = getFirstProperty(ub);
     		array.add(lbo.equals(Range.GreaterThanOrEqual.OPERATOR) ? lb.get(lbo) : lb);
