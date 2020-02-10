@@ -58,9 +58,9 @@ test {
 dependencies {
 
     compile group: 'javax.json', name: 'javax.json-api', version: '1.0'
-    compile group: 'com.softwareplumbers.oss', name: 'qualified-name', version: '0.0.14'
-    compile group: 'com.softwareplumbers.oss', name: 'json-view', version: 'master-SNAPSHOT'
-    compile group: 'com.softwareplumbers.oss', name: 'abstract-pattern', version: 'master-SNAPSHOT'
+    compile group: 'com.softwareplumbers.oss', name: 'qualified-name', version: '0.0.15'
+    compile group: 'com.softwareplumbers.oss', name: 'json-view', version: '0.0.6'
+    compile group: 'com.softwareplumbers.oss', name: 'abstract-pattern', version: '0.0.9'
 		
     // Use JUnit test framework
     testImplementation 'junit:junit:4.12'
