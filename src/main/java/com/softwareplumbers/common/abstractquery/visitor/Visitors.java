@@ -9,6 +9,7 @@ import com.softwareplumbers.common.QualifiedName;
 import com.softwareplumbers.common.abstractquery.JsonUtil;
 import com.softwareplumbers.common.abstractquery.Param;
 import com.softwareplumbers.common.abstractquery.Range;
+import java.math.BigDecimal;
 import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -247,6 +248,7 @@ public class Visitors {
     	public void endQueryExpr(Context context) { 
     		JsonValue result = buildAndExpr(context.valueType, getChildElements(context));
             popChildElements(context);
+            if (context.dimension != null && context.operator == null) result = Json.createObjectBuilder().add(context.dimension, result).build();
             elements.push(result);
     	}
 

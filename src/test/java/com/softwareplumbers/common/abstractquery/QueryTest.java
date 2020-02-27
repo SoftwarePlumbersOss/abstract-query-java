@@ -14,6 +14,7 @@ import static org.junit.Assert.*;
 import javax.json.JsonObject;
 import javax.json.JsonValue;
 import com.softwareplumbers.common.abstractquery.visitor.Visitors;
+import java.math.BigDecimal;
 
 
 public class QueryTest {
@@ -289,7 +290,25 @@ public class QueryTest {
 
 	@Test
     public void hasSaneJSONRepresentation() {
-    	Query query = Query
+        
+        // This seems to be causing a particular problem downstream
+        JsonObject folderState = Json.createObjectBuilder().add("state", "Closed").build();
+        JsonObject parentFolderState = Json.createObjectBuilder().add("parent", folderState).build();
+        JsonObject parentFolderStateAndName = Json.createObjectBuilder().add("parent", folderState).add("name","test").build();
+        
+
+
+        // This seems to be causing a particular problem downstream
+        /*
+        Query queryExample1 = Query.from(parentFolderState);
+        JsonObject jsonExample1 = (JsonObject)queryExample1.toJSON();
+        assertEquals(parentFolderState, jsonExample1);
+        */
+        Query queryExample2 = Query.from(parentFolderStateAndName);
+        JsonObject jsonExample2 = (JsonObject)queryExample2.toJSON();
+        assertEquals(parentFolderStateAndName, jsonExample2);
+
+        Query query = Query
     		.fromJson("{'x': 2, 'y' : [3,4], 'z' : 8}")
     		.union("{'x':2, 'y': [null,4], 'z': 7}")
     		.union("{'x':3, 'y': [3,null], 'z': {'$':'param1'}}");
