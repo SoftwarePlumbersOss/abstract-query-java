@@ -15,9 +15,15 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.Stack;
+import java.util.TreeMap;
+import java.util.TreeSet;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -673,6 +679,185 @@ public class Visitors {
             context.count++;
         }
     }
+    
+    /** Get the SQL query formatter
+	*/
+	public static class SQLFormat extends ContextualVisitor<String> {
+        
+
+        @FunctionalInterface
+        public interface Relationship {
+            String getCriteria(Map<QualifiedName,String> aliases);
+        }
+                
+        /** Stack of elements awaiting consolidation into a formatted expression
+         */
+        protected final Stack<String> elements;
+        protected final LinkedHashMap<QualifiedName,String> aliases;
+        protected final Function<QualifiedName, String> nameMapper;
+        protected final Function<QualifiedName, Relationship> relationships;
+        
+        public SQLFormat(
+            Function<QualifiedName, String> nameMapper,
+            Function<QualifiedName, Relationship> relationships
+        ) { 
+            this.elements = new Stack<>();
+            this.aliases = new LinkedHashMap<>();
+            this.nameMapper = nameMapper;
+            this.relationships = relationships;
+            addAlias(QualifiedName.ROOT);
+        }
+        
+        private void addAlias(QualifiedName inner) {
+            aliases.putIfAbsent(inner, "T" + aliases.size());
+        }
+        
+        private String getAlias(QualifiedName inner) {
+            return aliases.get(inner);
+        }
+        
+        @Override
+        public String getResult() {
+            StringBuilder builder = new StringBuilder();
+            builder.append("FROM ");
+            builder.append(nameMapper.apply(QualifiedName.ROOT));
+            builder.append(" T0");
+            Iterator<Map.Entry<QualifiedName,String>> i = aliases.entrySet().iterator();
+            i.next(); // the first entry is always the root, which we have dealt with
+            while (i.hasNext()) {
+                Map.Entry<QualifiedName, String> join = i.next();
+                QualifiedName inner = join.getKey();
+                String innerAlias = join.getValue();
+                builder.append(" INNER JOIN ");
+                builder.append(nameMapper.apply(inner));
+                builder.append(" ");
+                builder.append(innerAlias);
+                builder.append(" ON ");
+                builder.append(relationships.apply(inner).getCriteria(aliases));
+            }
+            String criteria = elements.firstElement();
+            if (criteria != null) {
+                builder.append(" WHERE ").append(criteria);
+            }
+            return builder.toString();
+        }
+		
+        @Override
+        public void beginDimensionExpr(Context context, String dimension) {
+            QualifiedName fullDimension = context.getDimension();
+            if (relationships.apply(fullDimension) != null) addAlias(fullDimension);
+        }
+        
+        
+		public String formatDimension(QualifiedName table, QualifiedName name) {
+            String alias = getAlias(table);
+            if (alias == null) 
+                return formatDimension(table.parent, name);
+            else
+                return alias + "." + nameMapper.apply(name);             
+		}
+        
+        @Override
+        public void value(Context context, JsonValue value) {
+            elements.push(formatValue(value));
+            context.count++;
+        }
+               
+				
+		public String formatValue(JsonValue value) {
+            if (Param.isParam(value)) {
+                return "?";
+            }
+            switch (value.getValueType()) {
+                case STRING: return "'" + ((JsonString)value).getString() + "'";
+                default: return value.toString();
+            }
+		}
+        
+        public List<String> getChildElements(Context context) {           
+            return elements.subList(elements.size() - context.count, elements.size());
+        }
+        
+        public void popChildElements(Context context) {
+            elements.setSize(elements.size() - context.count);
+        }
+        
+        @Override
+    	public void endAndExpr(Context context) { 
+    		String result = formatAndExpr(getChildElements(context));
+            popChildElements(context);
+            elements.push(result);
+    	}
+        
+        public String formatAndExpr(List<String> children) {
+            return children.stream().collect(Collectors.joining(" AND "));
+        }
+        
+        @Override
+    	public void endQueryExpr(Context context) { 
+    		String result = formatAndExpr(getChildElements(context));
+            popChildElements(context);
+            elements.push(result);
+    	}
+
+        public String formatQueryExpr(List<String> children) {
+            return children.stream().collect(Collectors.joining(" AND "));
+        }
+              
+        @Override
+    	public void endBetweenExpr(Context context) { 
+    		String result = formatAndExpr(getChildElements(context));
+            popChildElements(context);
+            elements.push(result);
+    	}
+        
+        public String formatBetweenExpr(List<String> children) {
+            return children.stream().collect(Collectors.joining(" AND "));
+        }
+        
+        @Override
+        public void endOrExpr(Context context) {
+    		String result = formatOrExpr(getChildElements(context));
+            popChildElements(context);
+            elements.push(result);            
+        }
+    	
+    	public String formatOrExpr(List<String> ors) { 
+    		return "(" + ors.stream().collect(Collectors.joining(" OR ")) + ")"; 
+    	}
+    	
+        @Override
+        public void endOperExpr(Context context) {
+            String value = elements.pop();
+            QualifiedName dimension = context.getDimension();
+            elements.push(formatOperExpr(formatDimension(dimension.parent, dimension), context.operator, value));
+        }
+        
+    	public String formatOperExpr(String dimension, String operator, String value) {
+    			// null dimension implies that we are in a 'has' clause where the dimension is attached to the
+    			// outer 'has' operator 
+    			if (operator.equals("match"))
+    				return value;
+    			if (operator.equals("has"))
+    				return value;
+    			if (operator.equals("like"))
+    				return dimension + " LIKE " + value;
+    			//if (dimension === null) return '$self' + operator + printValue(value) 
+
+    			return dimension + operator + value ;
+    	}
+               
+        @Override
+        public void endSubExpr(Context context) {
+        }
+ 
+		@Override
+		public void unbounded(Context context) {
+            context.count++;
+            elements.push(null);
+		}
+	};
+    
 	
 	public static Formatter<Node> SIMPLIFY = Factorizer::new;	
 	public static Formatter<Node> TREE =  TreeFormatter::new;
@@ -680,6 +865,10 @@ public class Visitors {
 	public static Formatter<String> DEFAULT = DefaultFormat::new;
 	/** Default JSON creates a JSON representation */
 	public static Formatter<JsonValue> JSON = JsonFormat::new;
+    
+    public static Formatter<String> SQL(Function<QualifiedName, String> nameMapper, Function<QualifiedName, SQLFormat.Relationship> relationships) {
+        return ()->new SQLFormat(nameMapper, relationships);
+    }
     
     public static <T> Function<Visitor<T>, Visitor<T>> rename(Function<QualifiedName,QualifiedName> mapper) {
         return output -> new NameRemapper<T>(output,  mapper);
