@@ -36,29 +36,16 @@ public class CubeTest {
     }
 
 	@Test
-    public void hasWorkingRemoveContainsMethodIn2dd() {
+    public void hasWorkingRemoveConstraintMethodIn2d() {
     	Query.Impl cube1 = (Query.Impl)Query.fromJson("{ 'x': 43, 'y': 33 }");
 
-		Query cube2 = cube1.removeConstraints(Query.fromJson("{'x':43}")); 
+		Query cube2 = cube1.removeConstraint("x"); 
 		assertEquals(Query.fromJson("{'y':33}"), cube2);
 
 		boolean ok = true;
 		
-    	try {
-    		cube1.removeConstraints(Query.fromJson("{'x':33}"));
-    		ok = false;
-    	} catch (RuntimeException err) {
-    		// Nothing
-    	}
-    	
-    	assertTrue(ok);
-
-    	try {
-    		cube1.removeConstraints(Query.fromJson("{'z' : 33}"));
-    		ok = false;
-    	} catch (RuntimeException err) {
-    		// ok
-    	}
+        
+		assertEquals(cube1, cube1.removeConstraint("z"));
     	
     	assertTrue(ok);
     }

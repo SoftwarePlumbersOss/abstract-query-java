@@ -12,18 +12,16 @@ import java.util.stream.Collectors;
 import javax.json.JsonArray;
 import javax.json.JsonValue;
 
-import com.softwareplumbers.common.abstractquery.visitor.Context;
 import com.softwareplumbers.common.QualifiedName;
 import com.softwareplumbers.common.jsonview.JsonViewFactory;
-import java.io.StringReader;
 import java.util.function.Function;
 import java.util.function.Predicate;
-import javax.json.Json;
 
 import javax.json.JsonObject;
 import javax.json.JsonValue.ValueType;
 import com.softwareplumbers.common.abstractquery.visitor.Visitor;
 import com.softwareplumbers.common.abstractquery.visitor.Visitors;
+import java.util.stream.Stream;
 
 /** A constraint maps each dimension in an abstract space to a range.
  *
@@ -49,8 +47,39 @@ public interface Query extends AbstractSet<JsonObject, Query> {
         }
     }
 	
-	public AbstractSet<?, ?> getConstraint(String dimension);
+	public AbstractSet<? extends JsonValue, ?> getConstraint(String dimension);
+    public Query setConstraint(String name, AbstractSet<? extends JsonValue, ?> constraint);
+    public Query removeConstraint(String name);
 	public Set<String> getConstraints();
+    public Stream<QualifiedName> getAllConstraints();
+    
+    public default Query getConstraint(QualifiedName dimension) {
+        if (dimension.parent.isEmpty())
+            return Query.from(dimension.part, getConstraint(dimension.part));
+        else {
+            String first = dimension.get(0);
+            return Query.from(first, ((Query)getConstraint(first)).getConstraint(dimension.rightFromStart(1)));
+        }
+    }
+
+    public default Query setConstraint(QualifiedName dimension, AbstractSet<? extends JsonValue, ?> constraint) {
+        if (dimension.parent.isEmpty()) 
+            return setConstraint(dimension.part, constraint);
+        else {
+            String first = dimension.get(0);
+            return setConstraint(first, ((Query)getConstraint(first)).setConstraint(dimension.rightFromStart(1), constraint));
+        }
+    }
+    
+    public default Query removeConstraint(QualifiedName dimension) {
+        if (dimension.parent.isEmpty())
+            return removeConstraint(dimension.part);
+        else {
+            String first = dimension.get(0);
+            return setConstraint(first, ((Query)getConstraint(first)).removeConstraint(dimension.rightFromStart(1)));
+        }
+	}
+
 	
 	default Query bind(String json) {
 		return bind(JsonUtil.parseObject(json));
@@ -97,7 +126,7 @@ public interface Query extends AbstractSet<JsonObject, Query> {
 	 * @param to_copy A constraint to copy
 	 */
 	public Impl(Impl to_copy) {
-		this.constraints = new TreeMap<String, AbstractSet<? extends JsonValue,?>>(to_copy.constraints);
+		this.constraints = new TreeMap<>(to_copy.constraints);
 	}
 	
 	/** Create a 'one dimensional' constraint
@@ -106,12 +135,12 @@ public interface Query extends AbstractSet<JsonObject, Query> {
 	 * @param range permitted range for that dimension
 	 */
 	public Impl(String dimension, AbstractSet<? extends JsonValue,?> range) {
-		this.constraints = new TreeMap<String, AbstractSet<? extends JsonValue,?>>();
+		this.constraints = new TreeMap<>();
 		this.constraints.put(dimension, range);
 	}
 	
 	public Impl() {
-		this.constraints = new TreeMap<String,AbstractSet<? extends JsonValue,?>>();
+		this.constraints = new TreeMap<>();
 	}
 
 	/** Get the constraint for a given dimension
@@ -122,21 +151,30 @@ public interface Query extends AbstractSet<JsonObject, Query> {
 	 * @param dimension the name of the dimension
 	 * @return the range of values permitted for the given dimension
 	 */
-	public AbstractSet<?,?> getConstraint(String dimension) {
+    @Override
+	public AbstractSet<? extends JsonValue,?> getConstraint(String dimension) {
 		return constraints.get(dimension);
 	}
 	
+    @Override
 	public Set<String> getConstraints() {
 		return constraints.keySet();
 	}
 	
-	/** Get the set of dimension names for this constraint.
-	 * 
-	 * @return the set of dimension names valid for this constraint
-	 */
-	public Set<String> getDimensions() {
-		return constraints.keySet();
+    private static Stream<QualifiedName> mapEntryToNames(Map.Entry<String, AbstractSet<? extends JsonValue,?>> entry) {
+        QualifiedName baseName = QualifiedName.of(entry.getKey());
+        if (entry.getValue() instanceof Query) {
+            return ((Query)entry).getAllConstraints().map(childName -> baseName.addAll(childName));
+        } else {
+            return Stream.of(baseName);
+        }
+    }
+    
+    @Override
+	public Stream<QualifiedName> getAllConstraints() {
+		return constraints.entrySet().stream().flatMap(Query.Impl::mapEntryToNames);
 	}
+
 
 	/** Check that two Cubes are equal
 	 * 
@@ -159,6 +197,7 @@ public interface Query extends AbstractSet<JsonObject, Query> {
 	 * @param other Other constraint to check
 	 * @return true if other is Cube and equal to this constraint
 	 */
+    @Override
 	public boolean equals(Object other) {
 		return other instanceof Query && equals((Query)other);
 	}
@@ -182,6 +221,7 @@ public interface Query extends AbstractSet<JsonObject, Query> {
 	 * @param other Cube to compare
 	 * @return true if this constraint contains the other constraint, false if not, null if we cannot tell.
 	 */
+    @Override
 	public Boolean contains(Query other) {
 		return Tristate.every(constraints.keySet(), constraint-> containsConstraint(constraint, other));
 	}
@@ -249,26 +289,32 @@ public interface Query extends AbstractSet<JsonObject, Query> {
 
 		return new Impl(result);
 	}
-	
-	// TODO: I don't think this is quite right.
-	private void removeConstraint(String dimension, AbstractSet<?,?> constraint) {
-		AbstractSet<?,?> this_constraint = constraints.get(dimension);
-		if (this_constraint != null && this_constraint.equals(constraint)) {
-			constraints.remove(dimension);
-		} else {
-			throw new IllegalArgumentException( "{ " + dimension + ":" + constraint + "} is not a in " + this );
-		}
-	}
+    
+    
+    public Query setConstraint(String dimension, AbstractSet<? extends JsonValue, ?> constraint) {
+        if (constraint.isUnconstrained()) return removeConstraint(dimension);
+        Impl result = new Impl(this);
+        result.constraints.put(dimension, constraint);
+        return result;
+    }
+
+    public Query removeConstraint(String name) {
+        if (constraints.containsKey(name) && constraints.size() == 1) return Query.UNBOUNDED;
+        Impl result = new Impl(this);
+        result.constraints.remove(name);
+        return result;
+    }
+    
 
 	/** Remove constraints from a constraint.
 	 * 
 	 * Used for factoring query expressions. At this point, rather experimental.
 	 * 
 	 */
-	public Query removeConstraints(Query to_remove) {
+	public Query removeConstraints(QualifiedName... constraints) {
 		Impl result = new Impl(this);
-		for (String constraint : to_remove.getConstraints()) 
-			result.removeConstraint(constraint, to_remove.getConstraint(constraint));
+		for (QualifiedName constraint : constraints) 
+			result.removeConstraint(constraint);
 		return result;
 	}
 
@@ -384,6 +430,7 @@ public interface Query extends AbstractSet<JsonObject, Query> {
 	public boolean isUnconstrained() {
 		return false;
 	}
+
 	}
 	
 	public class Unbounded implements Query {
@@ -402,6 +449,9 @@ public interface Query extends AbstractSet<JsonObject, Query> {
 		@Override	public Set<String> getConstraints() { return Collections.emptySet(); }		
 		@Override  	public Query maybeUnion(Query other) { return this; }
 		@Override  	public String toString() { return toExpression(Visitors.DEFAULT); }
+        @Override   public Query setConstraint(String name, AbstractSet<? extends JsonValue, ?> constraint) { return new Query.Impl(name, constraint); }
+        @Override   public Query removeConstraint(String name) { return UNBOUNDED; }
+        @Override   public Stream<QualifiedName> getAllConstraints() { return Stream.empty(); }
 
 	}
 	
@@ -421,6 +471,9 @@ public interface Query extends AbstractSet<JsonObject, Query> {
 		@Override	public Set<String> getConstraints() { return Collections.emptySet(); }		
 		@Override  	public Query maybeUnion(Query other) { return other; }
 		@Override  	public String toString() { return toExpression(Visitors.DEFAULT); }
+        @Override   public Query setConstraint(String name, AbstractSet<? extends JsonValue, ?> constraint) { return EMPTY; }
+        @Override   public Query removeConstraint(String name) { throw new RuntimeException(name + " is not a constraint in: " + this); }
+        @Override   public Stream<QualifiedName> getAllConstraints() { return Stream.empty(); }
 	}
 	
 	public class UnionCube extends Union<JsonObject,Query> implements Query {
@@ -431,7 +484,7 @@ public interface Query extends AbstractSet<JsonObject, Query> {
 
 		@SuppressWarnings("rawtypes")
 		@Override
-		public AbstractSet<?, ?> getConstraint(String dimension) {
+		public AbstractSet<? extends JsonValue, ?> getConstraint(String dimension) {
 			AbstractSet results = null;
 			for (Query elem : data) {
 				AbstractSet result = elem.getConstraint(dimension);
@@ -454,9 +507,22 @@ public interface Query extends AbstractSet<JsonObject, Query> {
 		public Query maybeUnion(Query other) {
 			return null;
 		}
+
+        @Override
+        public Query setConstraint(String name, AbstractSet<? extends JsonValue, ?> constraint) {
+            return FACTORY.union(data.stream().map(item -> item.setConstraint(name, constraint)).collect(Collectors.toList()));
+        }
+
+        @Override
+        public Query removeConstraint(String name) {
+            return FACTORY.union(data.stream().map(item -> item.removeConstraint(name)).collect(Collectors.toList()));
+        }
+
+        @Override
+        public Stream<QualifiedName> getAllConstraints() {
+            return data.stream().flatMap(item->item.getAllConstraints()).distinct();
+        }
 	}
-	
-		
 	
 	public static Query union(JsonArray constraints) {
 		// TODO: sensible error message for cast below

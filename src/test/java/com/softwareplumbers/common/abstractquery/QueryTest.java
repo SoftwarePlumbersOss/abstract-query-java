@@ -334,6 +334,18 @@ public class QueryTest {
    		assertEquals("(grade<'C' && (course='javascript 101' && student.age>=21 || course='medieval French poetry' && student.age>=40 && student.age<65))", expr2);
     }
 
+    @Test
+    public void pullOutCriteria() {
+    	Query query = Query
+    		.fromJson("{ 'course': 'javascript 101', 'student': { 'age' : [21, null] }, 'grade': [null,'C']}")
+    		.union("{ 'course': 'medieval French poetry', 'student': { 'age': [40,65]}, 'grade': [null,'C']}");
+        
+        assertEquals("(course='javascript 101' or course='medieval French poetry')", query.getConstraint(QualifiedName.of("course")).toExpression(Visitors.DEFAULT));
+        assertEquals("grade<'C' and student.age>=21", query.removeConstraint("course").toExpression(Visitors.DEFAULT));
+        assertEquals("(course='javascript 101' and student.age>=21 or course='medieval French poetry' and student.age>=40 and student.age<65)", query.removeConstraint(QualifiedName.of("grade")).toExpression(Visitors.DEFAULT));
+        assertEquals("student.age>=21", query.getConstraint(QualifiedName.of("student","age")).toExpression(Visitors.DEFAULT));
+        assertEquals("(course='javascript 101' and grade<'C' or course='medieval French poetry' and grade<'C')", query.removeConstraint(QualifiedName.of("student","age")).toExpression(Visitors.DEFAULT));
+    }
 /*
     it('sample code for README.md with parameters tests OK', ()=>{
         Cube query = Cube
