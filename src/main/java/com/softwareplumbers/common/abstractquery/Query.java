@@ -54,11 +54,16 @@ public interface Query extends AbstractSet<JsonObject, Query> {
     public Stream<QualifiedName> getAllConstraints();
     
     public default Query getConstraint(QualifiedName dimension) {
-        if (dimension.parent.isEmpty())
-            return Query.from(dimension.part, getConstraint(dimension.part));
-        else {
+        if (dimension.parent.isEmpty()) {
+            AbstractSet<? extends JsonValue, ?> childConstraint = getConstraint(dimension.part);          
+            return childConstraint == null ? Query.UNBOUNDED : Query.from(dimension.part, childConstraint);
+        } else {
             String first = dimension.get(0);
-            return Query.from(first, ((Query)getConstraint(first)).getConstraint(dimension.rightFromStart(1)));
+            AbstractSet<? extends JsonValue, ?> childConstraint = getConstraint(first);
+            if (childConstraint == null) 
+                return Query.UNBOUNDED;
+            else
+                return Query.from(first, ((Query)childConstraint).getConstraint(dimension.rightFromStart(1)));
         }
     }
 
@@ -67,7 +72,12 @@ public interface Query extends AbstractSet<JsonObject, Query> {
             return setConstraint(dimension.part, constraint);
         else {
             String first = dimension.get(0);
-            return setConstraint(first, ((Query)getConstraint(first)).setConstraint(dimension.rightFromStart(1), constraint));
+            AbstractSet<? extends JsonValue, ?> childConstraint = getConstraint(first);
+            if (childConstraint == null) {
+                return setConstraint(first, Query.from(dimension.rightFromStart(1), constraint));
+            } else {
+                return setConstraint(first, ((Query)getConstraint(first)).setConstraint(dimension.rightFromStart(1), constraint));
+            }
         }
     }
     
@@ -76,7 +86,12 @@ public interface Query extends AbstractSet<JsonObject, Query> {
             return removeConstraint(dimension.part);
         else {
             String first = dimension.get(0);
-            return setConstraint(first, ((Query)getConstraint(first)).removeConstraint(dimension.rightFromStart(1)));
+            AbstractSet<? extends JsonValue, ?> childConstraint = getConstraint(first);
+            if (childConstraint == null) {
+                return this;
+            } else {
+                return setConstraint(first, ((Query)getConstraint(first)).removeConstraint(dimension.rightFromStart(1)));
+            }
         }
 	}
 
@@ -206,7 +221,8 @@ public interface Query extends AbstractSet<JsonObject, Query> {
 		// We should do some type checking here.
 		U thisConstraint = (U)getConstraint(dimension);
 		U otherConstraint = (U)other.getConstraint(dimension);
-		return thisConstraint.contains(otherConstraint);
+
+        return thisConstraint.contains(otherConstraint);
 	}
 	
 	/** Check whether this constraint contains some other constraint

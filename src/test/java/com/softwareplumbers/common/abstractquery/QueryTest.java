@@ -346,6 +346,20 @@ public class QueryTest {
         assertEquals("student.age>=21", query.getConstraint(QualifiedName.of("student","age")).toExpression(Visitors.DEFAULT));
         assertEquals("(course='javascript 101' and grade<'C' or course='medieval French poetry' and grade<'C')", query.removeConstraint(QualifiedName.of("student","age")).toExpression(Visitors.DEFAULT));
     }
+    
+    @Test
+    public void getNonExistantConstraint() {
+    	Query query = Query
+    		.fromJson("{ 'course': 'javascript 101', 'student': { 'age' : [21, null] }, 'grade': [null,'C']}")
+    		.union("{ 'course': 'medieval French poetry', 'student': { 'age': [40,65]}, 'grade': [null,'C']}");
+        
+        // It would be nice if getConstraint could return Unbounded. But Query.UNBOUNDED and Range.UNBOUNDED are
+        // different objects; don't know which to return without type information we can't have.
+        assertNull(query.getConstraint("XXX"));
+        // However the semantics of getConstraint with a QualifiedName are different; we know this will always return
+        // a query
+        assertEquals(Query.UNBOUNDED, query.getConstraint(QualifiedName.of("YYY","XXX")));
+    }
 /*
     it('sample code for README.md with parameters tests OK', ()=>{
         Cube query = Cube
