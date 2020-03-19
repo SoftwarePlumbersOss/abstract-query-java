@@ -98,4 +98,11 @@ public class SQLFormatTest {
         
         assertEquals("FROM GRADES T0 INNER JOIN STUDENTS T1 ON T0.ID = T1.ID WHERE (T0.grade<'C' AND (T0.course='javascript 101' AND T1.age>=21 OR T0.course='medieval French poetry' AND T1.age>=40 AND T1.age<65))", expr);
     }
+    
+    @Test
+    public void formatsSQL92Patterns() {
+        Query query = Query.fromJson("{ 'course': { '$like': 'java*' } }");
+    	String expr = query.toExpression(GRADES_FORMATTER);
+        assertEquals("FROM GRADES T0 WHERE T0.course LIKE 'java%'", expr);
+    }
 }

@@ -6,6 +6,8 @@
 package com.softwareplumbers.common.abstractquery.visitor;
 
 import com.softwareplumbers.common.QualifiedName;
+import com.softwareplumbers.common.abstractpattern.parsers.Parsers;
+import com.softwareplumbers.common.abstractpattern.visitor.Builders;
 import com.softwareplumbers.common.abstractquery.JsonUtil;
 import com.softwareplumbers.common.abstractquery.Param;
 import com.softwareplumbers.common.abstractquery.Range;
@@ -840,8 +842,15 @@ public class Visitors {
     				return value;
     			if (operator.equals("has"))
     				return value;
-    			if (operator.equals("like"))
+    			if (operator.equals("like")) {
+                    try {
+                        value = Parsers.parseUnixWildcard(value).build(Builders.toSQL92('/'));
+                    } catch (com.softwareplumbers.common.abstractpattern.visitor.Visitor.PatternSyntaxException e) {
+                        throw new RuntimeException(e);
+                    }
+
     				return dimension + " LIKE " + value;
+                }
     			//if (dimension === null) return '$self' + operator + printValue(value) 
 
     			return dimension + operator + value ;
