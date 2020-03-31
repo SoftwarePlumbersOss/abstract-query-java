@@ -184,11 +184,11 @@ public interface Range extends AbstractSet<JsonValue, Range> {
             return new Like(pattern);
 	}
 	
-	/**
+	/** Create a range bounded by a lower and upper condition.
 	 * 
-	 * @param lower
-	 * @param upper
-	 * @return
+	 * @param lower lower condition
+	 * @param upper upper condition
+	 * @return A Range bounded by the lower and upper conditions given
 	 */
 	public static  Range between(Range lower, Range upper) {
 		if (lower instanceof LessThanOrEqual) return Range.EMPTY;
@@ -203,9 +203,15 @@ public interface Range extends AbstractSet<JsonValue, Range> {
 		return null;
 	}
 
-	/** Provide access to global Unbounded range
+	/** Provide access to global Unbounded range.
+     * 
+     * The unbounded range contains all values.
 	 */
 	public static final Range UNBOUNDED = new Unbounded();
+	/** Provide access to global Empty range.
+     * 
+     * The empty range contains no values.
+	 */    
 	public static final Range EMPTY = new Empty();
 	
 	/** Check to see if a JSON object is a Range 
@@ -343,7 +349,6 @@ public interface Range extends AbstractSet<JsonValue, Range> {
 
 	/** Range representing an unbounded data set [i.e. no constraint on data returned]
 	 *
-	 * @private
 	 */
 	public static class Unbounded implements Range {
 		
@@ -419,7 +424,6 @@ public interface Range extends AbstractSet<JsonValue, Range> {
 	
 	/** Range representing an unbounded data set [i.e. no constraint on data returned]
 	 *
-	 * @private
 	 */
 	public static class Empty implements Range {
 
@@ -497,7 +501,6 @@ public interface Range extends AbstractSet<JsonValue, Range> {
 
 	/** Base class for ranges with a single bound (e.g. less than, greater than etc.)
 	 *
-	 * @private
 	 */
 	public static abstract class OpenRange implements Range {
 
@@ -566,7 +569,6 @@ public interface Range extends AbstractSet<JsonValue, Range> {
 
 	/** Range between two bounds.
 	 *
-	 * @private
 	 */
 	public static class Between implements Range {
 
@@ -831,7 +833,6 @@ public interface Range extends AbstractSet<JsonValue, Range> {
 
 	/** Range less than some bound.
 	 *
-	 * @private
 	 */
 	public static class LessThan extends OpenRange {
 
@@ -957,7 +958,6 @@ public interface Range extends AbstractSet<JsonValue, Range> {
 
 	/** Range less than or equal to some bound
 	 *
-	 * @private
 	 */
 	public static class LessThanOrEqual extends OpenRange {
 
@@ -1095,7 +1095,6 @@ public interface Range extends AbstractSet<JsonValue, Range> {
 
 	/** Range greater than some bound
 	 *
-	 * @private
 	 */
 	public static class GreaterThan extends OpenRange {
 
@@ -1225,7 +1224,6 @@ public interface Range extends AbstractSet<JsonValue, Range> {
 
 	/** Range greater than or equal to some bound
 	 *
-	 * @private
 	 */
 	public static class GreaterThanOrEqual extends OpenRange {
 

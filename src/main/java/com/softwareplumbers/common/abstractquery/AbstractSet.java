@@ -26,7 +26,7 @@ public interface AbstractSet<T, U extends AbstractSet<T,U>> extends Visitable {
 	 * 
 	 * The intersection of two set contains all the values contained by both sets.
 	 * 
-	 * @param range Set to intersect with this set.
+	 * @param other Set to intersect with this set.
 	 * @return intersection of the two sets
 	 */	
 	@SuppressWarnings("unchecked") // Because every instance of AbstractSet<T,U> is a U
@@ -57,7 +57,7 @@ public interface AbstractSet<T, U extends AbstractSet<T,U>> extends Visitable {
 	 * A set contains a value if the value meets the implied constraints. Sets may be 
 	 * parameterized, in which case this cannot always be determined. 
 	 * 
-	 * @param range Range to compare to this range.
+	 * @param item item to check
 	 * @return True if this range contains the given value, False if not, null if this cannot be determined
 	 */
 	Boolean containsItem(T item);

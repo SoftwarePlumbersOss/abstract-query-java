@@ -352,15 +352,11 @@ public interface Query extends AbstractSet<JsonObject, Query> {
 		return toExpression(Visitors.JSON);
 	}
 
-	/** Convert a Cube to an expression using the given formatter and context
+	/** Walk over the query representation, applying some processing at each node.
 	 * 
-	 * The type parameter T of the formatter is commonly String, which means
-	 * that this method will return a String. The formatter may require context
-	 * information (for example, information about the parent scope of an expression).
-	 * 
-	 * @param formatter Object used to format an expression from this Cube
-	 * @return A formatted expression
+     * @param visitor object is processed at every node in the query representation
 	 */
+    @Override
 	public void visit(Visitor<?> visitor) {
         visitor.queryExpr();
         constraints.forEach((key,value)->{
