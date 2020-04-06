@@ -12,7 +12,7 @@ import java.util.stream.Collectors;
 import javax.json.JsonArray;
 import javax.json.JsonValue;
 
-import com.softwareplumbers.common.QualifiedName;
+import com.softwareplumbers.common.immutablelist.QualifiedName;
 import com.softwareplumbers.common.jsonview.JsonViewFactory;
 import java.util.function.Function;
 import java.util.function.Predicate;

@@ -58,7 +58,7 @@ test {
 dependencies {
 
     compile group: 'javax.json', name: 'javax.json-api', version: '1.0'
-    compile group: 'com.softwareplumbers.oss', name: 'qualified-name', version: '0.0.17'
+    compile group: 'com.softwareplumbers.oss', name: 'immutable-list', version: '0.0.1'
     compile group: 'com.softwareplumbers.oss', name: 'json-view', version: '0.0.6'
     compile group: 'com.softwareplumbers.oss', name: 'abstract-pattern', version: '0.0.9'
 		

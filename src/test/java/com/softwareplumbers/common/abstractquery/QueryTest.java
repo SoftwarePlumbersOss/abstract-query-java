@@ -1,6 +1,6 @@
 package com.softwareplumbers.common.abstractquery;
 
-import com.softwareplumbers.common.QualifiedName;
+import com.softwareplumbers.common.immutablelist.QualifiedName;
 import com.softwareplumbers.common.jsonview.JsonViewFactory;
 import java.util.Arrays;
 import java.util.List;
