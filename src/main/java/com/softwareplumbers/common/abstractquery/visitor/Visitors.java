@@ -772,6 +772,7 @@ public class Visitors {
             }
             switch (value.getValueType()) {
                 case STRING: return "'" + ((JsonString)value).getString() + "'";
+                case NULL: return "NULL";
                 default: return value.toString();
             }
 		}
@@ -852,8 +853,10 @@ public class Visitors {
     				return dimension + " LIKE " + value;
                 }
     			//if (dimension === null) return '$self' + operator + printValue(value) 
-
-    			return dimension + operator + value ;
+                if (operator.equals(Range.Equals.OPERATOR) && value.equals("NULL"))
+                    return dimension + " IS NULL";
+                else
+        			return dimension + operator + value ;
     	}
                
         @Override

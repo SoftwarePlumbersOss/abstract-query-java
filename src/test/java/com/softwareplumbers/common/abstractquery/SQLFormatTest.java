@@ -10,6 +10,7 @@ import com.softwareplumbers.common.abstractquery.visitor.Formatter;
 import com.softwareplumbers.common.abstractquery.visitor.Visitors;
 import com.softwareplumbers.common.abstractquery.visitor.Visitors.SQLFormat.Relationship;
 import java.util.Map;
+import javax.json.JsonValue;
 import static org.junit.Assert.assertEquals;
 import org.junit.Test;
 
@@ -65,7 +66,13 @@ public class SQLFormatTest {
     		.union(Query.fromJson("{'x':[6,8], 'y':3, 'z':99}"));
 
     	assertEquals("FROM THINGS T0 WHERE (T0.x<2 AND T0.y=4 AND T0.z=5 OR T0.x>=6 AND T0.x<8 AND T0.y=3 AND T0.z=99)", query.toExpression(GENERIC_FORMATTER));
-    }      
+    }  
+
+    @Test
+    public void createsExpressionWithNull() {
+        Query query = Query.from("x", Range.equals(JsonValue.NULL));
+    	assertEquals("FROM THINGS T0 WHERE T0.x IS NULL", query.toExpression(GENERIC_FORMATTER));
+    }
     
     @Test
     public void createsExpressionWithOr() {
