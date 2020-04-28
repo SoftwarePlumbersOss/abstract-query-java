@@ -8,7 +8,8 @@ package com.softwareplumbers.common.abstractquery;
 import com.softwareplumbers.common.immutablelist.QualifiedName;
 import com.softwareplumbers.common.abstractquery.visitor.Formatter;
 import com.softwareplumbers.common.abstractquery.visitor.Visitors;
-import com.softwareplumbers.common.abstractquery.visitor.Visitors.SQLFormat.Relationship;
+import com.softwareplumbers.common.abstractquery.visitor.Visitors.Relationship;
+import com.softwareplumbers.common.abstractquery.visitor.Visitors.SQLResult;
 import java.util.Map;
 import javax.json.JsonValue;
 import static org.junit.Assert.assertEquals;
@@ -56,6 +57,7 @@ public class SQLFormatTest {
     }
     
     public static Formatter<String> GENERIC_FORMATTER = Visitors.SQL(SQLFormatTest::genericNameMapper, SQLFormatTest::genericRelationships);
+    public static Formatter<SQLResult> GENERIC_FORMATTER_WITH_PARAMS = Visitors.ParameterizedSQL(SQLFormatTest::genericNameMapper, SQLFormatTest::genericRelationships);
     public static Formatter<String> GRADES_FORMATTER = Visitors.SQL(SQLFormatTest::gradesNameMapper, SQLFormatTest::gradesRelationships);
     
     @Test
@@ -66,6 +68,19 @@ public class SQLFormatTest {
     		.union(Query.fromJson("{'x':[6,8], 'y':3, 'z':99}"));
 
     	assertEquals("FROM THINGS T0 WHERE (T0.x<2 AND T0.y=4 AND T0.z=5 OR T0.x>=6 AND T0.x<8 AND T0.y=3 AND T0.z=99)", query.toExpression(GENERIC_FORMATTER));
+    }  
+    
+    @Test
+    public void createsParameterizedExpression() {
+    	Query query = Query
+    		.fromJson("{'x': [null,2], 'y': { '$': 'yparam'}}")
+    		.intersect(Query.fromJson("{ 'z': 5}"))
+    		.union(Query.fromJson("{'x':[6,8], 'y':3, 'z': { '$': 'zparam'}}"));
+
+        SQLResult result = query.toExpression(GENERIC_FORMATTER_WITH_PARAMS);
+    	assertEquals("FROM THINGS T0 WHERE (T0.x<2 AND T0.y=? AND T0.z=5 OR T0.x>=6 AND T0.x<8 AND T0.y=3 AND T0.z=?)", result.sql);
+        assertEquals("yparam", result.parameters.get(0));
+        assertEquals("zparam", result.parameters.get(1));
     }  
 
     @Test

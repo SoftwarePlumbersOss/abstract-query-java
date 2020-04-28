@@ -26,6 +26,7 @@ import java.util.Stack;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -628,7 +629,7 @@ public class Visitors {
      * 
      * @param <T> The type of the final result
      */
-    public static class NameRemapper<T> extends DelegatingVisitor<T> {
+    public static class NameRemapper<T> extends ContextualDelegatingVisitor<T> {
         
         protected final Function<QualifiedName, QualifiedName> mapper;
         
@@ -682,15 +683,26 @@ public class Visitors {
         }
     }
     
-    /** Get the SQL query formatter
+    public static class SQLResult {
+        public final String sql;
+        public final List<String> parameters;
+        public SQLResult(String sql, List<String> parameters) {
+            this.sql = sql;
+            this.parameters = parameters;
+        }
+    }
+        
+    @FunctionalInterface
+    public interface Relationship {
+        String getCriteria(Map<QualifiedName,String> aliases);
+    }
+        
+   /** Get the SQL query formatter
 	*/
-	public static class SQLFormat extends ContextualVisitor<String> {
+	public static class ParameterizedSQLFormat extends ContextualVisitor<SQLResult> {
         
 
-        @FunctionalInterface
-        public interface Relationship {
-            String getCriteria(Map<QualifiedName,String> aliases);
-        }
+
                 
         /** Stack of elements awaiting consolidation into a formatted expression
          */
@@ -698,13 +710,15 @@ public class Visitors {
         protected final LinkedHashMap<QualifiedName,String> aliases;
         protected final Function<QualifiedName, String> nameMapper;
         protected final Function<QualifiedName, Relationship> relationships;
+        protected final List<String> parameters;
         
-        public SQLFormat(
+        public ParameterizedSQLFormat(
             Function<QualifiedName, String> nameMapper,
             Function<QualifiedName, Relationship> relationships
         ) { 
             this.elements = new Stack<>();
             this.aliases = new LinkedHashMap<>();
+            this.parameters = new ArrayList<>();
             this.nameMapper = nameMapper;
             this.relationships = relationships;
             addAlias(QualifiedName.ROOT);
@@ -719,7 +733,7 @@ public class Visitors {
         }
         
         @Override
-        public String getResult() {
+        public SQLResult getResult() {
             StringBuilder builder = new StringBuilder();
             builder.append("FROM ");
             builder.append(nameMapper.apply(QualifiedName.ROOT));
@@ -741,7 +755,7 @@ public class Visitors {
             if (criteria != null) {
                 builder.append(" WHERE ").append(criteria);
             }
-            return builder.toString();
+            return new SQLResult(builder.toString(), parameters);
         }
 		
         @Override
@@ -768,6 +782,7 @@ public class Visitors {
 				
 		public String formatValue(JsonValue value) {
             if (Param.isParam(value)) {
+                parameters.add(Param.getKey(value));
                 return "?";
             }
             switch (value.getValueType()) {
@@ -870,7 +885,20 @@ public class Visitors {
 		}
 	};
     
-	
+    public static class SQLFormat extends DelegatingVisitor<String, SQLResult> {
+
+        @Override
+        public String getResult() {
+            return output.getResult().sql;
+        }
+        
+        public SQLFormat(Function<QualifiedName, String> nameMapper,
+                         Function<QualifiedName, Relationship> relationships) {
+            super(new ParameterizedSQLFormat(nameMapper, relationships));
+        }
+        
+    }
+    	
 	public static Formatter<Node> SIMPLIFY = Factorizer::new;	
 	public static Formatter<Node> TREE =  TreeFormatter::new;
 	/** Default formatter creates a compact string expression */
@@ -878,8 +906,12 @@ public class Visitors {
 	/** Default JSON creates a JSON representation */
 	public static Formatter<JsonValue> JSON = JsonFormat::new;
     
-    public static Formatter<String> SQL(Function<QualifiedName, String> nameMapper, Function<QualifiedName, SQLFormat.Relationship> relationships) {
+    public static Formatter<String> SQL(Function<QualifiedName, String> nameMapper, Function<QualifiedName, Relationship> relationships) {
         return ()->new SQLFormat(nameMapper, relationships);
+    }
+    
+    public static Formatter<SQLResult> ParameterizedSQL(Function<QualifiedName, String> nameMapper, Function<QualifiedName, Relationship> relationships) {
+        return ()->new ParameterizedSQLFormat(nameMapper, relationships);
     }
     
     public static <T> Function<Visitor<T>, Visitor<T>> rename(Function<QualifiedName,QualifiedName> mapper) {
