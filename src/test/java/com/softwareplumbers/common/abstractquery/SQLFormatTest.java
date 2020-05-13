@@ -79,8 +79,8 @@ public class SQLFormatTest {
 
         ParameterizedSQL result = query.toExpression(GENERIC_FORMATTER_WITH_PARAMS);
     	assertEquals("FROM THINGS T0 WHERE (T0.x<2 AND T0.y=? AND T0.z=5 OR T0.x>=6 AND T0.x<8 AND T0.y=3 AND T0.z=?)", result.sql);
-        assertEquals("yparam", result.parameters.get(0));
-        assertEquals("zparam", result.parameters.get(1));
+        assertEquals("yparam", result.parameters[0]);
+        assertEquals("zparam", result.parameters[1]);
     }  
 
     @Test

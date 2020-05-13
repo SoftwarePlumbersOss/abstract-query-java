@@ -15,6 +15,7 @@ import java.math.BigDecimal;
 import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -685,12 +686,18 @@ public class Visitors {
     
     public static class ParameterizedSQL {
         public final String sql;
-        public final List<String> parameters;
+        public final String[] parameters;
         public ParameterizedSQL(String sql, List<String> parameters) {
+            this.sql = sql;
+            this.parameters = parameters.toArray(new String[parameters.size()]);
+        }
+        public ParameterizedSQL(String sql, String... parameters) {
             this.sql = sql;
             this.parameters = parameters;
         }
+        @Override
         public String toString() { return sql; }
+        public List<String> getParameters() { return Arrays.asList(parameters); }
     }
         
     @FunctionalInterface
