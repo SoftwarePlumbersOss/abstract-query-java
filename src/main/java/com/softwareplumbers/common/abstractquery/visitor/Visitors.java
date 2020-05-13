@@ -683,13 +683,14 @@ public class Visitors {
         }
     }
     
-    public static class SQLResult {
+    public static class ParameterizedSQL {
         public final String sql;
         public final List<String> parameters;
-        public SQLResult(String sql, List<String> parameters) {
+        public ParameterizedSQL(String sql, List<String> parameters) {
             this.sql = sql;
             this.parameters = parameters;
         }
+        public String toString() { return sql; }
     }
         
     @FunctionalInterface
@@ -699,7 +700,7 @@ public class Visitors {
         
    /** Get the SQL query formatter
 	*/
-	public static class ParameterizedSQLFormat extends ContextualVisitor<SQLResult> {
+	public static class ParameterizedSQLFormat extends ContextualVisitor<ParameterizedSQL> {
         
 
 
@@ -733,7 +734,7 @@ public class Visitors {
         }
         
         @Override
-        public SQLResult getResult() {
+        public ParameterizedSQL getResult() {
             StringBuilder builder = new StringBuilder();
             builder.append("FROM ");
             builder.append(nameMapper.apply(QualifiedName.ROOT));
@@ -755,7 +756,7 @@ public class Visitors {
             if (criteria != null) {
                 builder.append(" WHERE ").append(criteria);
             }
-            return new SQLResult(builder.toString(), parameters);
+            return new ParameterizedSQL(builder.toString(), parameters);
         }
 		
         @Override
@@ -885,7 +886,7 @@ public class Visitors {
 		}
 	};
     
-    public static class SQLFormat extends DelegatingVisitor<String, SQLResult> {
+    public static class SQLFormat extends DelegatingVisitor<String, ParameterizedSQL> {
 
         @Override
         public String getResult() {
@@ -910,7 +911,7 @@ public class Visitors {
         return ()->new SQLFormat(nameMapper, relationships);
     }
     
-    public static Formatter<SQLResult> ParameterizedSQL(Function<QualifiedName, String> nameMapper, Function<QualifiedName, Relationship> relationships) {
+    public static Formatter<ParameterizedSQL> ParameterizedSQL(Function<QualifiedName, String> nameMapper, Function<QualifiedName, Relationship> relationships) {
         return ()->new ParameterizedSQLFormat(nameMapper, relationships);
     }
     
