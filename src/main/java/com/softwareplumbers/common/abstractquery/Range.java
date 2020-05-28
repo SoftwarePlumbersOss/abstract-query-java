@@ -125,6 +125,17 @@ public interface Range extends AbstractSet<JsonValue, Range> {
 	 */
 	public static Range equals(JsonValue value) 				
 	{ return new Equals(value); }
+    
+    public static Range equals(String value) {
+        return equals(JsonViewFactory.asJson(value));
+    } 
+            
+    public static Range equals(Number value) {
+        return equals(JsonViewFactory.asJson(value));
+    } 
+    public static Range equals(Boolean value) {
+        return equals(JsonViewFactory.asJson(value));
+    } 
 
 	/** Create a range containing values less than a given value 
 	 *
@@ -134,6 +145,17 @@ public interface Range extends AbstractSet<JsonValue, Range> {
 	public static  Range lessThan(JsonValue value) 		
 	{ return new LessThan(value); }
 
+    public static Range lessThan(String value) {
+        return lessThan(JsonViewFactory.asJson(value));
+    } 
+            
+    public static Range lessThan(Number value) {
+        return lessThan(JsonViewFactory.asJson(value));
+    } 
+    public static Range lessThan(Boolean value) {
+        return lessThan(JsonViewFactory.asJson(value));
+    } 
+    
 	/** Create a range containing values less than or equal to a given value 
 	 * @param value - value to search for
 	 * @return a Range object
@@ -141,13 +163,36 @@ public interface Range extends AbstractSet<JsonValue, Range> {
 	public static  Range lessThanOrEqual(JsonValue value) 		
 	{ return new LessThanOrEqual(value); }
 
-	/** Create a range containing values greater than a given value 
+
+    public static Range lessThanOrEqual(String value) {
+        return lessThanOrEqual(JsonViewFactory.asJson(value));
+    } 
+            
+    public static Range lessThanOrEqual(Number value) {
+        return lessThanOrEqual(JsonViewFactory.asJson(value));
+    } 
+    public static Range lessThanOrEqual(Boolean value) {
+        return lessThanOrEqual(JsonViewFactory.asJson(value));
+    } 
+    
+    /** Create a range containing values greater than a given value 
 	 * @param value - value to search for
 	 * @return a Range object
 	 */		
 	public static  Range greaterThan(JsonValue value) 	
 	{ return new GreaterThan(value); }
 
+    public static Range greaterThan(String value) {
+        return greaterThan(JsonViewFactory.asJson(value));
+    } 
+            
+    public static Range greaterThan(Number value) {
+        return greaterThan(JsonViewFactory.asJson(value));
+    } 
+    public static Range greaterThan(Boolean value) {
+        return greaterThan(JsonViewFactory.asJson(value));
+    }    
+    
 	/** Create a range containing values greater than or equal to a given value 
 	 * @param value - value to search for
 	 * @return a Range object
@@ -155,6 +200,18 @@ public interface Range extends AbstractSet<JsonValue, Range> {
 	public static  Range greaterThanOrEqual(JsonValue value)  	
 	{ return new GreaterThanOrEqual(value); }
 
+    public static Range greaterThanOrEqual(String value) {
+        return greaterThanOrEqual(JsonViewFactory.asJson(value));
+    } 
+            
+    public static Range greaterThanOrEqual(Number value) {
+        return greaterThanOrEqual(JsonViewFactory.asJson(value));
+    } 
+    
+    public static Range greaterThanOrEqual(Boolean value) {
+        return greaterThanOrEqual(JsonViewFactory.asJson(value));
+    }  
+    
 	/** Create a range containing values between the given values
 	 *
 	 * @param lower - lower range boundary (inclusive by default)
@@ -169,6 +226,22 @@ public interface Range extends AbstractSet<JsonValue, Range> {
 		return lowerr.intersect(upperr);
 	}
 	
+	public static  Range between(String lower, String upper)	{ 
+
+		Range lowerr = greaterThanOrEqual(lower);
+		Range upperr = lessThan(upper);
+
+		return lowerr.intersect(upperr);
+	}
+    
+	public static  Range between(Number lower, Number upper)	{ 
+
+		Range lowerr = greaterThanOrEqual(lower);
+		Range upperr = lessThan(upper);
+
+		return lowerr.intersect(upperr);
+    }   
+    
 	/** Create a range matching a wildcard template.
 	 * 
 	 * The characters * and ? represent multi-character and single character wildcards.
