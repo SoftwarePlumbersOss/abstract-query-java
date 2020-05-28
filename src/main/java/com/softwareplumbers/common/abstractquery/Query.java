@@ -243,6 +243,7 @@ public interface Query extends AbstractSet<JsonObject, Query> {
 	}
 
 	private <T extends JsonValue,U extends AbstractSet<T,U>> Boolean containsItem(String dimension, JsonObject item) {
+        if (item == null) return false;
 		// TODO: We should do some type checking here. Notionally that element.type equals constraint.type
 		U constraint = (U)getConstraint(dimension);
 		T element = (T)(item.containsKey(dimension) ? item.get(dimension) : null);
