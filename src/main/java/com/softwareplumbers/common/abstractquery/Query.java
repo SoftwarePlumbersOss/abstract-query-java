@@ -217,13 +217,18 @@ public interface Query extends AbstractSet<JsonObject, Query> {
 		return other instanceof Query && equals((Query)other);
 	}
 	
-	private <T extends JsonValue,U extends AbstractSet<T,U>> Boolean containsConstraint(String dimension, Query other) {
-		// We should do some type checking here.
-		U thisConstraint = (U)getConstraint(dimension);
-		U otherConstraint = (U)other.getConstraint(dimension);
+	private Boolean containsConstraint(String dimension, Query other) {
+		AbstractSet thisConstraint = getConstraint(dimension);
+		AbstractSet otherConstraint = other.getConstraint(dimension);
 
-        return thisConstraint.contains(otherConstraint);
-	}
+        if (thisConstraint instanceof Range && otherConstraint instanceof Range) {
+           return thisConstraint.contains(otherConstraint);       
+        } 
+        if (thisConstraint instanceof Query && otherConstraint instanceof Query) {
+           return thisConstraint.contains(otherConstraint);       
+        } 
+        return false;
+ 	}
 	
 	/** Check whether this constraint contains some other constraint
 	 * 
