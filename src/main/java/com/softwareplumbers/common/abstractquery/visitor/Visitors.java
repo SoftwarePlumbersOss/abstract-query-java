@@ -718,18 +718,33 @@ public class Visitors {
         protected final LinkedHashMap<QualifiedName,String> aliases;
         protected final Function<QualifiedName, String> nameMapper;
         protected final Function<QualifiedName, Relationship> relationships;
+        protected final BiFunction<QualifiedName, JsonValue, String> valueMapper;
         protected final List<String> parameters;
         
         public ParameterizedSQLFormat(
             Function<QualifiedName, String> nameMapper,
-            Function<QualifiedName, Relationship> relationships
+            Function<QualifiedName, Relationship> relationships,
+            BiFunction<QualifiedName, JsonValue, String> valueMapper
         ) { 
             this.elements = new Stack<>();
             this.aliases = new LinkedHashMap<>();
             this.parameters = new ArrayList<>();
             this.nameMapper = nameMapper;
             this.relationships = relationships;
+            this.valueMapper = valueMapper;
             addAlias(QualifiedName.ROOT);
+        }
+        
+        public static String defaultValueMapper(QualifiedName name, JsonValue value) {
+            switch (value.getValueType()) {
+                case STRING: return "'" + ((JsonString)value).getString() + "'";
+                case NULL: return "NULL";
+                default: return value.toString();
+            }            
+        }   
+        
+        public ParameterizedSQLFormat(Function<QualifiedName, String> nameMapper, Function<QualifiedName, Relationship> relationships) {
+            this(nameMapper, relationships, ParameterizedSQLFormat::defaultValueMapper);
         }
         
         private void addAlias(QualifiedName inner) {
@@ -783,20 +798,16 @@ public class Visitors {
         
         @Override
         public void value(Context context, JsonValue value) {
-            elements.push(formatValue(value));
+            elements.push(formatValue(context.getDimension(), value));
             context.count++;
         }
-               
-				
-		public String formatValue(JsonValue value) {
+           				
+		public String formatValue(QualifiedName name, JsonValue value) {
             if (Param.isParam(value)) {
                 parameters.add(Param.getKey(value));
                 return "?";
-            }
-            switch (value.getValueType()) {
-                case STRING: return "'" + ((JsonString)value).getString() + "'";
-                case NULL: return "NULL";
-                default: return value.toString();
+            } else {
+                return valueMapper.apply(name, value);
             }
 		}
         
@@ -904,6 +915,12 @@ public class Visitors {
                          Function<QualifiedName, Relationship> relationships) {
             super(new ParameterizedSQLFormat(nameMapper, relationships));
         }
+         
+        public SQLFormat(Function<QualifiedName, String> nameMapper,
+                         Function<QualifiedName, Relationship> relationships,
+                         BiFunction<QualifiedName, JsonValue, String> valueMapper) {
+            super(new ParameterizedSQLFormat(nameMapper, relationships, valueMapper));
+        }
         
     }
     	
@@ -917,11 +934,19 @@ public class Visitors {
     public static Formatter<String> SQL(Function<QualifiedName, String> nameMapper, Function<QualifiedName, Relationship> relationships) {
         return ()->new SQLFormat(nameMapper, relationships);
     }
+
+    public static Formatter<String> SQL(Function<QualifiedName, String> nameMapper, Function<QualifiedName, Relationship> relationships, BiFunction<QualifiedName, JsonValue, String> valueMapper) {
+        return ()->new SQLFormat(nameMapper, relationships, valueMapper);
+    }
     
     public static Formatter<ParameterizedSQL> ParameterizedSQL(Function<QualifiedName, String> nameMapper, Function<QualifiedName, Relationship> relationships) {
         return ()->new ParameterizedSQLFormat(nameMapper, relationships);
     }
     
+    public static Formatter<ParameterizedSQL> ParameterizedSQL(Function<QualifiedName, String> nameMapper, Function<QualifiedName, Relationship> relationships, BiFunction<QualifiedName, JsonValue, String> valueMapper) {
+        return ()->new ParameterizedSQLFormat(nameMapper, relationships, valueMapper);
+    }
+
     public static <T> Function<Visitor<T>, Visitor<T>> rename(Function<QualifiedName,QualifiedName> mapper) {
         return output -> new NameRemapper<T>(output,  mapper);
     }
