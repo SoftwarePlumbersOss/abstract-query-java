@@ -2,6 +2,7 @@ package com.softwareplumbers.common.abstractquery;
 
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.function.Function;
 import java.util.stream.Stream;
 
 /** Implementation of yes/no/maybe logic, using a Boolean value where 'null' is maybe.
@@ -11,15 +12,27 @@ import java.util.stream.Stream;
  */
 public class Tristate {
 	
-	@FunctionalInterface
-	public static interface Predicate<T> {
-		Boolean test(T item);
+    @FunctionalInterface
+	public static interface Predicate<T> extends java.util.function.Predicate<T> {
+		Boolean containsItem(T item);
+        @Override
+        default boolean test(T item) { return containsItem(item) == Boolean.TRUE; }
+        default <U> Predicate<U> on(Function<U,T> map) { return new ComposedPredicate<>(this, map); }
 	}
 
 	@FunctionalInterface
-	public static interface BiPredicate<T,U> {
-		Boolean test(T a, U b);
+	public static interface BiPredicate<T,U> extends java.util.function.BiPredicate<T,U> {
+		Boolean containsItem(T a, U b);
+        @Override
+        default boolean test(T a, U b) { return containsItem(a,b) == Boolean.TRUE; };
 	}
+    
+    public static class ComposedPredicate<U,T> implements Predicate<U> {
+        public final Predicate<T> original;
+        public final Function<U,T> map;
+        public ComposedPredicate(Predicate<T> original, Function<U,T> map) { this.original = original; this.map = map; }
+        public Boolean containsItem(U item) { return original.containsItem(map.apply(item)); }
+    }
 
 	public static Boolean and(Boolean a, Boolean b) {
 		if (a == Boolean.FALSE || b == Boolean.FALSE) return Boolean.FALSE;
@@ -36,7 +49,7 @@ public class Tristate {
 	public static <T> Boolean every(Collection<T> collection, Predicate<T> condition) {
 		Boolean result = Boolean.TRUE;
 		for (T item : collection) {
-			result = and(result, condition.test(item));
+			result = and(result, condition.containsItem(item));
 			if (result == Boolean.FALSE) return result;
 		}
 		return result;
@@ -45,7 +58,7 @@ public class Tristate {
 	public static <T> Boolean any(Iterator<T> collection, Predicate<T> condition) {
 		Boolean result = Boolean.FALSE;
 		while (collection.hasNext() && result != Boolean.TRUE) {
-			result = or(result, condition.test(collection.next()));
+			result = or(result, condition.containsItem(collection.next()));
 			if (result == Boolean.TRUE) return result;
 		}
 		return result;
@@ -65,7 +78,7 @@ public class Tristate {
 			Iterator<? extends U> bi = b.iterator();
 			Boolean result = Boolean.TRUE;
 			while (ai.hasNext() && bi.hasNext()) {
-				result = and(result, condition.test(ai.next(), bi.next()));
+				result = and(result, condition.containsItem(ai.next(), bi.next()));
 				if (result == Boolean.FALSE) return result;
 			}
 			return result;

@@ -394,7 +394,7 @@ public class QueryTest {
         );
 
         Query query = Query.fromJson("{ 'age': [null,18]}");
-        List<Person> result = data.stream().filter(query.predicate().compose(JsonViewFactory::asJsonObject)).collect(Collectors.toList());
+        List<Person> result = data.stream().filter(query.on(JsonViewFactory::asJsonObject)).collect(Collectors.toList());
         assertEquals(1, result.size());
     }
     /*

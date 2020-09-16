@@ -1,8 +1,6 @@
 package com.softwareplumbers.common.abstractquery;
 
 import javax.json.JsonValue;
-
-import com.softwareplumbers.common.abstractquery.visitor.Context;
 import javax.json.JsonObject;
 import com.softwareplumbers.common.abstractquery.visitor.Visitor;
 import com.softwareplumbers.common.abstractquery.visitor.Visitable;
@@ -14,7 +12,7 @@ import com.softwareplumbers.common.abstractquery.visitor.Visitable;
  * @param <T> The value type of the set
  * @param <U> The implementing class on which operations are performed.
  */
-public interface AbstractSet<T, U extends AbstractSet<T,U>> extends Visitable {
+public interface AbstractSet<T, U extends AbstractSet<T,U>> extends Visitable, Tristate.Predicate<T> {
 	
 	/** Factory that can be used to create new unions and intersections.
 	 * 
@@ -60,6 +58,7 @@ public interface AbstractSet<T, U extends AbstractSet<T,U>> extends Visitable {
 	 * @param item item to check
 	 * @return True if this range contains the given value, False if not, null if this cannot be determined
 	 */
+    @Override
 	Boolean containsItem(T item);
 	
 	/** Check if this set contain another set.

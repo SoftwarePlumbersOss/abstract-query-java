@@ -31,22 +31,7 @@ public interface Query extends AbstractSet<JsonObject, Query> {
 	public static final Query UNBOUNDED = new Unbounded();
 	public static final Query EMPTY = new Empty();
 	public static final QueryFactory FACTORY = new QueryFactory();
-    
-    public class ComposablePredicate implements Predicate<JsonObject> {
-        
-        Predicate<JsonObject> base;
-        
-        public boolean test(JsonObject obj) { return base.test(obj); }
-        
-        public <T> Predicate<T> compose(Function<T,JsonObject> map) {
-            return item->test(map.apply(item));
-        }
-        
-        public ComposablePredicate(Predicate<JsonObject> base) {
-            this.base = base;
-        }
-    }
-	
+    	
 	public AbstractSet<? extends JsonValue, ?> getConstraint(String dimension);
     public Query setConstraint(String name, AbstractSet<? extends JsonValue, ?> constraint);
     public Query removeConstraint(String name);
@@ -108,10 +93,6 @@ public interface Query extends AbstractSet<JsonObject, Query> {
 		return union(Query.fromJson(json));
 	}
 	
-    default ComposablePredicate predicate() {
-        return new ComposablePredicate(this::containsItem);
-    }
-
 	default Factory<JsonObject, Query> getFactory() {
 		return FACTORY;
 	}

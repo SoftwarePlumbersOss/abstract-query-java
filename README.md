@@ -55,7 +55,9 @@ without creating a dependency on any given back-end store. The following are cur
 
 ## Filtering Streams
 
-Abstract Query itself provides a simple 'predicate' property that can be used to filter streams. For example Person is a bean with name and age properties:
+Abstract Query itself is a Predicate<JsonObject> that can be used to filter streams. Query also provides an 'on' method which
+accepts a function that converts an object of type T to a JsonObject and returns a Predicate on T. For example Person is a bean
+with name and age properties:
 
 ```java
 
@@ -67,7 +69,7 @@ Abstract Query itself provides a simple 'predicate' property that can be used to
 
         Query query = Query.fromJson("{ 'age': [null,18]}");
         List<Person> result = data.stream()
-            .filter(query.predicate().compose(JsonViewFactory::asJsonObject))
+            .filter(query.on(JsonViewFactory::asJsonObject))
             .collect(Collectors.toList());
 ```
 
