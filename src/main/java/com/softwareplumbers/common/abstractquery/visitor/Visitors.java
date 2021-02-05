@@ -873,7 +873,7 @@ public class Visitors {
     				return value;
     			if (operator.equals("like")) {
                     try {
-                        value = Parsers.parseUnixWildcard(value).build(Builders.toSQL92('/'));
+                        value = Parsers.parseUnixWildcard(value).build(Builders.toSQL92('\\'));
                     } catch (com.softwareplumbers.common.abstractpattern.visitor.Visitor.PatternSyntaxException e) {
                         throw new RuntimeException(e);
                     }
