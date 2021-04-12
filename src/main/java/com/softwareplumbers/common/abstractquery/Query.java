@@ -559,6 +559,7 @@ public interface Query extends AbstractSet<JsonObject, Query> {
 		if (constraint == null) throw new IllegalArgumentException("Can't create from a null constraint");
 		if (dimension == null) throw new IllegalArgumentException("Can't create from a null dimension");
 		if (constraint.isUnconstrained()) return UNBOUNDED;
+        if (constraint.isEmpty()) return EMPTY;
 		return new Impl(dimension, constraint);
 	}
 	
